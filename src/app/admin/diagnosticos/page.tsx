@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Eye } from 'lucide-react'
+import { Eye, Plus } from 'lucide-react'
 import { DIAGNOSTIC_QUADRANTS } from '@/lib/constants'
 import type { DiagnosticSession } from '@/types'
 
@@ -35,9 +35,15 @@ export default function AdminDiagnosticosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Todos os Diagnósticos</h2>
-        <p className="text-muted-foreground">Visão geral de todas as auditorias</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Todos os Diagnósticos</h2>
+          <p className="text-muted-foreground">Visão geral de todas as auditorias</p>
+        </div>
+        <Button render={<Link href="/diagnostico/novo" />}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Diagnóstico
+        </Button>
       </div>
 
       <Card>

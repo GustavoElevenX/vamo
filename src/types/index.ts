@@ -1,6 +1,6 @@
 // ============ Auth & Organization ============
 
-export type UserRole = 'admin' | 'manager' | 'seller'
+export type UserRole = 'admin' | 'manager' | 'seller' | 'developer'
 
 export interface Organization {
   id: string
@@ -56,7 +56,7 @@ export interface DiagnosticQuestion {
 export interface DiagnosticSession {
   id: string
   organization_id: string
-  template_id: string
+  template_id: string | null
   conducted_by: string
   respondent_name: string
   status: DiagnosticStatus
@@ -64,7 +64,9 @@ export interface DiagnosticSession {
   max_score: number
   health_pct: number
   quadrant: DiagnosticQuadrant | null
-  area_scores: Record<DiagnosticArea, { score: number; max: number; pct: number }>
+  area_scores: Record<string, { score: number; max: number; pct: number }>
+  company_context?: Record<string, unknown> | null
+  ai_qa?: { questions: unknown[]; answers: Record<number, number> } | null
   created_at: string
   completed_at: string | null
 }
@@ -242,6 +244,19 @@ export interface ChecklistCompletion {
   fully_completed: boolean
   completed_at: string
 }
+
+// ============ AI ============
+
+export type {
+  AIAnalysisResult,
+  BehavioralProfile,
+  AIMission,
+  CoachTip,
+  AIAnalysisRecord,
+  BehavioralProfileRecord,
+  BehavioralAnswer,
+  BehavioralQuestion,
+} from '@/lib/ai/types'
 
 // ============ Leaderboard ============
 

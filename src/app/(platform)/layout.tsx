@@ -1,14 +1,26 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import {
+  MANAGER_ONLY_ROUTES,
+  SELLER_ONLY_ROUTES,
+  DEVELOPER_ONLY_ROUTES,
+  ADMIN_ONLY_ROUTES,
+  ROLE_HOME,
+} from '@/lib/constants'
 import type { UserXp, XpLevel } from '@/types'
-import { APP_NAME } from '@/lib/constants'
+
+function isRouteMatch(pathname: string, routes: string[]): boolean {
+  return routes.some(
+    (route) => pathname === route || pathname.startsWith(route + '/')
+  )
+}
 
 export default function PlatformLayout({
   children,
@@ -21,6 +33,7 @@ export default function PlatformLayout({
   const [currentLevel, setCurrentLevel] = useState<XpLevel | null>(null)
   const [nextLevel, setNextLevel] = useState<XpLevel | null>(null)
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
 
   // Redirect in effect to avoid setState-during-render warning
@@ -32,8 +45,76 @@ export default function PlatformLayout({
     }
     if (!user.organization_id) {
       router.push('/onboarding')
+      return
     }
-  }, [user, loading])
+
+    const role = user.role
+    const home = ROLE_HOME[role] || '/dashboard'
+
+    // Role-based route protection
+    if (role === 'seller') {
+      if (isRouteMatch(pathname, MANAGER_ONLY_ROUTES) ||
+          isRouteMatch(pathname, DEVELOPER_ONLY_ROUTES) ||
+          isRouteMatch(pathname, ADMIN_ONLY_ROUTES)) {
+        router.push(home)
+        return
+      }
+    }
+
+    if (role === 'manager') {
+      if (isRouteMatch(pathname, SELLER_ONLY_ROUTES) ||
+          isRouteMatch(pathname, DEVELOPER_ONLY_ROUTES) ||
+          isRouteMatch(pathname, ADMIN_ONLY_ROUTES)) {
+        router.push(home)
+        return
+      }
+    }
+
+    if (role === 'developer') {
+      if (isRouteMatch(pathname, MANAGER_ONLY_ROUTES) ||
+          isRouteMatch(pathname, SELLER_ONLY_ROUTES) ||
+          isRouteMatch(pathname, ADMIN_ONLY_ROUTES)) {
+        router.push(home)
+        return
+      }
+    }
+
+    if (role !== 'admin' && isRouteMatch(pathname, ADMIN_ONLY_ROUTES)) {
+      router.push(home)
+      return
+    }
+
+    // Redirect /dashboard to role-specific home
+    if (pathname === '/dashboard') {
+      router.push(home)
+      return
+    }
+
+    // Redirect old routes to new structure
+    const oldRouteRedirects: Record<string, string | Record<string, string>> = {
+      '/equipe': '/monitoramento/equipe',
+      '/saude-equipe': '/monitoramento/saude-equipe',
+      '/comissionamento': '/monitoramento/comissionamento',
+      '/meus-ganhos': '/ganhos/comissao',
+      '/loja': '/desenvolvimento/loja',
+      '/conquistas': '/desenvolvimento/conquistas',
+      '/kpis': '/performance/indicadores',
+      '/criterios': '/configuracao/kpis',
+      '/missoes': role === 'seller' ? '/performance/missoes' : '/objetivos/plano-acao',
+      '/perfil-comportamental': role === 'seller' ? '/desenvolvimento/feedback-ia' : '/diagnostico/individual',
+      '/ranking': home,
+      '/desafios': home,
+      '/padronizacao': home,
+    }
+
+    for (const [oldRoute, newRoute] of Object.entries(oldRouteRedirects)) {
+      if (pathname === oldRoute || pathname.startsWith(oldRoute + '/')) {
+        const target = typeof newRoute === 'string' ? newRoute : home
+        router.push(target)
+        return
+      }
+    }
+  }, [user, loading, pathname])
 
   useEffect(() => {
     if (!user) return
@@ -69,9 +150,9 @@ export default function PlatformLayout({
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
           <p className="text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>
@@ -88,13 +169,10 @@ export default function PlatformLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-60 lg:flex-col border-r bg-card">
-        <div className="border-b p-4">
-          <h2 className="text-lg font-bold">{APP_NAME}</h2>
-        </div>
-        <Sidebar role={user.role} />
+      <aside className="hidden lg:flex lg:w-60 lg:flex-col border-r border-border/50 bg-card/50">
+        <Sidebar role={user.role} userName={user.name.split(' ')[0]} />
       </aside>
 
       {/* Mobile Nav */}
@@ -102,6 +180,7 @@ export default function PlatformLayout({
         open={mobileOpen}
         onOpenChange={setMobileOpen}
         role={user.role}
+        userName={user.name.split(' ')[0]}
       />
 
       {/* Main Content */}
@@ -114,8 +193,10 @@ export default function PlatformLayout({
           onMenuToggle={() => setMobileOpen(true)}
           onSignOut={handleSignOut}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto bg-muted/30">
+          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

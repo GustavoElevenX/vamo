@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: '--font-sans',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
 })
 
 const geistMono = Geist_Mono({
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'GamePerformance - Gamificação Comercial',
-  description: 'Plataforma de gamificação para times comerciais',
+  title: 'MOTIVA — Plataforma de Performance Comercial',
+  description: 'Engaje sua equipe, acelere resultados e transforme metas em conquistas com gamificação inteligente.',
 }
 
 export default function RootLayout({
@@ -25,9 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${plusJakartaSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

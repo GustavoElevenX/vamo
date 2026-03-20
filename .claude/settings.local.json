@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const {OpenRouter} = require\\(''@openrouter/sdk''\\); const or = new OpenRouter\\({apiKey:''test''}\\); console.log\\(Object.keys\\(or\\).join\\('', ''\\)\\); console.log\\(typeof or.chat\\)\")",
+      "Bash(node -e \"const {OpenRouter} = require\\(''@openrouter/sdk''\\); const or = new OpenRouter\\({apiKey:''test''}\\); console.log\\(Object.keys\\(or.chat\\).join\\('', ''\\)\\)\")",
+      "Bash(node -e \"const {OpenRouter} = require\\(''@openrouter/sdk''\\); const or = new OpenRouter\\({apiKey:''test''}\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(or.chat\\)\\).join\\('', ''\\)\\)\")",
+      "Bash(pandoc \"C:\\\\Users\\\\Sofia Aragão\\\\Downloads\\\\Motiva_Estrutura_Navegacao.docx\" -o /tmp/motiva_nav.md)",
+      "Bash(python scripts/office/unpack.py \"C:\\\\Users\\\\Sofia Aragão\\\\Downloads\\\\Motiva_Estrutura_Navegacao.docx\" /tmp/motiva_unpacked/)",
+      "Bash(python -c \":*)",
+      "Bash(ls -la \"/c/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/\")",
+      "Bash(npx next:*)",
+      "Bash(ls \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/objetivos/\")",
+      "Bash(ls \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/\")",
+      "Bash(ls -la \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/performance/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/performance/indicadores/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/performance/missoes/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/ganhos/comissao/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/ganhos/projecao/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/desenvolvimento/feedback-ia/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/desenvolvimento/conquistas/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/desenvolvimento/loja/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/feed/page.tsx\")"
+    ]
+  }
+}

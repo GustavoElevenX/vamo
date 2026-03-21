@@ -29,6 +29,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nome, email e senha são obrigatórios' }, { status: 400 })
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Formato de email inválido. Use um email válido (ex: nome@empresa.com)' }, { status: 400 })
+    }
+
     if (password.length < 6) {
       return NextResponse.json({ error: 'A senha deve ter no mínimo 6 caracteres' }, { status: 400 })
     }
@@ -61,17 +67,21 @@ export async function POST(request: Request) {
       )
     }
 
-    // Insert into users table as seller
+    // Upsert into users table as seller
+    // (a Supabase trigger may auto-create a row on auth.user creation, so we upsert to update it)
     const { data: newUser, error: dbError } = await adminClient
       .from('users')
-      .insert({
-        auth_id: newAuthUser.user.id,
-        organization_id: requestingUser.organization_id,
-        name,
-        email,
-        role: 'seller',
-        active: true,
-      })
+      .upsert(
+        {
+          auth_id: newAuthUser.user.id,
+          organization_id: requestingUser.organization_id,
+          name,
+          email,
+          role: 'seller',
+          active: true,
+        },
+        { onConflict: 'auth_id' }
+      )
       .select('id, name, email, role, active')
       .single()
 
@@ -82,14 +92,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Erro ao salvar usuário' }, { status: 500 })
     }
 
-    // Initialize XP record for the new seller
-    await adminClient.from('user_xp').insert({
-      user_id: newUser.id,
-      organization_id: requestingUser.organization_id,
-      total_xp: 0,
-      current_level: 1,
-      current_streak: 0,
-    })
+    // Initialize XP record for the new seller (upsert to avoid duplicates)
+    await adminClient.from('user_xp').upsert(
+      {
+        user_id: newUser.id,
+        organization_id: requestingUser.organization_id,
+        total_xp: 0,
+        current_level: 1,
+        current_streak: 0,
+      },
+      { onConflict: 'user_id' }
+    )
 
     return NextResponse.json({ user: newUser }, { status: 201 })
   } catch (error: unknown) {

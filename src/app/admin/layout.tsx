@@ -54,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
       </div>
     )
   }
@@ -81,8 +81,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex flex-col h-full">
       <div className="px-5 py-5 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg motiva-gradient flex items-center justify-center shadow-sm">
-            <Zap className="h-4 w-4 text-white fill-white" />
+          <div className="h-8 w-8 rounded-lg vamo-gradient flex items-center justify-center shadow-sm">
+            <Zap className="h-4 w-4 text-[#0A0A0A] fill-current" />
           </div>
           <div>
             <p className="text-sm font-extrabold tracking-tight text-foreground leading-none">MOTIVA</p>

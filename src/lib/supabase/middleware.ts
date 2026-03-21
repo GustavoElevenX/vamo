@@ -29,13 +29,31 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // getUser() is needed to refresh session cookies server-side.
+  // We wrap it with a timeout so it doesn't block forever on free tier.
+  // If it times out, we let the request through — client-side auth handles it.
+  let user = null
+  let error = null as Error | null
+
+  try {
+    const result = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<'timeout'>(resolve => setTimeout(() => resolve('timeout'), 3000)),
+    ])
+
+    if (result === 'timeout') {
+      // Let request through on timeout — client auth context will handle redirect
+      return supabaseResponse
+    }
+
+    user = result.data.user
+    error = result.error
+  } catch {
+    return supabaseResponse
+  }
 
   // Public routes that don't require auth
   const publicRoutes = ['/login', '/registro', '/auth/callback']
-  // Routes that require auth but should not redirect authenticated users away
   const semiPublicRoutes = ['/onboarding']
   const isPublicRoute = publicRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
@@ -43,6 +61,12 @@ export async function updateSession(request: NextRequest) {
   const isSemiPublic = semiPublicRoutes.some(route =>
     request.nextUrl.pathname.startsWith(route)
   )
+
+  // If getUser() returned an error (network issue, timeout, etc.),
+  // DON'T redirect — let the request through and let client handle auth.
+  if (error) {
+    return supabaseResponse
+  }
 
   if (!user && !isPublicRoute && !isSemiPublic) {
     const url = request.nextUrl.clone()

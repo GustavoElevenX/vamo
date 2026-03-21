@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   const systemPrompt = `Você é um especialista em diagnóstico de equipes comerciais de alta performance no Brasil.
 Gere um questionário de diagnóstico personalizado com base no perfil da empresa.
 
-ÁREAS A COBRIR (4 perguntas por área, total 16):
+ÁREAS A COBRIR (3 perguntas por área, total 12):
 - lead_generation: Geração de Leads e Prospecção
 - sales_process: Processo de Vendas e Conversão
 - team_management: Gestão da Equipe Comercial
@@ -55,7 +55,7 @@ REGRAS:
 - Cada pergunta: 4 opções de resposta, valor 1 (pior) a 4 (melhor prática)
 - Adapte ao segmento, modelo de vendas e porte da empresa
 - Português brasileiro, linguagem direta e profissional
-- Retorne APENAS o JSON válido, sem texto adicional
+- Retorne APENAS o JSON válido e completo, sem texto adicional
 
 FORMATO:
 {
@@ -88,14 +88,14 @@ FORMATO:
 - Canais de leads: ${companyContext.canal_leads.join(', ')}
 - Gestor comercial dedicado: ${companyContext.tem_gestor ? 'Sim' : 'Não'}
 
-Gere 16 perguntas diagnósticas (4 por área) específicas para este perfil.`
+Gere 12 perguntas diagnósticas (3 por área) específicas para este perfil.`
 
   try {
     const { data } = await callOpenRouterJSON<{ questions: AIQuestion[] }>({
       systemPrompt,
       userPrompt,
       temperature: 0.4,
-      maxTokens: 3000,
+      maxTokens: 4000,
     })
 
     if (!data.questions || !Array.isArray(data.questions)) {

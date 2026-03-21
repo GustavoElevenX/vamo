@@ -38,6 +38,16 @@ interface FeedEvent {
 }
 
 const STATIC_POSTS: FeedEvent[] = [
+  // Auto-post da plataforma
+  {
+    id: 'static-auto-1',
+    type: 'celebration',
+    user_name: 'VAMO',
+    user_initials: 'VA',
+    description: 'A equipe esta em 82% da meta mensal. Faltam R$ 12.000 para bater o objetivo!',
+    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    xp: 0,
+  },
   {
     id: 'static-1',
     type: 'badge',
@@ -47,6 +57,16 @@ const STATIC_POSTS: FeedEvent[] = [
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     xp: 500,
   },
+  // Reconhecimento do gestor
+  {
+    id: 'static-rec-1',
+    type: 'recognition',
+    user_name: 'Gestor',
+    user_initials: 'GS',
+    description: 'reconheceu Ana Costa: "Parabens pelo excelente trabalho com o cliente XYZ. Sua abordagem consultiva fez a diferenca no fechamento!"',
+    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    xp: 300,
+  },
   {
     id: 'static-2',
     type: 'mission',
@@ -55,6 +75,16 @@ const STATIC_POSTS: FeedEvent[] = [
     description: 'completou 10 missoes consecutivas!',
     timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
     xp: 300,
+  },
+  // Missao coletiva com contribuicoes
+  {
+    id: 'static-coletiva-1',
+    type: 'celebration',
+    user_name: 'Equipe Comercial',
+    user_initials: 'EC',
+    description: 'completou a Missao Coletiva "50 Reunioes no Mes"! Contribuicoes: Maria (12), Joao (10), Ana (9), Carlos (8), Fernanda (6), Pedro (5).',
+    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    xp: 500,
   },
   {
     id: 'static-3',
@@ -70,9 +100,19 @@ const STATIC_POSTS: FeedEvent[] = [
     type: 'streak',
     user_name: 'Ana Costa',
     user_initials: 'AC',
-    description: 'esta com streak de 15 dias!',
+    description: 'esta com streak de 15 dias! Recorde pessoal!',
     timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     xp: 150,
+  },
+  // Reconhecimento do gestor
+  {
+    id: 'static-rec-2',
+    type: 'recognition',
+    user_name: 'Gestor',
+    user_initials: 'GS',
+    description: 'reconheceu Carlos Mendes: "Destaque da semana pelo maior ticket medio da equipe. Excelente trabalho em vendas consultivas!"',
+    timestamp: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
+    xp: 200,
   },
   {
     id: 'static-5',
@@ -92,6 +132,16 @@ const STATIC_POSTS: FeedEvent[] = [
     timestamp: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
     xp: 400,
   },
+  // Auto-post da plataforma
+  {
+    id: 'static-auto-2',
+    type: 'celebration',
+    user_name: 'VAMO',
+    user_initials: 'VA',
+    description: 'Engajamento da equipe esta em 85% esta semana! +12% comparado ao mes passado.',
+    timestamp: new Date(Date.now() - 40 * 60 * 60 * 1000).toISOString(),
+    xp: 0,
+  },
   {
     id: 'static-7',
     type: 'celebration',
@@ -100,6 +150,16 @@ const STATIC_POSTS: FeedEvent[] = [
     description: 'fechou o maior negocio do trimestre — R$ 85.000!',
     timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
     xp: 1000,
+  },
+  // Reconhecimento do gestor
+  {
+    id: 'static-rec-3',
+    type: 'recognition',
+    user_name: 'Gestor',
+    user_initials: 'GS',
+    description: 'reconheceu Pedro Alves: "Negocio do trimestre! Exemplo de persistencia e tecnica de negociacao. Time inteiro pode aprender com essa jornada."',
+    timestamp: new Date(Date.now() - 50 * 60 * 60 * 1000).toISOString(),
+    xp: 500,
   },
   {
     id: 'static-8',
@@ -190,7 +250,7 @@ export default function FeedRecompensasPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
       </div>
     )
   }

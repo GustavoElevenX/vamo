@@ -105,40 +105,82 @@ export async function callOpenRouter(params: OpenRouterParams): Promise<string> 
   throw lastError
 }
 
-export async function callOpenRouterJSON<T>(params: OpenRouterParams): Promise<{ data: T; model: string }> {
-  const rawContent = await callOpenRouter(params)
+function extractAndCleanJson(raw: string): string {
+  let s = raw.trim()
 
-  // Strip markdown code fences if present
-  let jsonStr = rawContent.trim()
-  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+  // Strip markdown code fences
+  const fenceMatch = s.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (fenceMatch) {
-    jsonStr = fenceMatch[1].trim()
-  } else if (jsonStr.startsWith('```')) {
-    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    s = fenceMatch[1].trim()
+  } else if (s.startsWith('```')) {
+    s = s.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
   }
 
-  // Extract JSON object/array if there's surrounding text
-  const objMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
-  if (objMatch) jsonStr = objMatch[1]
+  // Extract first JSON object or array
+  const objMatch = s.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
+  if (objMatch) s = objMatch[1]
 
+  return s
+}
+
+function repairTruncatedJson(s: string): string {
+  // Count unclosed brackets/braces and close them
+  const stack: string[] = []
+  let inString = false
+  let escape = false
+
+  for (const ch of s) {
+    if (escape) { escape = false; continue }
+    if (ch === '\\' && inString) { escape = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (ch === '{') stack.push('}')
+    else if (ch === '[') stack.push(']')
+    else if (ch === '}' || ch === ']') stack.pop()
+  }
+
+  // Remove trailing incomplete value (comma or partial key)
+  let repaired = s.trimEnd().replace(/,\s*$/, '')
+
+  // Close all open structures
+  while (stack.length > 0) {
+    repaired += stack.pop()
+  }
+
+  return repaired
+}
+
+export async function callOpenRouterJSON<T>(params: OpenRouterParams): Promise<{ data: T; model: string }> {
+  const rawContent = await callOpenRouter(params)
+  const jsonStr = extractAndCleanJson(rawContent)
+
+  // Try parsing as-is
   try {
     return { data: JSON.parse(jsonStr) as T, model: params.model || MODEL_CHAIN[0] }
   } catch {
-    // Retry with explicit JSON-only instruction
-    const retryContent = await callOpenRouter({
-      ...params,
-      systemPrompt:
-        params.systemPrompt +
-        '\n\nIMPORTANTE: Sua resposta deve conter APENAS o objeto JSON. Nenhum texto antes ou depois. Nenhum markdown.',
-    })
-    let retryStr = retryContent.trim()
-    const retryFence = retryStr.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (retryFence) {
-      retryStr = retryFence[1].trim()
+    // Try repairing truncated JSON before retrying the API
+    try {
+      const repaired = repairTruncatedJson(jsonStr)
+      return { data: JSON.parse(repaired) as T, model: params.model || MODEL_CHAIN[0] }
+    } catch {
+      // Fall through to API retry
     }
-    const retryObj = retryStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
-    if (retryObj) retryStr = retryObj[1]
+  }
+
+  // Retry with explicit JSON-only instruction
+  const retryContent = await callOpenRouter({
+    ...params,
+    systemPrompt:
+      params.systemPrompt +
+      '\n\nIMPORTANTE: Sua resposta deve conter APENAS o objeto JSON válido e completo. Nenhum texto antes ou depois. Nenhum markdown.',
+  })
+  const retryStr = extractAndCleanJson(retryContent)
+
+  try {
     return { data: JSON.parse(retryStr) as T, model: params.model || MODEL_CHAIN[0] }
+  } catch {
+    const repaired = repairTruncatedJson(retryStr)
+    return { data: JSON.parse(repaired) as T, model: params.model || MODEL_CHAIN[0] }
   }
 }
 

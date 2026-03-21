@@ -57,50 +57,68 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Diagnóstico não encontrado ou incompleto' }, { status: 404 })
   }
 
-  // Fetch answers + questions in parallel for rich context
-  const [{ data: answers }, { data: questions }] = await Promise.all([
-    supabase
-      .from('diagnostic_answers')
-      .select('question_id, score, notes')
-      .eq('session_id', sessionId),
-    supabase
-      .from('diagnostic_questions')
-      .select('id, question_text, area, options, order_index, weight')
-      .eq('template_id', session.template_id)
-      .order('order_index', { ascending: true }),
-  ])
+  // Build Q&A context from ai_qa (new AI-generated wizard) or legacy tables
+  type QAItem = {
+    question_text: string
+    area: DiagnosticArea
+    selected_option_label: string
+    score: number
+    max_score: number
+    notes?: string | null
+  }
 
-  // Build Q&A context: match each answer to its question and find the selected option label
-  const qa = (answers ?? [])
-    .map((answer) => {
-      const question = (questions ?? []).find((q) => q.id === answer.question_id)
-      if (!question) return null
-      const options = question.options as { label: string; value: number }[]
-      const selectedOption = options.find((o) => o.value === answer.score)
-      return {
-        question_text: question.question_text,
-        area: question.area as DiagnosticArea,
-        selected_option_label: selectedOption?.label ?? `Score ${answer.score}`,
-        score: answer.score,
-        max_score: Math.max(...options.map((o) => o.value)),
-        notes: answer.notes,
-      }
-    })
-    .filter(Boolean) as {
-      question_text: string
-      area: DiagnosticArea
-      selected_option_label: string
-      score: number
-      max_score: number
-      notes?: string | null
-    }[]
+  let qa: QAItem[] = []
 
-  // Sort by order_index via question lookup
-  qa.sort((a, b) => {
-    const qA = (questions ?? []).find((q) => q.question_text === a.question_text)?.order_index ?? 0
-    const qB = (questions ?? []).find((q) => q.question_text === b.question_text)?.order_index ?? 0
-    return qA - qB
-  })
+  const aiQa = session.ai_qa as { questions?: any[]; answers?: Record<string, number> } | null
+  if (aiQa?.questions && aiQa?.answers) {
+    // New wizard: Q&A stored directly in diagnostic_sessions.ai_qa
+    qa = aiQa.questions
+      .map((q: any) => {
+        const selectedValue = aiQa.answers![q.id]
+        if (selectedValue === undefined) return null
+        const options = q.options as { label: string; value: number }[]
+        const selectedOption = options.find((o) => o.value === selectedValue)
+        return {
+          question_text: q.question,
+          area: q.area as DiagnosticArea,
+          selected_option_label: selectedOption?.label ?? `Opção ${selectedValue}`,
+          score: selectedValue,
+          max_score: Math.max(...options.map((o: any) => o.value)),
+          notes: null,
+        }
+      })
+      .filter(Boolean) as QAItem[]
+  } else {
+    // Legacy: fetch from separate tables
+    const [{ data: answers }, { data: questions }] = await Promise.all([
+      supabase
+        .from('diagnostic_answers')
+        .select('question_id, score, notes')
+        .eq('session_id', sessionId),
+      supabase
+        .from('diagnostic_questions')
+        .select('id, question_text, area, options, order_index')
+        .eq('template_id', session.template_id)
+        .order('order_index', { ascending: true }),
+    ])
+
+    qa = (answers ?? [])
+      .map((answer) => {
+        const question = (questions ?? []).find((q) => q.id === answer.question_id)
+        if (!question) return null
+        const options = question.options as { label: string; value: number }[]
+        const selectedOption = options.find((o) => o.value === answer.score)
+        return {
+          question_text: question.question_text,
+          area: question.area as DiagnosticArea,
+          selected_option_label: selectedOption?.label ?? `Score ${answer.score}`,
+          score: answer.score,
+          max_score: Math.max(...options.map((o) => o.value)),
+          notes: answer.notes,
+        }
+      })
+      .filter(Boolean) as QAItem[]
+  }
 
   try {
     const prompt = buildDiagnosticAnalysisPrompt({

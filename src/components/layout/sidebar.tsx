@@ -115,11 +115,15 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
       {/* Logo */}
       <div className="px-5 py-5 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg motiva-gradient flex items-center justify-center shadow-sm">
-            <Zap className="h-4 w-4 text-white fill-white" />
+          <div className="h-8 w-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 text-primary" fill="currentColor">
+              <polygon points="5,17 10,7 10,17" />
+              <polygon points="11,17 11,4 18,17" />
+              <rect x="4" y="18" width="16" height="2.5" rx="1.2" />
+            </svg>
           </div>
           <div>
-            <p className="text-sm font-extrabold tracking-tight text-foreground leading-none">MOTIVA</p>
+            <p className="text-sm font-black tracking-tight text-foreground leading-none">VAMO</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">
               {ROLE_LABELS[role]}{userName ? ` · ${userName}` : ''}
             </p>
@@ -140,7 +144,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                 onClick={() => toggleGroup(group.key)}
                 className={cn(
                   'w-full flex items-center gap-2 px-3 py-1.5 mb-0.5 rounded-md transition-colors',
-                  'hover:bg-accent/50',
+                  'hover:bg-sidebar-accent/60',
                   groupActive && 'text-primary'
                 )}
               >
@@ -149,8 +153,8 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                     className={cn(
                       'flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold shrink-0',
                       groupActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
+                        ? 'bg-primary/20 text-primary'
+                        : 'bg-sidebar-accent text-muted-foreground'
                     )}
                   >
                     {group.prefix}
@@ -159,14 +163,14 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                 <span
                   className={cn(
                     'text-[11px] font-semibold uppercase tracking-wider truncate',
-                    groupActive ? 'text-primary' : 'text-muted-foreground/70'
+                    groupActive ? 'text-primary' : 'text-muted-foreground'
                   )}
                 >
                   {group.label}
                 </span>
                 <ChevronDown
                   className={cn(
-                    'h-3 w-3 ml-auto shrink-0 text-muted-foreground/50 transition-transform duration-200',
+                    'h-3 w-3 ml-auto shrink-0 text-muted-foreground/60 transition-transform duration-200',
                     isCollapsed && '-rotate-90'
                   )}
                 />
@@ -191,8 +195,8 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                         className={cn(
                           'group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150',
                           isActive
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                            ? 'bg-primary/10 text-primary border-l-2 border-primary pl-[10px]'
+                            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground border-l-2 border-transparent pl-[10px]'
                         )}
                       >
                         {Icon && (
@@ -200,8 +204,8 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                             className={cn(
                               'h-4 w-4 shrink-0 transition-colors',
                               isActive
-                                ? 'text-primary-foreground'
-                                : 'text-muted-foreground/70 group-hover:text-accent-foreground'
+                                ? 'text-primary'
+                                : 'text-sidebar-foreground/40 group-hover:text-sidebar-foreground'
                             )}
                           />
                         )}
@@ -221,7 +225,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-5 py-3 border-t border-sidebar-border">
-        <p className="text-[10px] text-muted-foreground/50 font-medium">MOTIVA v1.0</p>
+        <p className="text-[10px] text-muted-foreground/50 font-medium">VAMO v1.0</p>
       </div>
     </div>
   )

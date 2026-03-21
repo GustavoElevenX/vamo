@@ -80,6 +80,7 @@ export default function NovoDiagnosticoPage() {
   const [currentQ, setCurrentQ] = useState(0)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savingTimeout, setSavingTimeout] = useState(false)
 
   if (!user) return null
 
@@ -136,7 +137,12 @@ export default function NovoDiagnosticoPage() {
   const handleSave = async () => {
     if (!user || saving) return
     setSaving(true)
+    setSavingTimeout(false)
+    setError('')
     setStep('finalizando')
+
+    // Show recovery button after 30 seconds if still saving
+    const timeoutId = setTimeout(() => setSavingTimeout(true), 30000)
 
     try {
       // Calculate area scores
@@ -191,9 +197,12 @@ export default function NovoDiagnosticoPage() {
       router.push(`/diagnostico/${session.id}/relatorio`)
     } catch (err: any) {
       console.error(err)
-      setError('Erro ao salvar diagnóstico. Tente novamente.')
+      setError('Erro ao salvar diagnóstico. Verifique sua conexão e tente novamente.')
       setSaving(false)
       setStep('questionario')
+    } finally {
+      clearTimeout(timeoutId)
+      setSavingTimeout(false)
     }
   }
 
@@ -526,8 +535,8 @@ export default function NovoDiagnosticoPage() {
         <Card className="border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-5">
             <div className="relative">
-              <div className="h-16 w-16 rounded-2xl motiva-gradient flex items-center justify-center shadow-lg">
-                <Brain className="h-7 w-7 text-white" />
+              <div className="h-16 w-16 rounded-2xl vamo-gradient flex items-center justify-center shadow-lg">
+                <Brain className="h-7 w-7 text-[#0A0A0A]" />
               </div>
               <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-amber-400 flex items-center justify-center">
                 <Sparkles className="h-2.5 w-2.5 text-white" />
@@ -660,6 +669,23 @@ export default function NovoDiagnosticoPage() {
               <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse [animation-delay:200ms]" />
               <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse [animation-delay:400ms]" />
             </div>
+            {savingTimeout && (
+              <div className="space-y-2 pt-2">
+                <p className="text-xs text-muted-foreground">Isso está demorando mais que o esperado...</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSaving(false)
+                    setSavingTimeout(false)
+                    setStep('questionario')
+                    setError('Conexão lenta. Verifique sua internet e tente novamente.')
+                  }}
+                >
+                  Cancelar e tentar novamente
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

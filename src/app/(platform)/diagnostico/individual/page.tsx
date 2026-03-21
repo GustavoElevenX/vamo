@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,65 +56,86 @@ function simulateBurnout(userId: string): boolean {
 
 export default function DiagnosticoIndividualPage() {
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const [collaborators, setCollaborators] = useState<CollaboratorData[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user) return
+    if (!user?.organization_id) return
+
+    let cancelled = false
+    const supabase = supabaseRef.current
 
     const load = async () => {
-      // Fetch all sellers in the same organization
-      const { data: sellers } = await supabase
-        .from('users')
-        .select('*')
-        .eq('organization_id', user.organization_id)
-        .eq('role', 'seller')
-        .eq('active', true)
-        .order('name')
+      try {
+        // Fetch all sellers in the same organization
+        const { data: sellers } = await supabase
+          .from('users')
+          .select('id, name, email, role, active, organization_id, auth_id')
+          .eq('organization_id', user.organization_id)
+          .eq('role', 'seller')
+          .eq('active', true)
+          .order('name')
+          .limit(100)
 
-      if (!sellers) {
-        setLoading(false)
-        return
+        if (cancelled) return
+
+        if (!sellers || sellers.length === 0) {
+          setCollaborators([])
+          setLoading(false)
+          return
+        }
+
+        // Fetch behavioral profiles in parallel (only if we have sellers)
+        const sellerIds = sellers.map((s) => s.id)
+        const { data: profiles } = await supabase
+          .from('behavioral_profiles')
+          .select('user_id, profile_result')
+          .in('user_id', sellerIds)
+
+        if (cancelled) return
+
+        const profileMap = new Map<string, BehavioralProfile>()
+        profiles?.forEach((p: { user_id: string; profile_result: BehavioralProfile }) => {
+          profileMap.set(p.user_id, p.profile_result)
+        })
+
+        const mapped: CollaboratorData[] = sellers.map((seller: any) => {
+          const profile = profileMap.get(seller.id) ?? null
+          let status: 'pending' | 'in_progress' | 'completed' = 'pending'
+          if (profile) {
+            status = 'completed'
+          } else if (simulateBurnout(seller.id + '_progress')) {
+            status = 'in_progress'
+          }
+
+          return {
+            user: seller,
+            profile,
+            status,
+            hasBurnout: simulateBurnout(seller.id),
+          }
+        })
+
+        if (!cancelled) {
+          setCollaborators(mapped)
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error('[DiagnosticoIndividual] Erro ao carregar dados:', err)
+        if (!cancelled) {
+          setCollaborators([])
+          setLoading(false)
+        }
       }
-
-      // Fetch behavioral profiles for these users
-      const sellerIds = sellers.map((s) => s.id)
-      const { data: profiles } = await supabase
-        .from('behavioral_profiles')
-        .select('*')
-        .in('user_id', sellerIds)
-
-      const profileMap = new Map<string, BehavioralProfile>()
-      profiles?.forEach((p: { user_id: string; profile_result: BehavioralProfile }) => {
-        profileMap.set(p.user_id, p.profile_result)
-      })
-
-      const mapped: CollaboratorData[] = sellers.map((seller: User) => {
-        const profile = profileMap.get(seller.id) ?? null
-        let status: 'pending' | 'in_progress' | 'completed' = 'pending'
-        if (profile) {
-          status = 'completed'
-        } else if (simulateBurnout(seller.id + '_progress')) {
-          status = 'in_progress'
-        }
-
-        return {
-          user: seller,
-          profile,
-          status,
-          hasBurnout: simulateBurnout(seller.id),
-        }
-      })
-
-      setCollaborators(mapped)
-      setLoading(false)
     }
 
     load()
-  }, [user])
+
+    return () => { cancelled = true }
+  }, [user?.id, user?.organization_id])
 
   if (!user) return null
 

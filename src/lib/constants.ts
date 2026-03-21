@@ -1,4 +1,4 @@
-export const APP_NAME = 'MOTIVA'
+export const APP_NAME = 'VAMO'
 export const APP_DESCRIPTION = 'Plataforma de Performance Comercial'
 
 export const ROLES = {

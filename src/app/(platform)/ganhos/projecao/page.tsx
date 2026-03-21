@@ -48,7 +48,7 @@ export default function ProjecaoPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
       </div>
     )
   }
@@ -102,9 +102,18 @@ export default function ProjecaoPage() {
           <h2 className="text-xl font-semibold tracking-tight">Projecao de Ganhos</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Simulacao baseada nas suas missoes e KPIs</p>
         </div>
-        <Badge variant="secondary" className="text-[9px] bg-emerald-500/10 text-emerald-500 border-0">
-          <Brain className="h-2.5 w-2.5 mr-0.5" />IA
-        </Badge>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="text-[9px] text-emerald-600 font-medium">Tempo real</span>
+          </div>
+          <Badge variant="secondary" className="text-[9px] bg-emerald-500/10 text-emerald-500 border-0">
+            <Brain className="h-2.5 w-2.5 mr-0.5" />IA
+          </Badge>
+        </div>
       </div>
 
       {/* Scenario Cards */}

@@ -103,7 +103,7 @@ export default function PerformancePage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
       </div>
     )
   }
@@ -119,14 +119,30 @@ export default function PerformancePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">
-          Ola, {user.name.split(' ')[0]}!
-        </h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Minha Performance — resumo completo
-        </p>
+      {/* Header with level title */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold tracking-tight">
+              Ola, {user.name.split(' ')[0]}!
+            </h2>
+            {currentLevel && (
+              <Badge className="bg-primary/10 text-primary border-0 text-xs">
+                {currentLevel.name}
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Minha Performance — resumo completo
+          </p>
+        </div>
+        {userXp && userXp.current_streak > 0 && (
+          <div className="flex items-center gap-1.5 rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-1.5">
+            <Flame className="h-4 w-4 text-orange-500" />
+            <span className="text-sm font-bold text-orange-500">{userXp.current_streak}</span>
+            <span className="text-[10px] text-muted-foreground">dias</span>
+          </div>
+        )}
       </div>
 
       {/* XP & Level Hero */}
@@ -244,34 +260,46 @@ export default function PerformancePage() {
             <div>
               <p className="text-sm font-medium">Feedback Semanal da IA</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Sua semana foi produtiva! XP cresceu 15% vs semana anterior.
+                <strong className="text-foreground">Ponto forte:</strong> Seu streak de {userXp?.current_streak ?? 0} dias mostra consistencia acima da media da equipe.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                <strong className="text-foreground">Oportunidade:</strong> Sua taxa de conversao esta 13pp abaixo da meta.
                 {activeMissions.length > 0
-                  ? ` Voce tem ${activeMissions.length} missoes ativas — complete-as para maximizar seus ganhos.`
-                  : ' Continue assim para subir no ranking!'}
+                  ? ` Complete suas ${activeMissions.length} missoes ativas para ganhar ate +R$ ${(activeMissions.reduce((s, m) => s + Math.round(m.xp_reward * 1.5), 0)).toLocaleString('pt-BR')} em bonus.`
+                  : ' Aceite a missao de follow-up sugerida pela IA para melhorar.'}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Metrics */}
+      {/* Quick Metrics with commission link */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">Metricas Rapidas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 grid-cols-3">
-            <div className="text-center">
+          <div className="grid gap-4 grid-cols-3">
+            <div className="text-center space-y-0.5">
               <p className="text-lg font-bold text-emerald-500">22%</p>
               <p className="text-[10px] text-muted-foreground">Taxa Conversao</p>
+              <p className="text-[9px] text-emerald-500/80 font-medium">
+                <DollarSign className="h-2.5 w-2.5 inline" /> Atingir meta: +R$ 400
+              </p>
             </div>
-            <div className="text-center">
+            <div className="text-center space-y-0.5">
               <p className="text-lg font-bold text-blue-500">R$ 7.200</p>
               <p className="text-[10px] text-muted-foreground">Ticket Medio</p>
+              <p className="text-[9px] text-blue-500/80 font-medium">
+                <DollarSign className="h-2.5 w-2.5 inline" /> Atingir meta: +R$ 600
+              </p>
             </div>
-            <div className="text-center">
+            <div className="text-center space-y-0.5">
               <p className="text-lg font-bold text-amber-500">R$ 45k</p>
               <p className="text-[10px] text-muted-foreground">Pipeline</p>
+              <p className="text-[9px] text-amber-500/80 font-medium">
+                <DollarSign className="h-2.5 w-2.5 inline" /> Atingir meta: +R$ 280
+              </p>
             </div>
           </div>
         </CardContent>

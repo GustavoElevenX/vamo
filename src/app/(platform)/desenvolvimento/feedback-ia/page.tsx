@@ -15,58 +15,66 @@ import {
 } from 'lucide-react'
 import type { BehavioralProfile } from '@/types'
 
-const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string[]; insight: string; mission: string }> = {
+const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string[]; insight: string; collectiveImpact: string; mission: string; missionBonus: number }> = {
   D: {
     strengths: [
-      'Sua taxa de fechamento em primeira reuniao e 20% acima da media da equipe',
-      'Alta capacidade de superar objecoes com firmeza e argumentos diretos',
-      'Voce e referencia em velocidade de resposta e follow-up rapido',
+      'Sua taxa de fechamento em 1a reuniao e 78% — 18pp acima da media da equipe (60%)',
+      'Alta capacidade de superar objecoes: voce converte 3 de cada 4 objecoes, media da equipe e 2 de 4',
+      'Velocidade de resposta: seu tempo medio de follow-up e 2h, media da equipe e 6h',
     ],
     opportunities: [
-      'Ticket medio abaixo do potencial — perfil D tende a ir direto ao preco sem construir valor suficiente',
-      'Aprender a fazer perguntas consultivas antes de apresentar a solucao pode aumentar seu ticket em 15-20%',
+      'Ticket medio R$ 7.200 vs potencial de R$ 9.500 — perfil D tende a ir direto ao preco sem construir valor suficiente',
+      'Perguntas consultivas antes de apresentar solucao podem aumentar ticket em 15-20% (~R$ 1.100/venda)',
     ],
-    insight: 'A IA detectou que seu engajamento aumenta o resultado coletivo quando voce lidera desafios de time. Experimente as missoes coletivas.',
-    mission: 'Missao sugerida: Liderar desafio de time de fechamento — bonus estimado: +R$ 800',
+    insight: 'A IA detectou que seu engajamento aumenta o resultado coletivo quando voce lidera desafios de time. Nas ultimas 3 missoes coletivas que voce participou, o time bateu a meta 2x mais rapido.',
+    collectiveImpact: 'Quando voce completa missoes, o engajamento medio da equipe sobe 12%. Voce e uma referencia de ritmo para o time.',
+    mission: 'Liderar desafio de time de fechamento',
+    missionBonus: 800,
   },
   I: {
     strengths: [
-      'Sua taxa de conversao em Primeira Reuniao e 20% acima da media da equipe',
-      'Perfil Influenciador cria rapport rapidamente — voce conquista confianca do cliente em poucos minutos',
-      'Voce tem o maior indice de indicacoes da equipe',
+      'Sua conversao em 1a reuniao e 78% — 18pp acima da media da equipe. Seu perfil I cria rapport rapidamente',
+      'Maior indice de indicacoes da equipe: 8 indicacoes/mes vs media de 3',
+      'NPS dos seus clientes: 92 vs media da equipe de 78',
     ],
     opportunities: [
-      'Ticket medio abaixo do potencial — perfil I tem alta capacidade para vendas consultivas de maior valor',
-      'Identificar oportunidades de upsell pode aumentar seu ticket em 15-20%',
+      'Ticket medio R$ 6.800 vs potencial de R$ 9.500 — perfil I tem alta capacidade para vendas consultivas de maior valor',
+      'Identificar oportunidades de upsell pode aumentar ticket em 15-20% (~R$ 1.300/venda)',
     ],
-    insight: 'A IA detectou que seu engajamento sobe o engajamento medio coletivo quando voce esta ativo em missoes colaborativas.',
-    mission: 'Missao sugerida: Campanha de indicacoes com clientes ativos — bonus estimado: +R$ 500',
+    insight: 'A IA detectou que seu engajamento sobe o engajamento medio coletivo quando voce esta ativo em missoes colaborativas. O time performa 15% melhor nos meses em que voce participa de desafios coletivos.',
+    collectiveImpact: 'Suas indicacoes geraram R$ 24.000 em pipeline para o time nos ultimos 60 dias. Voce e o maior conector da equipe.',
+    mission: 'Campanha de indicacoes com clientes ativos',
+    missionBonus: 500,
   },
   S: {
     strengths: [
-      'Voce tem a maior taxa de retencao de clientes da equipe',
-      'Sua consistencia no CRM e a mais alta — dados sempre organizados e atualizados',
-      'Clientes antigos confiam em voce para expansao — maior LTV medio',
+      'Maior taxa de retencao de clientes da equipe: 94% vs media de 82%',
+      'Consistencia no CRM: 95% atualizado vs media de 68% — dados sempre organizados',
+      'Maior LTV medio: R$ 18.500/cliente vs media de R$ 12.000',
     ],
     opportunities: [
-      'Metas de volume alto podem gerar estresse — prefira metas de qualidade que se alinham ao seu estilo',
-      'Prospeccao ativa (frio) e o ponto de desenvolvimento — seu ponto forte e relacionamento com clientes existentes',
+      'Metas de volume alto podem gerar estresse — prefira metas de qualidade que se alinham ao seu perfil S',
+      'Prospeccao ativa (frio) e o ponto de desenvolvimento — taxa de conversao em cold calls 12% vs 22% do time',
     ],
-    insight: 'A IA sugere missoes de upsell em clientes existentes — area onde seu perfil S tem 3x mais chances de sucesso.',
-    mission: 'Missao sugerida: Upsell em base de clientes ativos — bonus estimado: +R$ 600',
+    insight: 'A IA sugere missoes de upsell em clientes existentes — area onde seu perfil S tem 3x mais chances de sucesso do que prospeccao fria.',
+    collectiveImpact: 'Sua retencao de clientes economiza R$ 8.000/mes para a empresa em custo de reposicao. Voce estabiliza a receita recorrente do time.',
+    mission: 'Upsell em base de clientes ativos',
+    missionBonus: 600,
   },
   C: {
     strengths: [
-      'Sua taxa de conversao em propostas tecnicas e a mais alta da equipe',
-      'Voce prepara as apresentacoes mais completas e bem fundamentadas',
-      'Sua analise de dados antes de cada reuniao e um diferencial percebido pelos clientes',
+      'Taxa de conversao em propostas tecnicas: 68% — a mais alta da equipe (media 45%)',
+      'Apresentacoes mais completas: taxa de aceite pos-proposta 72% vs 55% da media',
+      'Analise pre-reuniao: seus clientes reportam 90% de satisfacao com preparacao tecnica',
     ],
     opportunities: [
-      'Ciclo de vendas acima da media — perfil C tende a analisar demais antes de avancar',
-      'Estabelecer criterios claros de quando avancar no funil pode reduzir seu ciclo em 25-30%',
+      'Ciclo de vendas 42 dias vs media de 28 — perfil C tende a analisar demais antes de avancar',
+      'Estabelecer criterios claros de quando avancar pode reduzir ciclo em 25-30% (10-12 dias)',
     ],
-    insight: 'A IA detectou que voce fecha mais quando tem acesso a dados e comparativos. Peca estudos de caso antes de cada proposta.',
-    mission: 'Missao sugerida: Criar banco de estudos de caso — bonus estimado: +R$ 400',
+    insight: 'A IA detectou que voce fecha mais quando tem acesso a dados e comparativos. Suas conversoes sobem 35% quando voce usa estudos de caso.',
+    collectiveImpact: 'Suas propostas detalhadas elevam a qualidade media das propostas do time. Colegas que usam seus templates convertem 20% mais.',
+    mission: 'Criar banco de estudos de caso',
+    missionBonus: 400,
   },
 }
 
@@ -111,7 +119,7 @@ export default function FeedbackIAPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
       </div>
     )
   }
@@ -248,16 +256,37 @@ export default function FeedbackIAPage() {
         </CardContent>
       </Card>
 
-      {/* Suggested Mission */}
+      {/* Collective Impact */}
+      <Card className="border-violet-500/20 bg-violet-500/5">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-start gap-3">
+            <div className="h-9 w-9 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+              <Brain className="h-5 w-5 text-violet-500" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-violet-600 mb-1">Seu Impacto no Time</p>
+              <p className="text-xs text-muted-foreground">{feedback.collectiveImpact}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Suggested Mission with Accept Button */}
       <Card className="border-border/50">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-start gap-3">
             <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
               <Sparkles className="h-5 w-5 text-amber-500" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium">Missao Sugerida</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{feedback.mission}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {feedback.mission} — bonus estimado: <strong className="text-emerald-500">+R$ {feedback.missionBonus}</strong>
+              </p>
+              <Button size="sm" className="h-7 text-xs mt-2 gap-1.5" render={<Link href="/performance/missoes" />}>
+                <Sparkles className="h-3 w-3" />
+                Aceitar Missao
+              </Button>
             </div>
           </div>
         </CardContent>

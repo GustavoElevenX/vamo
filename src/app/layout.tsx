@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
+import { Inter, Geist_Mono } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import './globals.css'
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const inter = Inter({
   variable: '--font-sans',
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700', '800', '900'],
 })
 
 const geistMono = Geist_Mono({
@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'MOTIVA — Plataforma de Performance Comercial',
+  title: 'VAMO — Plataforma de Performance Comercial',
   description: 'Engaje sua equipe, acelere resultados e transforme metas em conquistas com gamificação inteligente.',
 }
 
@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${plusJakartaSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${inter.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

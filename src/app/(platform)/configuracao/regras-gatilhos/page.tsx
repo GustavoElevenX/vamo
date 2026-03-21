@@ -182,11 +182,9 @@ export default function RegrasGatilhosPage() {
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger>
-            <Button size="sm" className="h-8 text-xs">
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Nova Regra
-            </Button>
+          <DialogTrigger render={<Button size="sm" className="h-8 text-xs" />}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Nova Regra
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>

@@ -103,7 +103,7 @@ export default function LancamentoPage() {
 
       // Check missions exist
       const { count: missionCount } = await supabase
-        .from('missions')
+        .from('ai_missions')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', user.organization_id)
 
@@ -163,7 +163,7 @@ export default function LancamentoPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
       </div>
     )
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
@@ -34,7 +34,7 @@ export default function PlatformLayout({
   const [nextLevel, setNextLevel] = useState<XpLevel | null>(null)
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   // Redirect in effect to avoid setState-during-render warning
   useEffect(() => {
@@ -121,21 +121,22 @@ export default function PlatformLayout({
     if (!user.organization_id) return
 
     const fetchXp = async () => {
-      const { data: xp } = await supabase
-        .from('user_xp')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (xp) {
-        setUserXp(xp)
-
-        const { data: levels } = await supabase
+      const supabase = supabaseRef.current
+      const [{ data: xp }, { data: levels }] = await Promise.all([
+        supabase
+          .from('user_xp')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase
           .from('xp_levels')
           .select('*')
           .eq('organization_id', user.organization_id)
-          .order('level', { ascending: true })
+          .order('level', { ascending: true }),
+      ])
 
+      if (xp) {
+        setUserXp(xp)
         if (levels) {
           const curr = levels.find((l) => l.level === xp.current_level)
           const next = levels.find((l) => l.level === xp.current_level + 1)
@@ -152,7 +153,7 @@ export default function PlatformLayout({
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
           <p className="text-sm text-muted-foreground">Carregando...</p>
         </div>
       </div>
@@ -171,7 +172,7 @@ export default function PlatformLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-60 lg:flex-col border-r border-border/50 bg-card/50">
+      <aside className="hidden lg:flex lg:w-60 lg:flex-col border-r border-white/8 bg-sidebar">
         <Sidebar role={user.role} userName={user.name.split(' ')[0]} />
       </aside>
 
@@ -193,7 +194,7 @@ export default function PlatformLayout({
           onMenuToggle={() => setMobileOpen(true)}
           onSignOut={handleSignOut}
         />
-        <main className="flex-1 overflow-y-auto bg-muted/30">
+        <main className="flex-1 overflow-y-auto bg-background">
           <div className="p-4 md:p-6 max-w-7xl mx-auto">
             {children}
           </div>

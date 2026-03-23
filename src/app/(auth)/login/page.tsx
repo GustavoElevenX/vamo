@@ -11,11 +11,7 @@ import { TrendingUp, Trophy, Target, ArrowRight, Zap } from 'lucide-react'
 
 function VamoLogo({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-      <polygon points="5,17 10,7 10,17" />
-      <polygon points="11,17 11,4 18,17" />
-      <rect x="4" y="18" width="16" height="2.5" rx="1.2" />
-    </svg>
+    <img src="/logo.png" alt="Logo" className={className} />
   )
 }
 
@@ -55,10 +51,9 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
-              <VamoLogo className="h-5 w-5 text-primary" />
+            <div className="h-auto w-auto flex items-center justify-center">
+              <VamoLogo className="h-9 object-contain" />
             </div>
-            <span className="text-2xl font-black text-white tracking-tight">VAMO</span>
           </div>
         </div>
 
@@ -105,10 +100,9 @@ export default function LoginPage() {
         <div className="w-full max-w-[380px] space-y-8">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="h-9 w-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center">
-              <VamoLogo className="h-5 w-5 text-primary" />
+            <div className="h-auto w-auto flex items-center justify-center">
+              <VamoLogo className="h-9 object-contain" />
             </div>
-            <span className="text-2xl font-black tracking-tight text-white">VAMO</span>
           </div>
 
           {/* Header */}

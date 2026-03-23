@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { APP_NAME, DEFAULT_XP_LEVELS } from '@/lib/constants'
-import { Building2, Sparkles } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 
 export default function OnboardingPage() {
   const [orgName, setOrgName] = useState('')
@@ -87,8 +87,8 @@ export default function OnboardingPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <div className="rounded-full bg-primary/10 p-3">
-              <Sparkles className="h-8 w-8 text-primary" />
+            <div className="h-auto w-auto flex items-center justify-center">
+              <img src="/logo.png" alt="Logo" className="h-12 object-contain" />
             </div>
           </div>
           <h1 className="text-2xl font-bold">{APP_NAME}</h1>

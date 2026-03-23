@@ -115,15 +115,10 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
       {/* Logo */}
       <div className="px-5 py-5 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 text-primary" fill="currentColor">
-              <polygon points="5,17 10,7 10,17" />
-              <polygon points="11,17 11,4 18,17" />
-              <rect x="4" y="18" width="16" height="2.5" rx="1.2" />
-            </svg>
+          <div className="h-8 w-auto flex items-center justify-center">
+            <img src="/logo.png" alt="Logo" className="h-8 object-contain" />
           </div>
           <div>
-            <p className="text-sm font-black tracking-tight text-foreground leading-none">VAMO</p>
             <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">
               {ROLE_LABELS[role]}{userName ? ` · ${userName}` : ''}
             </p>

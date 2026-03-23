@@ -354,7 +354,11 @@ export default function FeedRecompensasPage() {
               <CardContent className="py-3 px-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-[10px] bg-accent">{event.user_initials}</AvatarFallback>
+                    {event.user_name === 'VAMO' ? (
+                      <img src="/logo.png" alt="VAMO" className="h-full w-full object-contain p-1" />
+                    ) : (
+                      <AvatarFallback className="text-[10px] bg-accent">{event.user_initials}</AvatarFallback>
+                    )}
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm">

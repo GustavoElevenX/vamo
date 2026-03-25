@@ -77,6 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    const markReady = () => {
+      if (!initialResolved && mounted) {
+        initialResolved = true
+        setLoading(false)
+      }
+    }
+
     // 1) Restore session from cookies explicitly via getSession() (local, fast).
     //    This is more reliable than waiting for INITIAL_SESSION on page refresh.
     const initSession = async () => {
@@ -94,19 +101,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('[Auth] Erro ao restaurar sessão:', err)
         await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
       } finally {
-        if (!initialResolved && mounted) {
-          initialResolved = true
-          setLoading(false)
-        }
+        markReady()
       }
     }
 
     initSession()
 
+    // Safety net: if initSession somehow hangs, force loading=false after 10s
+    // so the user never stares at a spinner forever.
+    const safetyTimeout = setTimeout(markReady, 10_000)
+
     // 2) Listen for subsequent auth events (sign in, sign out, token refresh).
     //    Skip INITIAL_SESSION since initSession() already handled it.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: string, session: any) => {
         if (!mounted) return
         if (event === 'INITIAL_SESSION') return // already handled above
         if (event === 'TOKEN_REFRESHED' && !session) {
@@ -121,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false
+      clearTimeout(safetyTimeout)
       subscription.unsubscribe()
     }
   }, [])

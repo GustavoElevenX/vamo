@@ -145,7 +145,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
       setTotalSellers(sellers ?? 0)
 
       if (allXp) {
-        const rank = allXp.findIndex((r) => r.user_id === user.id)
+        const rank = allXp.findIndex((r: any) => r.user_id === user.id)
         setMyRank(rank >= 0 ? rank + 1 : null)
       }
 
@@ -153,8 +153,8 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
         const { data: levels } = await supabase
           .from('xp_levels').select('*').eq('organization_id', user.organization_id).order('level', { ascending: true })
         if (levels) {
-          setCurrentLevel(levels.find((l) => l.level === xp.current_level) ?? null)
-          setNextLevel(levels.find((l) => l.level === xp.current_level + 1) ?? null)
+          setCurrentLevel(levels.find((l: any) => l.level === xp.current_level) ?? null)
+          setNextLevel(levels.find((l: any) => l.level === xp.current_level + 1) ?? null)
         }
       }
 

@@ -1,7 +1,7 @@
 // VAMO IA — Powered by OpenAI
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
-const TIMEOUT_MS = 30000
+const TIMEOUT_MS = 60000 // Aumentado para 60s para respostas longas (JSON)
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
 interface OpenAIMessage {

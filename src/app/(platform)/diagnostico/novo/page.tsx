@@ -174,13 +174,15 @@ export default function NovoDiagnosticoPage() {
         healthPct < 50 ? 'at_risk' :
         healthPct < 75 ? 'developing' : 'optimized'
 
-      const { data: session, error: insertError } = await supabase
-        .from('diagnostic_sessions')
-        .insert({
-          organization_id: user.organization_id,
-          conducted_by: user.id,
+      const timeoutPromise = new Promise<{ id: string }>((_, reject) =>
+        setTimeout(() => reject(new Error('A conexão com o banco demorou muito. Por favor, atualize a página (F5) e tente de novo.')), 15000)
+      )
+
+      const savePromise = fetch('/api/diagnostics/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           respondent_name: ctx.respondent_name,
-          status: 'completed',
           total_score: totalScore,
           max_score: maxScore,
           health_pct: healthPct,
@@ -188,16 +190,19 @@ export default function NovoDiagnosticoPage() {
           area_scores: areaScores,
           company_context: ctx,
           ai_qa: { questions, answers },
-          completed_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
+        }),
+      }).then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Erro ao salvar no banco de dados')
+        return data as { id: string }
+      })
 
-      if (insertError) throw insertError
+      const session = await Promise.race([savePromise, timeoutPromise])
+
       router.push(`/diagnostico/${session.id}/relatorio`)
     } catch (err: any) {
       console.error(err)
-      setError('Erro ao salvar diagnóstico. Verifique sua conexão e tente novamente.')
+      setError(err.message || 'Erro ao salvar diagnóstico. Verifique sua conexão e tente novamente.')
       setSaving(false)
       setStep('questionario')
     } finally {

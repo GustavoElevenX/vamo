@@ -63,7 +63,7 @@ export default function MonitoramentoComissionamentoPage() {
 
       if (members) {
         const commissions: TeamCommission[] = await Promise.all(
-          members.map(async (member) => {
+          members.map(async (member: { id: string; name: string }) => {
             const { count: missionsCompleted } = await supabase
               .from('ai_missions')
               .select('*', { count: 'exact', head: true })

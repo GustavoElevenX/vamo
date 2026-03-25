@@ -89,7 +89,7 @@ export default function DiagnosticoIndividualPage() {
         }
 
         // Fetch behavioral profiles in parallel (only if we have sellers)
-        const sellerIds = sellers.map((s) => s.id)
+        const sellerIds = sellers.map((s: { id: string }) => s.id)
         const { data: profiles } = await supabase
           .from('behavioral_profiles')
           .select('user_id, profile_result')

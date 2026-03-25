@@ -138,8 +138,8 @@ export default function PlatformLayout({
       if (xp) {
         setUserXp(xp)
         if (levels) {
-          const curr = levels.find((l) => l.level === xp.current_level)
-          const next = levels.find((l) => l.level === xp.current_level + 1)
+          const curr = levels.find((l: any) => l.level === xp.current_level)
+          const next = levels.find((l: any) => l.level === xp.current_level + 1)
           setCurrentLevel(curr ?? null)
           setNextLevel(next ?? null)
         }

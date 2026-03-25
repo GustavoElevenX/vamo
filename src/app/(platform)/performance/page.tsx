@@ -95,7 +95,7 @@ export default function PerformancePage() {
       setLoading(false)
     }
 
-    fetchAll()
+    fetchAll().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

@@ -1,11 +1,12 @@
+// VAMO IA — Perfil comportamental DISC via OpenAI
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { callOpenRouterJSON, isOpenRouterConfigured } from '@/lib/services/openrouter.service'
+import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 import { buildBehavioralProfilePrompt } from '@/lib/ai/prompts'
 import type { BehavioralProfile, BehavioralAnswer } from '@/lib/ai/types'
 
 export async function POST(request: Request) {
-  if (!isOpenRouterConfigured()) {
+  if (!isOpenAIConfigured()) {
     return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
   }
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
   try {
     const prompt = buildBehavioralProfilePrompt(answers)
 
-    const { data: profile, model } = await callOpenRouterJSON<BehavioralProfile>({
+    const { data: profile, model } = await callOpenAIJSON<BehavioralProfile>({
       systemPrompt: prompt.system,
       userPrompt: prompt.user,
       temperature: 0.3,

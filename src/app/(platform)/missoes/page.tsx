@@ -40,7 +40,7 @@ export default function MissoesPage() {
 
   useEffect(() => {
     if (!user) return
-    fetchMissions()
+    fetchMissions().catch(() => setLoading(false))
 
     if (isManager) {
       // Fetch team missions overview

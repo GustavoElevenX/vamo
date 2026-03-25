@@ -81,11 +81,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     //    This is more reliable than waiting for INITIAL_SESSION on page refresh.
     const initSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error } = await supabase.auth.getSession()
         if (!mounted) return
+        // If there's an auth error (e.g. invalid refresh token), clear stale session
+        if (error) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+          if (mounted) setAppUser(null)
+          return
+        }
         await resolveUser(session?.user ?? null)
       } catch (err) {
         console.error('[Auth] Erro ao restaurar sessão:', err)
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
       } finally {
         if (!initialResolved && mounted) {
           initialResolved = true
@@ -102,6 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (!mounted) return
         if (event === 'INITIAL_SESSION') return // already handled above
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          // Refresh token was invalid — clear stale session
+          await supabase.auth.signOut()
+          if (mounted) setAppUser(null)
+          return
+        }
         await resolveUser(session?.user ?? null)
       }
     )

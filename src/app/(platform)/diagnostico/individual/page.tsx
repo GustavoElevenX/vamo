@@ -132,7 +132,7 @@ export default function DiagnosticoIndividualPage() {
       }
     }
 
-    load()
+    load().catch(() => setLoading(false))
 
     return () => { cancelled = true }
   }, [user?.id, user?.organization_id])

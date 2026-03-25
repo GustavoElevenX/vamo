@@ -36,7 +36,7 @@ export default function MemberDetailPage() {
       setBadgeCount(count ?? 0)
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user, id])
 
   if (!user) return null

@@ -43,7 +43,7 @@ export default function KpisPage() {
       setEntries(todayEntries ?? [])
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

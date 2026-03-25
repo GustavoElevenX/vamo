@@ -47,7 +47,7 @@ export default function RankingPage() {
       setRankings(mapped)
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user, period])
 
   if (!user) return null

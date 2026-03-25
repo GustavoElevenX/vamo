@@ -79,7 +79,7 @@ export default function ParecerPage() {
       setSession(data)
       setLoading(false)
     }
-    load()
+    load().catch(() => setLoading(false))
   }, [user, id])
 
   if (!user) return null

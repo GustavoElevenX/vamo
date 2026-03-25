@@ -37,7 +37,7 @@ export default function PadronizacaoPage() {
       setChecklists(cl ?? [])
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

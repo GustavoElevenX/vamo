@@ -146,7 +146,7 @@ export default function PlatformLayout({
       }
     }
 
-    fetchXp()
+    fetchXp().catch(() => {})
   }, [user])
 
   if (loading) {

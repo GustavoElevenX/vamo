@@ -41,7 +41,7 @@ export default function DesafioDetailPage() {
       setParticipants(p ?? [])
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user, id])
 
   if (!user) return null

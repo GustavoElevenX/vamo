@@ -28,7 +28,7 @@ export default function EquipePage() {
       setMembers(data ?? [])
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

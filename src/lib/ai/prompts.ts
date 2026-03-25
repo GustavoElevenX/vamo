@@ -1,3 +1,4 @@
+// VAMO IA — Prompts de IA para análise comercial e gamificação
 import type { DiagnosticArea } from '@/types'
 import { DIAGNOSTIC_AREAS } from '@/lib/constants'
 import type { BehavioralAnswer } from './types'

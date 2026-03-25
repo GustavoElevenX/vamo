@@ -1,6 +1,7 @@
+// VAMO IA — Geração de perguntas diagnósticas via OpenAI
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { callOpenRouterJSON, isOpenRouterConfigured } from '@/lib/services/openrouter.service'
+import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 
 interface CompanyContext {
   respondent_name: string
@@ -27,7 +28,7 @@ export interface AIQuestion {
 }
 
 export async function POST(request: Request) {
-  if (!isOpenRouterConfigured()) {
+  if (!isOpenAIConfigured()) {
     return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
   }
 
@@ -91,7 +92,7 @@ FORMATO:
 Gere 12 perguntas diagnósticas (3 por área) específicas para este perfil.`
 
   try {
-    const { data } = await callOpenRouterJSON<{ questions: AIQuestion[] }>({
+    const { data } = await callOpenAIJSON<{ questions: AIQuestion[] }>({
       systemPrompt,
       userPrompt,
       temperature: 0.4,

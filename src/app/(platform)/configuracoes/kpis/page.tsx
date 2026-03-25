@@ -31,7 +31,7 @@ export default function ConfigKpisPage() {
 
   useEffect(() => {
     if (!user) return
-    fetchKpis()
+    fetchKpis().catch(() => setLoading(false))
   }, [user])
 
   const fetchKpis = async () => {
@@ -91,7 +91,7 @@ export default function ConfigKpisPage() {
 
     setSaving(false)
     setDialogOpen(false)
-    fetchKpis()
+    fetchKpis().catch(() => setLoading(false))
   }
 
   const handleToggle = async (kpi: KpiDefinition) => {
@@ -99,7 +99,7 @@ export default function ConfigKpisPage() {
       .from('kpi_definitions')
       .update({ active: !kpi.active })
       .eq('id', kpi.id)
-    fetchKpis()
+    fetchKpis().catch(() => setLoading(false))
   }
 
   return (

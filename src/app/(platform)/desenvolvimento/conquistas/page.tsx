@@ -69,7 +69,7 @@ export default function ConquistasPage() {
       setLoading(false)
     }
 
-    fetchAll()
+    fetchAll().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

@@ -30,7 +30,7 @@ export default function DesafiosPage() {
       setChallenges(data ?? [])
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

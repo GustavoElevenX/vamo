@@ -1,11 +1,12 @@
+// VAMO IA — Dicas do coach via OpenAI
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { callOpenRouterJSON, isOpenRouterConfigured } from '@/lib/services/openrouter.service'
+import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 import { buildCoachTipPrompt } from '@/lib/ai/prompts'
 import type { CoachTip } from '@/lib/ai/types'
 
 export async function POST() {
-  if (!isOpenRouterConfigured()) {
+  if (!isOpenAIConfigured()) {
     return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
   }
 
@@ -66,7 +67,7 @@ export async function POST() {
       latestDiagnosticHealthPct: latestDiagnostic?.health_pct ?? undefined,
     })
 
-    const { data: tip } = await callOpenRouterJSON<CoachTip>({
+    const { data: tip } = await callOpenAIJSON<CoachTip>({
       systemPrompt: prompt.system,
       userPrompt: prompt.user,
       temperature: 0.7,

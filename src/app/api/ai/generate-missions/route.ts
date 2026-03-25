@@ -1,6 +1,7 @@
+// VAMO IA — Geração de missões via OpenAI
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { callOpenRouterJSON, isOpenRouterConfigured } from '@/lib/services/openrouter.service'
+import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 import { buildMissionGenerationPrompt } from '@/lib/ai/prompts'
 import type { DiagnosticArea } from '@/types'
 
@@ -16,7 +17,7 @@ interface GeneratedMission {
 const VALID_AREAS = ['lead_generation', 'sales_process', 'team_management', 'tools_technology']
 
 export async function POST(request: Request) {
-  if (!isOpenRouterConfigured()) {
+  if (!isOpenAIConfigured()) {
     return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
   }
 
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
       behavioralProfile,
     })
 
-    const { data: missions } = await callOpenRouterJSON<GeneratedMission[]>({
+    const { data: missions } = await callOpenAIJSON<GeneratedMission[]>({
       systemPrompt: prompt.system,
       userPrompt: prompt.user,
       temperature: 0.5,

@@ -97,7 +97,7 @@ export default function SaudeEquipePage() {
       setLoading(false)
     }
 
-    fetchData()
+    fetchData().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

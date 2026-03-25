@@ -242,7 +242,7 @@ export default function FeedRecompensasPage() {
       setLoading(false)
     }
 
-    fetchData()
+    fetchData().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

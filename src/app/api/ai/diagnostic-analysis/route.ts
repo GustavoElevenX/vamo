@@ -1,11 +1,12 @@
+// VAMO IA — Análise diagnóstica via OpenAI
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { callOpenRouterJSON, isOpenRouterConfigured } from '@/lib/services/openrouter.service'
+import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 import { buildDiagnosticAnalysisPrompt } from '@/lib/ai/prompts'
 import type { AIAnalysisResult, DiagnosticArea } from '@/types'
 
 export async function POST(request: Request) {
-  if (!isOpenRouterConfigured()) {
+  if (!isOpenAIConfigured()) {
     return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
   }
 
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
       qa,
     })
 
-    const { data: analysis, model } = await callOpenRouterJSON<AIAnalysisResult>({
+    const { data: analysis, model } = await callOpenAIJSON<AIAnalysisResult>({
       systemPrompt: prompt.system,
       userPrompt: prompt.user,
       temperature: 0.3,

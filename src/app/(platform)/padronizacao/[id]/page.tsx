@@ -30,7 +30,7 @@ export default function PlaybookDetailPage() {
       setPlaybook(data)
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user, id])
 
   if (!user) return null

@@ -70,7 +70,7 @@ export default function MissoesPage() {
       setLoading(false)
     }
 
-    fetchMissions()
+    fetchMissions().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

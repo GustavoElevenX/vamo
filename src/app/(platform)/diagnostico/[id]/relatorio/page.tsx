@@ -100,7 +100,7 @@ export default function RelatorioPage() {
         generateAnalysis()
       }
     }
-    load()
+    load().catch(() => setLoading(false))
   }, [user, id])
 
   if (!user) return null

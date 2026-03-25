@@ -33,7 +33,7 @@ export default function RegistrarKpiPage() {
         .order('name')
       setKpis(data ?? [])
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

@@ -111,7 +111,7 @@ export default function FeedbackIAPage() {
       setLoading(false)
     }
 
-    fetchProfile()
+    fetchProfile().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

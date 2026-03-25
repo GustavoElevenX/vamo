@@ -52,7 +52,7 @@ export default function ConfigGamificacaoPage() {
 
   useEffect(() => {
     if (!user) return
-    fetchAll()
+    fetchAll().catch(() => setLoading(false))
   }, [user])
 
   const fetchAll = async () => {
@@ -87,7 +87,7 @@ export default function ConfigGamificacaoPage() {
     setBadgeDialog(false)
     setBadgeName('')
     setBadgeDesc('')
-    fetchAll()
+    fetchAll().catch(() => setLoading(false))
   }
 
   const handleSaveReward = async () => {
@@ -105,7 +105,7 @@ export default function ConfigGamificacaoPage() {
     setRewardDialog(false)
     setRewardName('')
     setRewardDesc('')
-    fetchAll()
+    fetchAll().catch(() => setLoading(false))
   }
 
   const handleSaveChallenge = async () => {
@@ -127,7 +127,7 @@ export default function ConfigGamificacaoPage() {
     setChallengeDialog(false)
     setChallengeTitle('')
     setChallengeDesc('')
-    fetchAll()
+    fetchAll().catch(() => setLoading(false))
   }
 
   return (

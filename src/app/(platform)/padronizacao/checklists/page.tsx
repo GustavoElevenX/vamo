@@ -47,7 +47,7 @@ export default function ChecklistPage() {
 
       setLoading(false)
     }
-    fetch()
+    fetch().catch(() => setLoading(false))
   }, [user, checklistId])
 
   if (!user) return null

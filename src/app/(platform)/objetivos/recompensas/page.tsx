@@ -137,7 +137,7 @@ export default function RecompensasPage() {
       setLoading(false)
     }
 
-    fetchData()
+    fetchData().catch(() => setLoading(false))
   }, [user])
 
   if (!user) return null

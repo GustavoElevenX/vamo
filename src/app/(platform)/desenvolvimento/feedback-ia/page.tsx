@@ -26,7 +26,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Ticket medio R$ 7.200 vs potencial de R$ 9.500 — perfil D tende a ir direto ao preco sem construir valor suficiente',
       'Perguntas consultivas antes de apresentar solucao podem aumentar ticket em 15-20% (~R$ 1.100/venda)',
     ],
-    insight: 'A IA detectou que seu engajamento aumenta o resultado coletivo quando voce lidera desafios de time. Nas ultimas 3 missoes coletivas que voce participou, o time bateu a meta 2x mais rapido.',
+    insight: 'A VAMO IA detectou que seu engajamento aumenta o resultado coletivo quando voce lidera desafios de time. Nas ultimas 3 missoes coletivas que voce participou, o time bateu a meta 2x mais rapido.',
     collectiveImpact: 'Quando voce completa missoes, o engajamento medio da equipe sobe 12%. Voce e uma referencia de ritmo para o time.',
     mission: 'Liderar desafio de time de fechamento',
     missionBonus: 800,
@@ -41,7 +41,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Ticket medio R$ 6.800 vs potencial de R$ 9.500 — perfil I tem alta capacidade para vendas consultivas de maior valor',
       'Identificar oportunidades de upsell pode aumentar ticket em 15-20% (~R$ 1.300/venda)',
     ],
-    insight: 'A IA detectou que seu engajamento sobe o engajamento medio coletivo quando voce esta ativo em missoes colaborativas. O time performa 15% melhor nos meses em que voce participa de desafios coletivos.',
+    insight: 'A VAMO IA detectou que seu engajamento sobe o engajamento medio coletivo quando voce esta ativo em missoes colaborativas. O time performa 15% melhor nos meses em que voce participa de desafios coletivos.',
     collectiveImpact: 'Suas indicacoes geraram R$ 24.000 em pipeline para o time nos ultimos 60 dias. Voce e o maior conector da equipe.',
     mission: 'Campanha de indicacoes com clientes ativos',
     missionBonus: 500,
@@ -56,7 +56,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Metas de volume alto podem gerar estresse — prefira metas de qualidade que se alinham ao seu perfil S',
       'Prospeccao ativa (frio) e o ponto de desenvolvimento — taxa de conversao em cold calls 12% vs 22% do time',
     ],
-    insight: 'A IA sugere missoes de upsell em clientes existentes — area onde seu perfil S tem 3x mais chances de sucesso do que prospeccao fria.',
+    insight: 'A VAMO IA sugere missoes de upsell em clientes existentes — area onde seu perfil S tem 3x mais chances de sucesso do que prospeccao fria.',
     collectiveImpact: 'Sua retencao de clientes economiza R$ 8.000/mes para a empresa em custo de reposicao. Voce estabiliza a receita recorrente do time.',
     mission: 'Upsell em base de clientes ativos',
     missionBonus: 600,
@@ -71,7 +71,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Ciclo de vendas 42 dias vs media de 28 — perfil C tende a analisar demais antes de avancar',
       'Estabelecer criterios claros de quando avancar pode reduzir ciclo em 25-30% (10-12 dias)',
     ],
-    insight: 'A IA detectou que voce fecha mais quando tem acesso a dados e comparativos. Suas conversoes sobem 35% quando voce usa estudos de caso.',
+    insight: 'A VAMO IA detectou que voce fecha mais quando tem acesso a dados e comparativos. Suas conversoes sobem 35% quando voce usa estudos de caso.',
     collectiveImpact: 'Suas propostas detalhadas elevam a qualidade media das propostas do time. Colegas que usam seus templates convertem 20% mais.',
     mission: 'Criar banco de estudos de caso',
     missionBonus: 400,
@@ -129,7 +129,7 @@ export default function FeedbackIAPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Feedback da IA</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Feedback da VAMO IA</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Insights personalizados baseados no seu perfil DISC</p>
         </div>
 
@@ -141,7 +141,7 @@ export default function FeedbackIAPage() {
               </div>
               <h3 className="text-base font-semibold">Descubra seu perfil comportamental</h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                Complete a avaliacao DISC para receber feedback personalizado da IA sobre seus pontos fortes, oportunidades e missoes ideais.
+                Complete a avaliacao DISC para receber feedback personalizado da VAMO IA sobre seus pontos fortes, oportunidades e missoes ideais.
               </p>
               <Link href="/perfil-comportamental">
                 <Button className="mt-4 text-xs">
@@ -169,7 +169,7 @@ export default function FeedbackIAPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Feedback da IA</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Feedback da VAMO IA</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Insights personalizados baseados nos seus dados</p>
         </div>
         <Badge variant="secondary" className="text-[10px]">

@@ -292,7 +292,7 @@ export default function RelatorioPage() {
         </CardContent>
       </Card>
 
-      {/* Parecer Final IA */}
+      {/* Parecer Final VAMO IA */}
       <Card className={`border-2 ${
         session.health_pct >= 75 ? 'border-emerald-500/40 bg-emerald-500/5' :
         session.health_pct >= 50 ? 'border-blue-500/40 bg-blue-500/5' :
@@ -307,7 +307,7 @@ export default function RelatorioPage() {
               <Brain className={`h-5 w-5 ${session.health_pct >= 50 ? 'text-emerald-500' : 'text-red-500'}`} />
             </div>
             <div>
-              <p className="text-sm font-semibold">Parecer da IA — Recomendação para 90 dias</p>
+              <p className="text-sm font-semibold">Parecer da VAMO IA — Recomendação para 90 dias</p>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 {session.health_pct >= 75
                   ? `O time de ${session.respondent_name} está em boa forma. O principal foco dos próximos 90 dias deve ser escalar o que já funciona bem e criar desafios progressivos para manter o engajamento.`
@@ -399,7 +399,7 @@ export default function RelatorioPage() {
         <div className="flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-base font-semibold">
             <Sparkles className="h-4 w-4 text-primary" />
-            Análise Aprofundada da IA
+            Análise Aprofundada da VAMO IA
           </h3>
           {aiError && (
             <Button size="sm" variant="outline" onClick={generateAnalysis}>

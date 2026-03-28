@@ -7,7 +7,7 @@ import type { BehavioralProfile, BehavioralAnswer } from '@/lib/ai/types'
 
 export async function POST(request: Request) {
   if (!isOpenAIConfigured()) {
-    return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
+    return NextResponse.json({ error: 'VAMO IA não configurada' }, { status: 503 })
   }
 
   const supabase = await createClient()

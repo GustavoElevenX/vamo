@@ -76,7 +76,7 @@ export default function LoginPage() {
               { icon: Target, label: 'Diagnóstico inteligente', desc: 'Identifique gargalos e perdas em R$' },
               { icon: Trophy, label: 'Gamificação real', desc: 'XP, missões e rankings que motivam' },
               { icon: TrendingUp, label: 'ROI comprovado', desc: 'Média de 4.2× de retorno em 90 dias' },
-              { icon: Zap, label: 'IA integrada', desc: 'Insights e missões geradas por IA' },
+              { icon: Zap, label: 'VAMO IA integrada', desc: 'Insights e missões geradas por VAMO IA' },
             ].map(({ icon: Icon, label, desc }) => (
               <div key={label} className="rounded-2xl bg-white/5 border border-primary/20 p-4 backdrop-blur-sm">
                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mb-3">

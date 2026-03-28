@@ -66,13 +66,20 @@ export interface NavGroup {
 export const NAV_CONFIG: Record<string, NavGroup[]> = {
   manager: [
     {
+      key: 'chat-ia',
+      label: 'VAMO IA',
+      items: [
+        { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
+      ],
+    },
+    {
       key: 'diagnostico',
       label: 'Diagnóstico',
       prefix: '1',
       items: [
         { label: 'Diagnóstico da Empresa', href: '/diagnostico', icon: 'Search' },
         { label: 'Diagnóstico Individual', href: '/diagnostico/individual', icon: 'User' },
-        { label: 'Parecer Final da IA', href: '/diagnostico/parecer', icon: 'ClipboardList' },
+        { label: 'Parecer Final da VAMO IA', href: '/diagnostico/parecer', icon: 'ClipboardList' },
       ],
     },
     {
@@ -105,7 +112,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
         { label: 'Visão Geral — ROI', href: '/monitoramento', icon: 'TrendingUp' },
         { label: 'Funil em Tempo Real', href: '/monitoramento/funil', icon: 'Filter' },
         { label: 'Performance da Equipe', href: '/monitoramento/equipe', icon: 'Users' },
-        { label: 'Alertas da IA', href: '/monitoramento/alertas', icon: 'Zap', badge: 'alert' },
+        { label: 'Alertas da VAMO IA', href: '/monitoramento/alertas', icon: 'Zap', badge: 'alert' },
         { label: 'Saúde da Equipe', href: '/monitoramento/saude-equipe', icon: 'HeartPulse' },
         { label: 'Comissionamento', href: '/monitoramento/comissionamento', icon: 'DollarSign' },
         { label: 'ROI da Plataforma', href: '/monitoramento/roi', icon: 'PieChart' },
@@ -120,6 +127,13 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
     },
   ],
   seller: [
+    {
+      key: 'chat-ia',
+      label: 'VAMO IA',
+      items: [
+        { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
+      ],
+    },
     {
       key: 'desempenho',
       label: 'Meu Desempenho',
@@ -144,7 +158,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       label: 'Meu Desenvolvimento',
       prefix: 'C',
       items: [
-        { label: 'Feedback da IA', href: '/desenvolvimento/feedback-ia', icon: 'Bot' },
+        { label: 'Feedback da VAMO IA', href: '/desenvolvimento/feedback-ia', icon: 'Bot' },
         { label: 'Conquistas e XP', href: '/desenvolvimento/conquistas', icon: 'Medal' },
         { label: 'Loja de Recompensas', href: '/desenvolvimento/loja', icon: 'ShoppingBag' },
       ],

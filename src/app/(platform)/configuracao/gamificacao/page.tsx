@@ -245,7 +245,7 @@ export default function GamificacaoPage() {
                 <span className="text-xs text-muted-foreground">%</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                → IA pausa missões de volume + notifica gestor
+                → VAMO IA pausa missões de volume + notifica gestor
               </p>
             </div>
           </CardContent>

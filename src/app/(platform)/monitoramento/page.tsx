@@ -74,7 +74,7 @@ const WEEKLY_REVENUE = [
 const QUICK_LINKS = [
   { label: 'Funil em Tempo Real', href: '/monitoramento/funil', icon: Filter },
   { label: 'Performance da Equipe', href: '/monitoramento/equipe', icon: Users },
-  { label: 'Alertas da IA', href: '/monitoramento/alertas', icon: AlertTriangle },
+  { label: 'Alertas da VAMO IA', href: '/monitoramento/alertas', icon: AlertTriangle },
   { label: 'Saúde da Equipe', href: '/monitoramento/saude-equipe', icon: HeartPulse },
   { label: 'Comissionamento', href: '/monitoramento/comissionamento', icon: DollarSign },
   { label: 'ROI da Plataforma', href: '/monitoramento/roi', icon: PieChart },
@@ -189,7 +189,7 @@ export default function MonitoramentoPage() {
                 <Brain className="h-4 w-4 text-violet-600" />
               </div>
               <div>
-                <p className="text-sm font-semibold">Predição da IA</p>
+                <p className="text-sm font-semibold">Predição da VAMO IA</p>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   No ritmo atual, a meta de{' '}
                   <span className="text-violet-600 font-semibold">R$ 178k</span> será atingida em

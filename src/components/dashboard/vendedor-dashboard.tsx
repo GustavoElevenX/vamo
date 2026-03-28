@@ -58,7 +58,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Ticket médio abaixo do potencial — perfil D tende a ir direto ao preço sem construir valor suficiente',
       'Aprender a fazer perguntas consultivas antes de apresentar a solução pode aumentar seu ticket em 15–20%',
     ],
-    insight: 'A IA detectou que seu engajamento aumenta o resultado coletivo quando você lidera desafios de time. Experimente as missões coletivas.',
+    insight: 'A VAMO IA detectou que seu engajamento aumenta o resultado coletivo quando você lidera desafios de time. Experimente as missões coletivas.',
   },
   I: {
     strengths: [
@@ -70,7 +70,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Ticket médio abaixo do potencial — perfil I tem alta capacidade para vendas consultivas de maior valor',
       'Identificar oportunidades de upsell pode aumentar seu ticket em 15–20%',
     ],
-    insight: 'A IA detectou que seu engajamento sobe o engajamento médio coletivo quando você está ativo em missões colaborativas.',
+    insight: 'A VAMO IA detectou que seu engajamento sobe o engajamento médio coletivo quando você está ativo em missões colaborativas.',
   },
   S: {
     strengths: [
@@ -82,7 +82,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Metas de volume alto podem gerar estresse — prefira metas de qualidade que se alinham ao seu estilo',
       'Prospecção ativa (frio) é o ponto de desenvolvimento — seu ponto forte é relacionamento com clientes existentes',
     ],
-    insight: 'A IA sugere missões de upsell em clientes existentes — área onde seu perfil S tem 3x mais chances de sucesso.',
+    insight: 'A VAMO IA sugere missões de upsell em clientes existentes — área onde seu perfil S tem 3x mais chances de sucesso.',
   },
   C: {
     strengths: [
@@ -94,7 +94,7 @@ const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string
       'Ciclo de vendas acima da média — perfil C tende a analisar demais antes de avançar',
       'Estabelecer critérios claros de quando avançar no funil pode reduzir seu ciclo em 25–30%',
     ],
-    insight: 'A IA detectou que você fecha mais quando tem acesso a dados e comparativos. Peça estudos de caso antes de cada proposta.',
+    insight: 'A VAMO IA detectou que você fecha mais quando tem acesso a dados e comparativos. Peça estudos de caso antes de cada proposta.',
   },
 }
 
@@ -420,7 +420,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
               <Zap className="mb-2 h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">Nenhuma missão ativa.</p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Missões são geradas pela IA com base no seu perfil.
+                Missões são geradas pela VAMO IA com base no seu perfil.
               </p>
             </div>
           ) : (
@@ -459,7 +459,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             <DollarSign className="h-4 w-4 text-emerald-500" />
             <CardTitle className="text-sm font-medium">Projeção de Ganhos</CardTitle>
             <Badge variant="secondary" className="text-[9px] bg-emerald-500/10 text-emerald-500 border-0">
-              <Brain className="h-2.5 w-2.5 mr-0.5" />IA
+              <Brain className="h-2.5 w-2.5 mr-0.5" />VAMO IA
             </Badge>
           </div>
         </CardHeader>
@@ -512,13 +512,13 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* ── Módulo 6: Feedback da IA ── */}
+      {/* ── Módulo 6: Feedback da VAMO IA ── */}
       {discProfile && discFeedback ? (
         <Card className="border-blue-500/20 bg-blue-500/5">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Brain className="h-4 w-4 text-blue-500" />
-              <CardTitle className="text-sm font-medium">Feedback da IA</CardTitle>
+              <CardTitle className="text-sm font-medium">Feedback da VAMO IA</CardTitle>
               <Badge variant="secondary" className="text-[9px]">
                 Perfil {discProfile.dominant_profile} · {discProfile.profile_name}
               </Badge>
@@ -569,7 +569,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
                 <Brain className="h-5 w-5 text-blue-500" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium">Feedback personalizado da IA</p>
+                <p className="text-sm font-medium">Feedback personalizado da VAMO IA</p>
                 <p className="text-xs text-muted-foreground">Complete seu Perfil Comportamental DISC para receber insights personalizados.</p>
               </div>
               <Link href="/perfil-comportamental">
@@ -594,7 +594,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
         </Button>
       </div>
 
-      {/* Coach IA */}
+      {/* Coach VAMO IA */}
       <CoachWidget />
     </div>
   )

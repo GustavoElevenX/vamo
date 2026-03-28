@@ -17,7 +17,14 @@
       "Bash(ls -la \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/performance/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/performance/indicadores/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/performance/missoes/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/ganhos/comissao/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/ganhos/projecao/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/desenvolvimento/feedback-ia/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/desenvolvimento/conquistas/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/desenvolvimento/loja/page.tsx\" \"C:/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/src/app/\\(platform\\)/feed/page.tsx\")",
       "Bash(node node_modules/typescript/bin/tsc --noEmit --skipLibCheck)",
       "Bash(ls \"C:\\\\Users\\\\Sofia Aragão\\\\Desktop\\\\Programas\\\\gamificacaoia\\\\src\\\\app\\\\\\(platform\\)\"\")",
-      "Bash(node node_modules/next/dist/bin/next build)"
+      "Bash(node node_modules/next/dist/bin/next build)",
+      "Bash(find '/c/Users/Sofia Aragão/Desktop/Programas/gamificacaoia/.git' -name *.lock)",
+      "Bash(node fix-loading.mjs)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i 's/^\\\\\\(\\\\s\\\\+\\\\\\)load\\(\\)$/\\\\1load\\(\\).catch\\(\\(\\) => setLoading\\(false\\)\\)/' \"$f\")",
+      "Bash(echo \"Fixed: $f\")",
+      "Bash(done)"
     ]
   }
 }

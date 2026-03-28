@@ -128,7 +128,7 @@ export default function AuditoriaComercialPage() {
                 R$ {totalLoss.toLocaleString('pt-BR')}<span className="text-base font-normal">/mês</span>
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {bottlenecks.length} gargalos identificados pela IA
+                {bottlenecks.length} gargalos identificados pela VAMO IA
               </p>
             </div>
           </div>

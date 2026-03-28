@@ -231,7 +231,7 @@ export default function NovoDiagnosticoPage() {
         </div>
         <h2 className="text-xl font-semibold tracking-tight">Novo Diagnóstico</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          IA gera perguntas personalizadas para o seu negócio
+          VAMO IA gera perguntas personalizadas para o seu negócio
         </p>
       </div>
 
@@ -241,7 +241,7 @@ export default function NovoDiagnosticoPage() {
         <div className="flex justify-between text-[10px] text-muted-foreground">
           <span className={step === 'fonte' ? 'text-primary font-medium' : ''}>Fonte</span>
           <span className={step === 'empresa' ? 'text-primary font-medium' : ''}>Empresa</span>
-          <span className={step === 'gerando' || step === 'questionario' ? 'text-primary font-medium' : ''}>Questionário IA</span>
+          <span className={step === 'gerando' || step === 'questionario' ? 'text-primary font-medium' : ''}>Questionário VAMO IA</span>
           <span className={step === 'finalizando' ? 'text-primary font-medium' : ''}>Resultado</span>
         </div>
       </div>
@@ -303,7 +303,7 @@ export default function NovoDiagnosticoPage() {
               <Brain className="h-4 w-4 text-primary" />
               <CardTitle className="text-base">Contexto da Empresa</CardTitle>
             </div>
-            <p className="text-xs text-muted-foreground">A IA usa esses dados para gerar perguntas relevantes ao seu negócio</p>
+            <p className="text-xs text-muted-foreground">A VAMO IA usa esses dados para gerar perguntas relevantes ao seu negócio</p>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Nome / empresa */}
@@ -528,7 +528,7 @@ export default function NovoDiagnosticoPage() {
                 onClick={handleGerarPerguntas}
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Gerar Questionário com IA
+                Gerar Questionário com VAMO IA
               </Button>
             </div>
           </CardContent>
@@ -548,7 +548,7 @@ export default function NovoDiagnosticoPage() {
               </div>
             </div>
             <div>
-              <p className="font-semibold text-foreground">IA analisando seu perfil...</p>
+              <p className="font-semibold text-foreground">VAMO IA analisando seu perfil...</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Gerando perguntas personalizadas para <strong>{ctx.segmento}</strong>
                 {ctx.modelo_vendas ? ` · ${ctx.modelo_vendas}` : ''}

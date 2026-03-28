@@ -92,7 +92,7 @@ export default function EmpresaPage() {
 
   const planFeatures = [
     'Até 25 vendedores',
-    'Missões com IA',
+    'Missões com VAMO IA',
     'Diagnóstico completo',
     'Monitoramento de equipe',
     'Relatórios e ROI',
@@ -241,7 +241,7 @@ export default function EmpresaPage() {
               { label: 'Configurar empresa', done: true },
               { label: 'Adicionar vendedores', done: orgUsers.filter((u) => u.role === 'seller').length > 0 },
               { label: 'Configurar KPIs', done: false },
-              { label: 'Ativar missões com IA', done: false },
+              { label: 'Ativar missões com VAMO IA', done: false },
             ].map((step) => (
               <div key={step.label} className="flex items-center gap-2">
                 {step.done ? (

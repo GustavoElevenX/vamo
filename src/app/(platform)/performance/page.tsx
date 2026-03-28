@@ -258,7 +258,7 @@ export default function PerformancePage() {
               <Brain className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm font-medium">Feedback Semanal da IA</p>
+              <p className="text-sm font-medium">Feedback Semanal da VAMO IA</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 <strong className="text-foreground">Ponto forte:</strong> Seu streak de {userXp?.current_streak ?? 0} dias mostra consistencia acima da media da equipe.
               </p>
@@ -266,7 +266,7 @@ export default function PerformancePage() {
                 <strong className="text-foreground">Oportunidade:</strong> Sua taxa de conversao esta 13pp abaixo da meta.
                 {activeMissions.length > 0
                   ? ` Complete suas ${activeMissions.length} missoes ativas para ganhar ate +R$ ${(activeMissions.reduce((s, m) => s + Math.round(m.xp_reward * 1.5), 0)).toLocaleString('pt-BR')} em bonus.`
-                  : ' Aceite a missao de follow-up sugerida pela IA para melhorar.'}
+                  : ' Aceite a missao de follow-up sugerida pela VAMO IA para melhorar.'}
               </p>
             </div>
           </div>
@@ -321,7 +321,7 @@ export default function PerformancePage() {
         </Button>
       </div>
 
-      {/* Coach IA */}
+      {/* Coach VAMO IA */}
       <CoachWidget />
     </div>
   )

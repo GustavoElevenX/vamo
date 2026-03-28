@@ -420,7 +420,7 @@ export default function PlanoAcaoPage() {
                       </Badge>
                       {mission.isAiSuggested && (
                         <Badge variant="secondary" className="text-[9px] bg-violet-500/10 text-violet-500 border-0">
-                          <Brain className="h-2.5 w-2.5 mr-0.5" /> IA
+                          <Brain className="h-2.5 w-2.5 mr-0.5" /> VAMO IA
                         </Badge>
                       )}
                     </div>

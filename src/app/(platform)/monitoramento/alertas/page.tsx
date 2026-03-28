@@ -37,7 +37,7 @@ const ALERTS: AIAlert[] = [
     id: '1',
     severity: 'critical',
     title: 'João Silva não acessa o CRM há 5 dias',
-    description: 'Último acesso em 14/03/2026. Risco de desengajamento identificado pela IA. Recomendação: contato direto.',
+    description: 'Último acesso em 14/03/2026. Risco de desengajamento identificado pela VAMO IA. Recomendação: contato direto.',
     timestamp: 'Há 2 horas',
     read: false,
     action: 'Contatar',
@@ -174,7 +174,7 @@ export default function AlertasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-            Alertas da IA
+            Alertas da VAMO IA
             {unreadCount > 0 && (
               <Badge className="bg-red-500 text-white text-[10px] h-5 min-w-5 flex items-center justify-center">
                 {unreadCount}
@@ -182,7 +182,7 @@ export default function AlertasPage() {
             )}
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Insights e alertas gerados automaticamente pela IA
+            Insights e alertas gerados automaticamente pela VAMO IA
           </p>
         </div>
         <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">

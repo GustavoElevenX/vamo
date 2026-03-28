@@ -95,7 +95,7 @@ export default function MetasPage() {
       medicao: 'auto_crm',
     }))
     setAiSuggestionAccepted(true)
-    toast.success('Sugestão da IA aplicada com sucesso!')
+    toast.success('Sugestão da VAMO IA aplicada com sucesso!')
   }
 
   const handleSave = async () => {
@@ -265,7 +265,7 @@ export default function MetasPage() {
                       <CheckCircle className="h-3 w-3" /> Sugestão aplicada
                     </span>
                   ) : (
-                    <span className="text-violet-500">A IA sugere:</span>
+                    <span className="text-violet-500">A VAMO IA sugere:</span>
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground">

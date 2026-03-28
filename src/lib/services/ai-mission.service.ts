@@ -38,7 +38,7 @@ export async function completeMission(
     amount: mission.xp_reward,
     sourceType: 'bonus',
     sourceId: missionId,
-    description: `Missão IA completada: ${mission.title}`,
+    description: `Missão VAMO IA completada: ${mission.title}`,
   })
 
   return { mission, xpResult }

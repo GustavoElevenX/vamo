@@ -257,9 +257,9 @@ export default function KpisPage() {
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">Sugestão da IA</p>
+              <p className="text-sm font-medium">Sugestão da VAMO IA</p>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                A IA sugere: Sua maior perda é em proposta — sugiro taxa de conversão como KPI
+                A VAMO IA sugere: Sua maior perda é em proposta — sugiro taxa de conversão como KPI
                 principal. Confirma?
               </p>
               {!aiAccepted ? (

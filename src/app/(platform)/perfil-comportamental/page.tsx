@@ -419,7 +419,7 @@ export default function PerfilComportamentalPage() {
                 <h3 className="text-lg font-semibold">Diagnóstico DISC Completo + Bem-estar</h3>
                 <p className="text-sm text-muted-foreground">
                   Responda {TOTAL_Q} perguntas sobre seu estilo de trabalho, nível de engajamento e autoavaliação de performance.
-                  A IA gerará um perfil personalizado com insights acionáveis para sua evolução comercial.
+                  A VAMO IA gerará um perfil personalizado com insights acionáveis para sua evolução comercial.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2 pt-2">
                   {DIMENSION_ORDER.map((dim) => (

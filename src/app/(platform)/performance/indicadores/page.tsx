@@ -130,7 +130,7 @@ export default function IndicadoresPage() {
               <Brain className="h-5 w-5 text-blue-500" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium">Insight da IA — Foco de Hoje</p>
+              <p className="text-sm font-medium">Insight da VAMO IA — Foco de Hoje</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Para maximizar seus ganhos hoje, foque em <strong className="text-foreground">{bestFocusKpi.name}</strong>.
                 Atingir a meta gera <strong className="text-emerald-500">+R$ {bestFocusKpi.bonus.toLocaleString('pt-BR')}</strong> em bonus.

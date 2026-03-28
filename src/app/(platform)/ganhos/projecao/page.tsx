@@ -111,7 +111,7 @@ export default function ProjecaoPage() {
             <span className="text-[9px] text-emerald-600 font-medium">Tempo real</span>
           </div>
           <Badge variant="secondary" className="text-[9px] bg-emerald-500/10 text-emerald-500 border-0">
-            <Brain className="h-2.5 w-2.5 mr-0.5" />IA
+            <Brain className="h-2.5 w-2.5 mr-0.5" />VAMO IA
           </Badge>
         </div>
       </div>

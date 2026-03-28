@@ -128,7 +128,7 @@ export default function SaudeEquipePage() {
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Saúde da Equipe</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Monitor de bem-estar com alertas de burnout e ações sugeridas pela IA
+          Monitor de bem-estar com alertas de burnout e ações sugeridas pela VAMO IA
         </p>
       </div>
 
@@ -285,7 +285,7 @@ export default function SaudeEquipePage() {
             <div className="mt-4 space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <p className="text-xs font-medium">Sugestões da IA</p>
+                <p className="text-xs font-medium">Sugestões da VAMO IA</p>
               </div>
               {members
                 .filter((m) => m.risk_level !== 'healthy')

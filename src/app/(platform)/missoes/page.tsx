@@ -146,8 +146,8 @@ export default function MissoesPage() {
         </h2>
         <p className="text-sm text-muted-foreground mt-0.5">
           {isManager
-            ? 'Gestão de missões individuais e coletivas, com sugestões automáticas da IA'
-            : 'Missões com progresso em tempo real e sugestões da IA'}
+            ? 'Gestão de missões individuais e coletivas, com sugestões automáticas da VAMO IA'
+            : 'Missões com progresso em tempo real e sugestões da VAMO IA'}
         </p>
       </div>
 

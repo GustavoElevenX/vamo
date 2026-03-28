@@ -323,7 +323,7 @@ export default function DiagnosticoIndividualPage() {
                             <div className="flex items-start gap-2">
                               <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                               <div>
-                                <p className="text-[11px] font-medium text-primary mb-1">Insight da IA</p>
+                                <p className="text-[11px] font-medium text-primary mb-1">Insight da VAMO IA</p>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
                                   {collab.profile.performance_insight ||
                                     `Perfil ${collab.profile.dominant_profile} alto vai direto ao preco sem construir valor. Explica baixa conversao em fechamento.`}

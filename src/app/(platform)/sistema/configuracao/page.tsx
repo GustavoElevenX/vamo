@@ -89,7 +89,7 @@ export default function ConfiguracaoAvancadaPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Brain className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Modelo de IA</CardTitle>
+              <CardTitle className="text-base">Modelo de VAMO IA</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">

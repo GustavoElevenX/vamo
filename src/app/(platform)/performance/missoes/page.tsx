@@ -277,7 +277,7 @@ export default function MissoesPage() {
               <Zap className="mb-2 h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">Nenhuma missao ativa.</p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Missoes sao geradas pela IA com base no seu perfil e indicadores.
+                Missoes sao geradas pela VAMO IA com base no seu perfil e indicadores.
               </p>
             </div>
           </CardContent>
@@ -337,7 +337,7 @@ export default function MissoesPage() {
               <Brain className="h-5 w-5 text-blue-500" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium">Sugestao da IA</p>
+              <p className="text-sm font-medium">Sugestao da VAMO IA</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Voce pode melhorar em ticket medio. Aceitar a Missao de Upsell Consultivo pode te render{' '}
                 <strong className="text-emerald-500">+R$ 600</strong> este mes. Seu perfil tem 3x mais chances de sucesso nesse tipo de missao.

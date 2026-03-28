@@ -7,7 +7,7 @@ import type { AIAnalysisResult, DiagnosticArea } from '@/types'
 
 export async function POST(request: Request) {
   if (!isOpenAIConfigured()) {
-    return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
+    return NextResponse.json({ error: 'VAMO IA não configurada' }, { status: 503 })
   }
 
   const supabase = await createClient()
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('AI diagnostic analysis error:', error)
     return NextResponse.json(
-      { error: 'Análise IA indisponível no momento. Tente novamente.' },
+      { error: 'Análise VAMO IA indisponível no momento. Tente novamente.' },
       { status: 503 }
     )
   }

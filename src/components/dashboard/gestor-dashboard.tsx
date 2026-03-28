@@ -328,7 +328,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
         <Card className="border-border/50 lg:col-span-2">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">Insights da IA</CardTitle>
+              <CardTitle className="text-sm font-medium">Insights da VAMO IA</CardTitle>
               <Sparkles className="h-4 w-4 text-amber-500" />
             </div>
           </CardHeader>
@@ -573,13 +573,13 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Alertas Proativos da IA */}
+      {/* Alertas Proativos da VAMO IA */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Brain className="h-4 w-4 text-blue-500" />
-              <CardTitle className="text-sm font-medium">Alertas Proativos da IA</CardTitle>
+              <CardTitle className="text-sm font-medium">Alertas Proativos da VAMO IA</CardTitle>
             </div>
             <Badge variant="secondary" className="text-[10px]">3 ações sugeridas</Badge>
           </div>
@@ -640,7 +640,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
         </CardContent>
       </Card>
 
-      {/* Coach IA */}
+      {/* Coach VAMO IA */}
       <CoachWidget />
     </div>
   )

@@ -7,7 +7,7 @@ import type { CoachTip } from '@/lib/ai/types'
 
 export async function POST() {
   if (!isOpenAIConfigured()) {
-    return NextResponse.json({ error: 'IA não configurada' }, { status: 503 })
+    return NextResponse.json({ error: 'VAMO IA não configurada' }, { status: 503 })
   }
 
   const supabase = await createClient()
@@ -78,7 +78,7 @@ export async function POST() {
   } catch (error: any) {
     console.error('AI coach tip error:', error)
     return NextResponse.json(
-      { error: 'Coach IA indisponível no momento.' },
+      { error: 'Coach VAMO IA indisponível no momento.' },
       { status: 503 }
     )
   }

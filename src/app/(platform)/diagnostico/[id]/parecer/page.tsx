@@ -140,7 +140,7 @@ export default function ParecerPage() {
               </Badge>
             )}
           </div>
-          <h2 className="text-xl font-semibold tracking-tight">Parecer Final da IA</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Parecer Final da VAMO IA</h2>
           <p className="text-sm text-muted-foreground">{session.respondent_name}</p>
         </div>
       </div>
@@ -280,7 +280,7 @@ export default function ParecerPage() {
               <CardTitle className="text-sm font-medium">7 Missoes Gamificadas Prontas para Ativar</CardTitle>
             </div>
             <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-500 border-0">
-              Geradas pela IA
+              Geradas pela VAMO IA
             </Badge>
           </div>
         </CardHeader>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Sparkles } from 'lucide-react'
 
 const MESSAGES = [
-  'Analisando seus dados com IA...',
+  'Analisando seus dados com VAMO IA...',
   'Identificando padrões de performance...',
   'Gerando insights personalizados...',
   'Preparando recomendações...',

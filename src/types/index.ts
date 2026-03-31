@@ -1,6 +1,6 @@
 // ============ Auth & Organization ============
 
-export type UserRole = 'admin' | 'manager' | 'seller' | 'developer'
+export type UserRole = 'admin' | 'manager' | 'seller' | 'developer' | 'consultant'
 
 export interface Organization {
   id: string
@@ -243,6 +243,82 @@ export interface ChecklistCompletion {
   items_completed: Record<string, boolean>
   fully_completed: boolean
   completed_at: string
+}
+
+// ============ Check-in Diário ============
+
+export interface DailyCheckin {
+  id: string
+  user_id: string
+  organization_id: string
+  energy_level: number
+  intention: string | null
+  obstacle: string | null
+  checkin_date: string
+  created_at: string
+}
+
+// ============ Briefing Semanal ============
+
+export interface WeeklyBriefing {
+  id: string
+  organization_id: string
+  generated_by: string | null
+  week_start: string
+  content: {
+    o_que_foi_bem: string
+    o_que_preocupa: string
+    quem_precisa_atencao: string
+    prioridade_semana: string
+    acao_recomendada: string
+  }
+  model_used: string | null
+  created_at: string
+}
+
+// ============ Retrospectiva Mensal ============
+
+export interface MonthlyRetrospective {
+  id: string
+  organization_id: string
+  cycle_start: string
+  cycle_end: string
+  content: {
+    o_que_foi_prometido: string
+    o_que_foi_entregue: string
+    impacto_financeiro: string
+    fica_pro_proximo: string
+    recomendacao_proximo_ciclo: string
+  }
+  model_used: string | null
+  created_at: string
+}
+
+// ============ Simulador ============
+
+export interface SimulationSession {
+  id: string
+  user_id: string
+  organization_id: string
+  scenario: Record<string, unknown>
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>
+  feedback: {
+    ponto_forte: string
+    erro_especifico: string
+    frase_ideal: string
+  } | null
+  difficulty: number
+  completed: boolean
+  created_at: string
+}
+
+// ============ Consultor ============
+
+export interface ConsultantPortfolio {
+  id: string
+  consultant_user_id: string
+  organization_id: string
+  added_at: string
 }
 
 // ============ AI ============

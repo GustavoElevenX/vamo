@@ -33,7 +33,7 @@ export default function AdminAnalyticsPage() {
         supabase.from('xp_transactions').select('amount'),
       ])
 
-      const totalXp = (xpData ?? []).reduce((sum: number, t: any) => sum + (t.amount ?? 0), 0)
+      const totalXp = (xpData ?? []).reduce((sum: number, t: { amount: number }) => sum + (t.amount ?? 0), 0)
 
       setStats({
         totalOrgs: orgs ?? 0,

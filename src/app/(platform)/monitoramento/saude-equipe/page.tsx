@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { EnergyThermometer } from '@/components/dashboard/energy-thermometer'
 import {
   HeartPulse,
   AlertTriangle,
@@ -132,6 +133,9 @@ export default function MonitoramentoSaudeEquipePage() {
           Monitor de bem-estar com alertas de burnout e ações sugeridas pela VAMO IA
         </p>
       </div>
+
+      {/* Termômetro de Energia */}
+      <EnergyThermometer organizationId={user.organization_id} />
 
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-4">

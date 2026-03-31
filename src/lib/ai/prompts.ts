@@ -202,7 +202,14 @@ Responda EXCLUSIVAMENTE com JSON valido no seguinte formato:
     "area": "lead_generation",
     "difficulty": 1,
     "xp_reward": 50,
-    "resources": [{"title": "nome do recurso", "url": ""}]
+    "resources": [{"title": "nome do recurso", "url": ""}],
+    "playbook_content": {
+      "por_que_voce_recebe": "Explicacao baseada no perfil DISC de por que essa missao e relevante",
+      "passos": ["Passo 1 pratico", "Passo 2 pratico", "Passo 3 pratico"],
+      "nao_fazer": "O erro mais comum que o perfil do vendedor comete nessa situacao",
+      "frase_gatilho": "Frase especifica para usar no momento critico da venda",
+      "simulador_link": true
+    }
   }
 ]
 
@@ -214,7 +221,12 @@ Regras:
 - xp_reward: 30-50 (facil), 60-100 (medio), 120-200 (dificil)
 - Cada missao deve ter 1-2 recursos sugeridos (podem ser genericos)
 - Missoes devem ser praticas e acionaveis, nao teoricas
-- Se houver perfil DISC, personalize as missoes ao estilo do vendedor
+- Se houver perfil DISC, personalize as missoes e o playbook ao estilo do vendedor
+- O playbook_content DEVE ser preenchido para cada missao com instrucoes praticas e acionaveis
+- passos: 3 a 5 instrucoes claras e acionaveis com exemplos reais
+- nao_fazer: o erro mais comum associado ao perfil comportamental
+- frase_gatilho: uma frase especifica para o vendedor usar na hora critica
+- simulador_link: true se a missao pode ser praticada no simulador de roleplay
 - NAO inclua markdown, explicacoes ou texto fora do JSON`,
 
     user: `Dados do diagnostico:

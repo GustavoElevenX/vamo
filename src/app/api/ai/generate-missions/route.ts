@@ -12,6 +12,13 @@ interface GeneratedMission {
   difficulty: number
   xp_reward: number
   resources: { title: string; url?: string }[]
+  playbook_content?: {
+    por_que_voce_recebe: string
+    passos: string[]
+    nao_fazer: string
+    frase_gatilho: string
+    simulador_link?: boolean
+  }
 }
 
 const VALID_AREAS = ['lead_generation', 'sales_process', 'team_management', 'tools_technology']
@@ -107,6 +114,7 @@ export async function POST(request: Request) {
       xp_reward: Math.min(200, Math.max(10, Number(m.xp_reward) || 50)),
       criteria: {},
       resources: Array.isArray(m.resources) ? m.resources : [],
+      playbook_content: m.playbook_content || null,
       status: 'pending',
     }))
 

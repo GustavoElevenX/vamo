@@ -6,6 +6,7 @@ export const ROLES = {
   MANAGER: 'manager',
   SELLER: 'seller',
   DEVELOPER: 'developer',
+  CONSULTANT: 'consultant',
 } as const
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -13,6 +14,7 @@ export const ROLE_LABELS: Record<string, string> = {
   manager: 'Gestor',
   seller: 'Vendedor',
   developer: 'Desenvolvedor',
+  consultant: 'Consultor',
 }
 
 export const DIAGNOSTIC_AREAS = {
@@ -109,6 +111,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       label: 'Monitoramento',
       prefix: '4',
       items: [
+        { label: 'Briefing Semanal', href: '/briefing-semanal', icon: 'Newspaper' },
         { label: 'Visão Geral — ROI', href: '/monitoramento', icon: 'TrendingUp' },
         { label: 'Funil em Tempo Real', href: '/monitoramento/funil', icon: 'Filter' },
         { label: 'Performance da Equipe', href: '/monitoramento/equipe', icon: 'Users' },
@@ -116,6 +119,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
         { label: 'Saúde da Equipe', href: '/monitoramento/saude-equipe', icon: 'HeartPulse' },
         { label: 'Comissionamento', href: '/monitoramento/comissionamento', icon: 'DollarSign' },
         { label: 'ROI da Plataforma', href: '/monitoramento/roi', icon: 'PieChart' },
+        { label: 'Retrospectiva Mensal', href: '/retrospectiva', icon: 'RefreshCw' },
       ],
     },
     {
@@ -128,9 +132,10 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
   ],
   seller: [
     {
-      key: 'chat-ia',
-      label: 'VAMO IA',
+      key: 'hoje',
+      label: 'Hoje',
       items: [
+        { label: 'Meu Dia', href: '/hoje', icon: 'Sun' },
         { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
       ],
     },
@@ -159,6 +164,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       prefix: 'C',
       items: [
         { label: 'Feedback da VAMO IA', href: '/desenvolvimento/feedback-ia', icon: 'Bot' },
+        { label: 'Simulador de Proposta', href: '/simulador', icon: 'Swords' },
         { label: 'Conquistas e XP', href: '/desenvolvimento/conquistas', icon: 'Medal' },
         { label: 'Loja de Recompensas', href: '/desenvolvimento/loja', icon: 'ShoppingBag' },
       ],
@@ -197,6 +203,26 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       ],
     },
   ],
+  consultant: [
+    {
+      key: 'chat-ia',
+      label: 'VAMO IA',
+      items: [
+        { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
+      ],
+    },
+    {
+      key: 'carteira',
+      label: 'Minha Carteira',
+      prefix: '1',
+      items: [
+        { label: 'Meus Clientes', href: '/consultor/clientes', icon: 'Building2' },
+        { label: 'Ações Pendentes', href: '/consultor/acoes', icon: 'ClipboardList' },
+        { label: 'Saúde da Carteira', href: '/consultor/saude-carteira', icon: 'HeartPulse' },
+        { label: 'Impacto Consolidado', href: '/consultor/impacto', icon: 'TrendingUp' },
+      ],
+    },
+  ],
 }
 
 // Route protection per role
@@ -221,10 +247,15 @@ export const ADMIN_ONLY_ROUTES = [
   '/admin',
 ]
 
+export const CONSULTANT_ONLY_ROUTES = [
+  '/consultor',
+]
+
 // Default home route per role
 export const ROLE_HOME: Record<string, string> = {
   manager: '/monitoramento',
-  seller: '/performance',
+  seller: '/hoje',
   developer: '/sistema/logs',
   admin: '/admin',
+  consultant: '/consultor/clientes',
 }

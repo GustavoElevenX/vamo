@@ -19,8 +19,20 @@ import {
   DollarSign,
   CheckSquare,
   AlertTriangle,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Swords,
 } from 'lucide-react'
 import Link from 'next/link'
+
+interface PlaybookContent {
+  por_que_voce_recebe: string
+  passos: string[]
+  nao_fazer: string
+  frase_gatilho: string
+  simulador_link?: boolean
+}
 
 interface Mission {
   id: string
@@ -31,6 +43,7 @@ interface Mission {
   created_at: string
   is_collective?: boolean
   description?: string
+  playbook_content?: PlaybookContent | null
 }
 
 function getExpiration(createdAt: string) {
@@ -54,6 +67,7 @@ export default function MissoesPage() {
   const [loading, setLoading] = useState(true)
   const [missions, setMissions] = useState<Mission[]>([])
   const [accepting, setAccepting] = useState<string | null>(null)
+  const [expandedPlaybook, setExpandedPlaybook] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -61,7 +75,7 @@ export default function MissoesPage() {
     const fetchMissions = async () => {
       const { data } = await supabase
         .from('ai_missions')
-        .select('id, title, status, xp_reward, difficulty, created_at, is_collective, description')
+        .select('id, title, status, xp_reward, difficulty, created_at, is_collective, description, playbook_content')
         .eq('user_id', user.id)
         .in('status', ['pending', 'in_progress'])
         .order('created_at', { ascending: false })
@@ -191,6 +205,66 @@ export default function MissoesPage() {
                       Registrar Acao
                     </Button>
                   </div>
+
+                  {/* Playbook - Como fazer */}
+                  {mission.playbook_content && (
+                    <>
+                      <button
+                        onClick={() => setExpandedPlaybook(expandedPlaybook === mission.id ? null : mission.id)}
+                        className="flex w-full items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <BookOpen className="h-3.5 w-3.5" />
+                          Como fazer
+                        </span>
+                        {expandedPlaybook === mission.id ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                      {expandedPlaybook === mission.id && (
+                        <div className="space-y-3 rounded-lg border border-border/50 bg-card p-4">
+                          {mission.playbook_content.por_que_voce_recebe && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-primary uppercase tracking-wider mb-1">Por que você recebe isso</p>
+                              <p className="text-xs text-muted-foreground">{mission.playbook_content.por_que_voce_recebe}</p>
+                            </div>
+                          )}
+                          {mission.playbook_content.passos && mission.playbook_content.passos.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-primary uppercase tracking-wider mb-1">Passos práticos</p>
+                              <ol className="list-decimal list-inside space-y-1">
+                                {mission.playbook_content.passos.map((passo, i) => (
+                                  <li key={i} className="text-xs text-muted-foreground">{passo}</li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
+                          {mission.playbook_content.nao_fazer && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-red-500 uppercase tracking-wider mb-1">O que NÃO fazer</p>
+                              <p className="text-xs text-muted-foreground">{mission.playbook_content.nao_fazer}</p>
+                            </div>
+                          )}
+                          {mission.playbook_content.frase_gatilho && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider mb-1">Frase de gatilho</p>
+                              <p className="text-xs text-muted-foreground italic">&quot;{mission.playbook_content.frase_gatilho}&quot;</p>
+                            </div>
+                          )}
+                          {mission.playbook_content.simulador_link && (
+                            <Link href="/simulador">
+                              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 mt-1">
+                                <Swords className="h-3 w-3" />
+                                Praticar no Simulador
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )

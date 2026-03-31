@@ -6,12 +6,14 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { useAuth } from '@/hooks/use-auth'
+import { DailyCheckinModal } from '@/components/checkin/daily-checkin-modal'
 import { createClient } from '@/lib/supabase/client'
 import {
   MANAGER_ONLY_ROUTES,
   SELLER_ONLY_ROUTES,
   DEVELOPER_ONLY_ROUTES,
   ADMIN_ONLY_ROUTES,
+  CONSULTANT_ONLY_ROUTES,
   ROLE_HOME,
 } from '@/lib/constants'
 import type { UserXp, XpLevel } from '@/types'
@@ -171,6 +173,9 @@ export default function PlatformLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Check-in Diário — aparece 1x/dia para vendedores */}
+      <DailyCheckinModal />
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:w-60 lg:flex-col border-r border-white/8 bg-sidebar">
         <Sidebar role={user.role} userName={user.name.split(' ')[0]} />

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User as AppUser } from '@/types'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js'
 
 interface AuthContextValue {
   user: AppUser | null
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 2) Listen for subsequent auth events (sign in, sign out, token refresh).
     //    Skip INITIAL_SESSION since initSession() already handled it.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: any) => {
+      async (event: string, session: Session | null) => {
         if (!mounted) return
         if (event === 'INITIAL_SESSION') return // already handled above
         if (event === 'TOKEN_REFRESHED' && !session) {

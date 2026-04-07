@@ -170,9 +170,11 @@ async function createOrUpdateUser(user: typeof TEST_USERS[number]) {
       if (error.message.includes('Database error')) {
         console.log(`[Setup] ⚠ Registro órfão detectado em auth.users. Limpando...`)
         // Tenta remover via SQL direto (registro existe mas sem id visível no Admin API)
-        await supabase.rpc('exec_sql', {
-          sql: `DELETE FROM auth.users WHERE email = '${user.email}'`,
-        }).catch(() => {})
+        try {
+          await supabase.rpc('exec_sql', {
+            sql: `DELETE FROM auth.users WHERE email = '${user.email}'`,
+          })
+        } catch {}
 
         // Aguarda propagação
         await new Promise((r) => setTimeout(r, 1_000))

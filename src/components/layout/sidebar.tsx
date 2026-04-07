@@ -186,6 +186,24 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                         item.href.split('/').length > 2 &&
                         pathname.startsWith(item.href + '/'))
 
+                    // Special Chat IA highlight
+                    if (item.href === '/chat-ia') {
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={onNavigate}
+                          className={cn('vamo-chat-nav-item', isActive && 'active')}
+                        >
+                          <span className="vamo-chat-nav-icon">
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </span>
+                          <span className="truncate flex-1">Converse com VAMO IA</span>
+                          <span className="vamo-chat-nav-badge">IA</span>
+                        </Link>
+                      )
+                    }
+
                     return (
                       <Link
                         key={item.href}

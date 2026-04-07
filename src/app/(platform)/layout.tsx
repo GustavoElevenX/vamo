@@ -7,6 +7,7 @@ import { Topbar } from '@/components/layout/topbar'
 import { MobileNav } from '@/components/layout/mobile-nav'
 import { useAuth } from '@/hooks/use-auth'
 import { DailyCheckinModal } from '@/components/checkin/daily-checkin-modal'
+import { ChatFAB } from '@/components/ai/chat-fab'
 import { createClient } from '@/lib/supabase/client'
 import {
   MANAGER_ONLY_ROUTES,
@@ -175,6 +176,9 @@ export default function PlatformLayout({
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Check-in Diário — aparece 1x/dia para vendedores */}
       <DailyCheckinModal />
+
+      {/* Chat IA FAB — botão flutuante visível em todas as páginas */}
+      <ChatFAB />
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:w-60 lg:flex-col border-r border-white/8 bg-sidebar">

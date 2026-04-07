@@ -103,6 +103,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
         { label: 'KPIs', href: '/configuracao/kpis', icon: 'BarChart3' },
         { label: 'Integrações', href: '/configuracao/integracoes', icon: 'Link' },
         { label: 'Regras e Gatilhos', href: '/configuracao/regras-gatilhos', icon: 'Settings' },
+        { label: 'Comissionamento', href: '/configuracao/comissionamento', icon: 'DollarSign' },
         { label: 'Gamificação', href: '/configuracao/gamificacao', icon: 'Gamepad2' },
       ],
     },

@@ -37,6 +37,8 @@ import {
   Terminal,
   Wrench,
   ChevronDown,
+  Newspaper,
+  RefreshCw,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -77,6 +79,8 @@ const iconMap: Record<string, LucideIcon> = {
   Megaphone,
   Terminal,
   Wrench,
+  Newspaper,
+  RefreshCw,
 }
 
 interface SidebarProps {

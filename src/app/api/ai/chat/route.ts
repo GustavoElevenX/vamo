@@ -24,7 +24,91 @@ export async function POST(req: NextRequest) {
     userName: string
   }
 
-  const systemPrompt = buildSystemPrompt(role, userName)
+  // ── Buscar contexto do negócio ──
+  const { data: dbUser } = await supabase
+    .from('users')
+    .select('organization_id')
+    .eq('auth_id', authUser.id)
+    .single()
+
+  let businessContext = ''
+
+  if (dbUser?.organization_id) {
+    const orgId = dbUser.organization_id
+
+    // Buscar dados da organização + último diagnóstico + KPIs ativos em paralelo
+    const [orgResult, diagResult, kpiResult, teamResult] = await Promise.all([
+      supabase
+        .from('organizations')
+        .select('name, plan, settings')
+        .eq('id', orgId)
+        .single(),
+      supabase
+        .from('diagnostic_sessions')
+        .select('company_context, health_pct, quadrant, area_scores')
+        .eq('organization_id', orgId)
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('kpi_definitions')
+        .select('name, unit, targets')
+        .eq('organization_id', orgId)
+        .eq('active', true)
+        .limit(10),
+      supabase
+        .from('users')
+        .select('id, name, role')
+        .eq('organization_id', orgId)
+        .eq('active', true),
+    ])
+
+    const org = orgResult.data
+    const diag = diagResult.data
+    const kpis = kpiResult.data
+    const team = teamResult.data
+
+    const parts: string[] = []
+
+    if (org) {
+      parts.push(`Empresa: ${org.name}`)
+    }
+
+    if (diag?.company_context) {
+      const ctx = diag.company_context as Record<string, unknown>
+      if (ctx.segmento) parts.push(`Segmento: ${ctx.segmento}${ctx.subnicho ? ` (${ctx.subnicho})` : ''}`)
+      if (ctx.num_vendedores) parts.push(`Vendedores: ${ctx.num_vendedores}`)
+      if (ctx.modelo_vendas) parts.push(`Modelo de vendas: ${ctx.modelo_vendas}`)
+      if (ctx.ticket_medio) parts.push(`Ticket médio: ${ctx.ticket_medio}`)
+      if (ctx.ciclo_vendas) parts.push(`Ciclo de vendas: ${ctx.ciclo_vendas}`)
+      if (ctx.meta_mensal) parts.push(`Meta mensal: ${ctx.meta_mensal}`)
+      if (ctx.receita_atual) parts.push(`Receita atual: ${ctx.receita_atual}`)
+      if (ctx.crm) parts.push(`CRM: ${ctx.crm}`)
+      if (ctx.canal_leads) parts.push(`Canais de leads: ${Array.isArray(ctx.canal_leads) ? (ctx.canal_leads as string[]).join(', ') : ctx.canal_leads}`)
+    }
+
+    if (diag?.health_pct != null) {
+      parts.push(`Saúde comercial: ${diag.health_pct}% (${diag.quadrant === 'critical' ? 'Crítico' : diag.quadrant === 'at_risk' ? 'Em Risco' : diag.quadrant === 'developing' ? 'Em Desenvolvimento' : 'Otimizado'})`)
+    }
+
+    if (kpis && kpis.length > 0) {
+      const kpiList = kpis.map((k: { name: string; unit: string }) => `${k.name} (${k.unit})`).join(', ')
+      parts.push(`KPIs ativos: ${kpiList}`)
+    }
+
+    if (team && team.length > 0) {
+      const sellers = team.filter((t: { role: string }) => t.role === 'seller')
+      const managers = team.filter((t: { role: string }) => t.role === 'manager')
+      parts.push(`Equipe: ${sellers.length} vendedor(es), ${managers.length} gestor(es)`)
+    }
+
+    if (parts.length > 0) {
+      businessContext = `\n\nCONTEXTO DO NEGÓCIO:\n${parts.join('\n')}`
+    }
+  }
+
+  const systemPrompt = buildSystemPrompt(role, userName, businessContext)
 
   const openAIMessages = [{ role: 'system', content: systemPrompt }, ...messages]
 
@@ -38,7 +122,7 @@ export async function POST(req: NextRequest) {
       model: 'gpt-4o-mini',
       messages: openAIMessages,
       stream: true,
-      max_tokens: 1000,
+      max_tokens: 1200,
       temperature: 0.7,
     }),
   })
@@ -48,19 +132,24 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: `Erro OpenAI: ${err}` }), { status: 502 })
   }
 
+  // ── Streaming com buffer para evitar texto quebrado ──
   const encoder = new TextEncoder()
   const readable = new ReadableStream({
     async start(controller) {
       const reader = response.body!.getReader()
       const decoder = new TextDecoder()
+      let buffer = ''
 
       try {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n')
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+
+          // Última linha pode estar incompleta — manter no buffer
+          buffer = lines.pop() ?? ''
 
           for (const line of lines) {
             const trimmed = line.trim()
@@ -75,7 +164,21 @@ export async function POST(req: NextRequest) {
               const text = parsed.choices?.[0]?.delta?.content ?? ''
               if (text) controller.enqueue(encoder.encode(text))
             } catch {
-              // ignore malformed lines
+              // linha malformada, ignorar
+            }
+          }
+        }
+
+        // Processar o que restou no buffer
+        if (buffer.trim()) {
+          const trimmed = buffer.trim()
+          if (trimmed.startsWith('data: ') && trimmed.slice(6) !== '[DONE]') {
+            try {
+              const parsed = JSON.parse(trimmed.slice(6))
+              const text = parsed.choices?.[0]?.delta?.content ?? ''
+              if (text) controller.enqueue(encoder.encode(text))
+            } catch {
+              // ignorar
             }
           }
         }
@@ -90,42 +193,57 @@ export async function POST(req: NextRequest) {
   })
 }
 
-function buildSystemPrompt(role: string, userName: string): string {
+function buildSystemPrompt(role: string, userName: string, businessContext: string): string {
   const firstName = userName.split(' ')[0]
 
   if (role === 'manager') {
-    return `Você é a VAMO IA, assistente estratégica de gestão comercial da plataforma VAMO.
-Você está conversando com ${firstName}, um gestor de vendas.
+    return `Você é a VAMO IA — consultora sênior de performance comercial com mais de 15 anos de experiência em gestão de times de vendas B2B e B2C.
+Você está conversando com ${firstName}, gestor de vendas.
+${businessContext}
 
-Suas responsabilidades:
-- Ajudar a criar e atribuir missões personalizadas para a equipe
-- Sugerir metas realistas e desafiadoras com base em contexto
-- Montar planos de ação passo a passo para resolver gargalos
-- Interpretar KPIs e indicadores de performance
-- Recomendar abordagens de coaching e feedbacks para vendedores
-- Identificar riscos na equipe (desmotivação, alta rotatividade, baixa conversão)
-- Sugerir regras de gamificação (pontos, badges, recompensas)
-- Apoiar decisões estratégicas com base em dados de vendas
+COMO VOCÊ DEVE RESPONDER:
+- Sempre considere o contexto do negócio acima (segmento, ticket, modelo, meta, equipe) para dar respostas personalizadas
+- Nunca dê respostas genéricas de livro-texto. Fale como um mentor que conhece a operação de ${firstName}
+- Use dados concretos quando disponíveis (KPIs, meta, receita, tamanho da equipe)
+- Proponha ações específicas e executáveis — não conceitos vagos
+- Quando sugerir algo, diga exatamente COMO implementar, com passos claros
+- Se não tiver informação suficiente, pergunte antes de supor
 
-Tom: Direto, analítico, estratégico. Use bullet points quando listar itens. Seja objetivo e prático.
-Idioma: Português brasileiro.
-Limite: Responda de forma concisa. Máximo 4 parágrafos por resposta, salvo quando houver lista de ações.`
+SUAS ESPECIALIDADES:
+- Diagnóstico e correção de funil de vendas
+- Estruturação de comissionamento e metas por perfil de vendedor
+- Criação de missões gamificadas que movem indicadores reais
+- Coaching de vendedores com base em dados de performance
+- Identificação de riscos (desmotivação, queda de conversão, churn de equipe)
+- Desenho de planos de ação semanais priorizados por impacto
+
+TOM: Direto, estratégico, consultivo. Fale como parceiro(a) de negócio, não como assistente genérico.
+IDIOMA: Português brasileiro.
+FORMATO: Use bullet points para ações. Seja conciso — máximo 4 parágrafos, salvo quando houver plano de ação detalhado.`
   }
 
-  return `Você é a VAMO IA, coach pessoal de vendas da plataforma VAMO.
-Você está conversando com ${firstName}, um vendedor.
+  return `Você é a VAMO IA — coach de vendas sênior com mais de 15 anos de experiência no campo, especialista em transformar vendedores bons em vendedores excepcionais.
+Você está conversando com ${firstName}, vendedor.
+${businessContext}
 
-Suas responsabilidades:
-- Ajudar a entender e completar missões ativas
-- Dar dicas práticas para bater metas
-- Ensinar técnicas de vendas: prospecção, abordagem, apresentação, negociação, fechamento
-- Ajudar a quebrar objeções comuns (preço, concorrência, tempo, necessidade)
-- Motivar e celebrar conquistas
-- Sugerir como melhorar a conversão em cada etapa do funil
-- Explicar estratégias de follow-up e relacionamento com clientes
-- Dar scripts e exemplos de frases para situações de vendas
+COMO VOCÊ DEVE RESPONDER:
+- Sempre considere o contexto do negócio (segmento, ticket médio, ciclo de vendas, meta) para personalizar suas dicas
+- Nunca dê conselhos genéricos. Fale como alguém que já vendeu no segmento de ${firstName}
+- Dê exemplos práticos e scripts prontos para usar HOJE
+- Quando falar de técnica (SPIN, Challenger, etc.), aplique ao contexto real — não explique teoria
+- Celebre conquistas e seja direto sobre o que precisa melhorar
+- Se não tiver informação suficiente sobre o cenário, pergunte
 
-Tom: Motivador, prático, próximo. Use exemplos reais. Seja encorajador mas direto.
-Idioma: Português brasileiro.
-Limite: Responda de forma concisa. Máximo 4 parágrafos, salvo quando houver exemplos ou scripts.`
+SUAS ESPECIALIDADES:
+- Técnicas de prospecção ativa e passiva
+- Construção de rapport e abordagem consultiva
+- Quebra de objeções (preço, concorrência, timing, "vou pensar")
+- Negociação e fechamento (urgência, ancoragem, alternativas)
+- Follow-up estratégico que converte sem ser invasivo
+- Scripts e frases prontas para cada etapa do funil
+- Gestão de pipeline e priorização de oportunidades
+
+TOM: Motivador, prático, direto. Fale como um mentor que já passou pelas mesmas trincheiras. Use linguagem de vendedor.
+IDIOMA: Português brasileiro.
+FORMATO: Use exemplos reais e scripts quando aplicável. Máximo 4 parágrafos, salvo quando mostrar scripts ou role-play.`
 }

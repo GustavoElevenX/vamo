@@ -17,15 +17,20 @@ export default function AdminTemplatesPage() {
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('diagnostic_templates')
-        .select('*, diagnostic_questions(*)')
-        .order('version', { ascending: false })
-      setTemplates(data ?? [])
-      setLoading(false)
+    const fetchTemplates = async () => {
+      try {
+        const { data } = await supabase
+          .from('diagnostic_templates')
+          .select('*, diagnostic_questions(*)')
+          .order('version', { ascending: false })
+        setTemplates(data ?? [])
+      } catch (err) {
+        console.error('[Templates] Erro ao carregar dados:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch()
+    fetchTemplates()
   }, [user])
 
   if (!user) return null

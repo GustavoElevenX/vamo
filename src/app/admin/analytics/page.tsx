@@ -20,30 +20,35 @@ export default function AdminAnalyticsPage() {
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      const [
-        { count: orgs },
-        { count: users },
-        { count: diagnostics },
-        { data: xpData },
-      ] = await Promise.all([
-        supabase.from('organizations').select('*', { count: 'exact', head: true }),
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('diagnostic_sessions').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
-        supabase.from('xp_transactions').select('amount'),
-      ])
+    const fetchStats = async () => {
+      try {
+        const [
+          { count: orgs },
+          { count: users },
+          { count: diagnostics },
+          { data: xpData },
+        ] = await Promise.all([
+          supabase.from('organizations').select('*', { count: 'exact', head: true }),
+          supabase.from('users').select('*', { count: 'exact', head: true }),
+          supabase.from('diagnostic_sessions').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+          supabase.from('xp_transactions').select('amount'),
+        ])
 
-      const totalXp = (xpData ?? []).reduce((sum: number, t: { amount: number }) => sum + (t.amount ?? 0), 0)
+        const totalXp = (xpData ?? []).reduce((sum: number, t: { amount: number }) => sum + (t.amount ?? 0), 0)
 
-      setStats({
-        totalOrgs: orgs ?? 0,
-        totalUsers: users ?? 0,
-        totalDiagnostics: diagnostics ?? 0,
-        totalXpAwarded: totalXp,
-      })
-      setLoading(false)
+        setStats({
+          totalOrgs: orgs ?? 0,
+          totalUsers: users ?? 0,
+          totalDiagnostics: diagnostics ?? 0,
+          totalXpAwarded: totalXp,
+        })
+      } catch (err) {
+        console.error('[Analytics] Erro ao carregar dados:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch()
+    fetchStats()
   }, [user])
 
   if (!user) return null

@@ -15,16 +15,21 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      const [{ count: orgs }, { count: users }, { count: diagnostics }] = await Promise.all([
-        supabase.from('organizations').select('*', { count: 'exact', head: true }),
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('diagnostic_sessions').select('*', { count: 'exact', head: true }),
-      ])
-      setStats({ orgs: orgs ?? 0, users: users ?? 0, diagnostics: diagnostics ?? 0 })
-      setLoading(false)
+    const fetchStats = async () => {
+      try {
+        const [{ count: orgs }, { count: users }, { count: diagnostics }] = await Promise.all([
+          supabase.from('organizations').select('*', { count: 'exact', head: true }),
+          supabase.from('users').select('*', { count: 'exact', head: true }),
+          supabase.from('diagnostic_sessions').select('*', { count: 'exact', head: true }),
+        ])
+        setStats({ orgs: orgs ?? 0, users: users ?? 0, diagnostics: diagnostics ?? 0 })
+      } catch (err) {
+        console.error('[AdminDashboard] Erro ao carregar dados:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch()
+    fetchStats()
   }, [user])
 
   if (!user) return null

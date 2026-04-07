@@ -13,6 +13,28 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+const USER_CACHE_KEY = 'vamo_cached_user'
+
+function getCachedUser(): AppUser | null {
+  try {
+    const raw = sessionStorage.getItem(USER_CACHE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as AppUser
+  } catch {
+    return null
+  }
+}
+
+function setCachedUser(user: AppUser | null) {
+  try {
+    if (user) {
+      sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user))
+    } else {
+      sessionStorage.removeItem(USER_CACHE_KEY)
+    }
+  } catch { /* ignore — private browsing or quota */ }
+}
+
 async function fetchOrCreateAppUser(
   supabase: ReturnType<typeof createClient>,
   supabaseUser: SupabaseUser
@@ -56,23 +78,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true
     let initialResolved = false
 
+    // Restore cached user instantly so pages render without waiting for DB.
+    // This runs before initSession completes, eliminating the loading spinner
+    // on page reload when we already have a cached user.
+    const cached = getCachedUser()
+    if (cached) {
+      setAppUser(cached)
+      setLoading(false)
+      initialResolved = true
+    }
+
     const resolveUser = async (supabaseUser: SupabaseUser | null) => {
       if (!mounted) return
       if (!supabaseUser) {
         setAppUser(null)
+        setCachedUser(null)
         return
       }
       try {
         const user = await fetchOrCreateAppUser(supabase, supabaseUser)
-        if (mounted) setAppUser(user)
+        if (mounted) {
+          setAppUser(user)
+          setCachedUser(user)
+        }
       } catch (err) {
         console.error('[Auth] Erro ao buscar usuário, tentando novamente...', err)
         // Retry once — free tier DB can fail intermittently
         try {
           const user = await fetchOrCreateAppUser(supabase, supabaseUser)
-          if (mounted) setAppUser(user)
+          if (mounted) {
+            setAppUser(user)
+            setCachedUser(user)
+          }
         } catch {
           if (mounted) setAppUser(null)
+          // Don't clear cache here — stale data is better than none
         }
       }
     }
@@ -93,13 +133,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If there's an auth error (e.g. invalid refresh token), clear stale session
         if (error) {
           await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
-          if (mounted) setAppUser(null)
+          if (mounted) {
+            setAppUser(null)
+            setCachedUser(null)
+          }
           return
         }
         await resolveUser(session?.user ?? null)
       } catch (err) {
         console.error('[Auth] Erro ao restaurar sessão:', err)
         await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+        setCachedUser(null)
       } finally {
         markReady()
       }
@@ -120,7 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (event === 'TOKEN_REFRESHED' && !session) {
           // Refresh token was invalid — clear stale session
           await supabase.auth.signOut()
-          if (mounted) setAppUser(null)
+          if (mounted) {
+            setAppUser(null)
+            setCachedUser(null)
+          }
           return
         }
         await resolveUser(session?.user ?? null)
@@ -137,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabaseRef.current.auth.signOut()
     setAppUser(null)
+    setCachedUser(null)
   }
 
   return (

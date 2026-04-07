@@ -20,15 +20,20 @@ export default function AdminDiagnosticosPage() {
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('diagnostic_sessions')
-        .select('*, organizations(name)')
-        .order('created_at', { ascending: false })
-      setSessions(data ?? [])
-      setLoading(false)
+    const fetchSessions = async () => {
+      try {
+        const { data } = await supabase
+          .from('diagnostic_sessions')
+          .select('*, organizations(name)')
+          .order('created_at', { ascending: false })
+        setSessions(data ?? [])
+      } catch (err) {
+        console.error('[Diagnosticos] Erro ao carregar dados:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch()
+    fetchSessions()
   }, [user])
 
   if (!user) return null

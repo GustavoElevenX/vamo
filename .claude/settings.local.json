@@ -24,7 +24,8 @@
       "Bash(do)",
       "Bash(sed -i 's/^\\\\\\(\\\\s\\\\+\\\\\\)load\\(\\)$/\\\\1load\\(\\).catch\\(\\(\\) => setLoading\\(false\\)\\)/' \"$f\")",
       "Bash(echo \"Fixed: $f\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npx playwright:*)"
     ]
   }
 }

@@ -1,0 +1,10 @@
+src/app/(platform)/performance/page.tsx(82,39): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/app/(platform)/performance/page.tsx(90,40): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/(platform)/performance/page.tsx(91,37): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/admin/analytics/page.tsx(36,46): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/app/admin/analytics/page.tsx(36,51): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/components/dashboard/vendedor-dashboard.tsx(148,39): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/components/dashboard/vendedor-dashboard.tsx(156,40): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/components/dashboard/vendedor-dashboard.tsx(157,37): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/contexts/auth-context.tsx(117,14): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/contexts/auth-context.tsx(117,21): error TS7006: Parameter 'session' implicitly has an 'any' type.

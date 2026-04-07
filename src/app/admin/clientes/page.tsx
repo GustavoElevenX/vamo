@@ -19,15 +19,20 @@ export default function ClientesPage() {
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('organizations')
-        .select('*')
-        .order('name')
-      setOrgs(data ?? [])
-      setLoading(false)
+    const fetchOrgs = async () => {
+      try {
+        const { data } = await supabase
+          .from('organizations')
+          .select('*')
+          .order('name')
+        setOrgs(data ?? [])
+      } catch (err) {
+        console.error('[Clientes] Erro ao carregar dados:', err)
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch()
+    fetchOrgs()
   }, [user])
 
   if (!user) return null

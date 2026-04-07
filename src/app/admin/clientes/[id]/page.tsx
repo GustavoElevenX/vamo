@@ -57,21 +57,26 @@ export default function ClienteDetailPage() {
   const [actionUserId, setActionUserId] = useState<string | null>(null)
 
   const fetchData = async () => {
-    const [{ data: o }, { data: m }, { count }] = await Promise.all([
-      supabase.from('organizations').select('*').eq('id', id).single(),
-      supabase.from('users').select('*').eq('organization_id', id).order('name'),
-      supabase.from('diagnostic_sessions').select('*', { count: 'exact', head: true }).eq('organization_id', id),
-    ])
-    setOrg(o)
-    setMembers(m ?? [])
-    setDiagnosticCount(count ?? 0)
-    if (o) {
-      setOrgName(o.name)
-      setOrgPlan(o.plan)
-      setOrgColor(o.primary_color)
-      setOrgActive(o.active)
+    try {
+      const [{ data: o }, { data: m }, { count }] = await Promise.all([
+        supabase.from('organizations').select('*').eq('id', id).single(),
+        supabase.from('users').select('*').eq('organization_id', id).order('name'),
+        supabase.from('diagnostic_sessions').select('*', { count: 'exact', head: true }).eq('organization_id', id),
+      ])
+      setOrg(o)
+      setMembers(m ?? [])
+      setDiagnosticCount(count ?? 0)
+      if (o) {
+        setOrgName(o.name)
+        setOrgPlan(o.plan)
+        setOrgColor(o.primary_color)
+        setOrgActive(o.active)
+      }
+    } catch (err) {
+      console.error('[ClienteDetail] Erro ao carregar dados:', err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {

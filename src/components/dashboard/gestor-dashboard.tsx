@@ -74,68 +74,73 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
     if (!user) return
 
     const fetchData = async () => {
-      const [
-        { data: members },
-        { count: missions },
-        { count: diagnostics },
-      ] = await Promise.all([
-        supabase
-          .from('user_xp')
-          .select('user_id, total_xp, current_level, current_streak, users!inner(name, role)')
-          .eq('organization_id', user.organization_id)
-          .order('total_xp', { ascending: false })
-          .limit(10),
-        supabase
-          .from('ai_missions')
+      try {
+        const [
+          { data: members },
+          { count: missions },
+          { count: diagnostics },
+        ] = await Promise.all([
+          supabase
+            .from('user_xp')
+            .select('user_id, total_xp, current_level, current_streak, users!inner(name, role)')
+            .eq('organization_id', user.organization_id)
+            .order('total_xp', { ascending: false })
+            .limit(10),
+          supabase
+            .from('ai_missions')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', user.organization_id)
+            .in('status', ['pending', 'in_progress']),
+          supabase
+            .from('diagnostic_sessions')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', user.organization_id),
+        ])
+
+        const { count: total } = await supabase
+          .from('users')
           .select('*', { count: 'exact', head: true })
           .eq('organization_id', user.organization_id)
-          .in('status', ['pending', 'in_progress']),
-        supabase
-          .from('diagnostic_sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id),
-      ])
+          .eq('role', 'seller')
+          .eq('active', true)
 
-      const { count: total } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', user.organization_id)
-        .eq('role', 'seller')
-        .eq('active', true)
+        setTeamSize(total ?? 0)
+        setActiveMissions(missions ?? 0)
+        setDiagnosticCount(diagnostics ?? 0)
 
-      setTeamSize(total ?? 0)
-      setActiveMissions(missions ?? 0)
-      setDiagnosticCount(diagnostics ?? 0)
-
-      if (members) {
-        setTeamMembers(
-          (members as any[])
-            .filter((m) => m.users?.role === 'seller')
-            .map((m) => ({
-              user_id: m.user_id,
-              name: m.users?.name ?? 'Vendedor',
-              total_xp: m.total_xp,
-              current_level: m.current_level,
-              current_streak: m.current_streak,
-            }))
-        )
-      }
-
-      // Generate alerts based on data
-      const alerts: string[] = []
-      if (members) {
-        const lowStreak = (members as any[]).filter(
-          (m) => m.current_streak === 0 && m.users?.role === 'seller'
-        )
-        if (lowStreak.length > 0) {
-          alerts.push(`${lowStreak.length} vendedor(es) sem atividade recente`)
+        if (members) {
+          setTeamMembers(
+            (members as any[])
+              .filter((m) => m.users?.role === 'seller')
+              .map((m) => ({
+                user_id: m.user_id,
+                name: m.users?.name ?? 'Vendedor',
+                total_xp: m.total_xp,
+                current_level: m.current_level,
+                current_streak: m.current_streak,
+              }))
+          )
         }
+
+        // Generate alerts based on data
+        const alerts: string[] = []
+        if (members) {
+          const lowStreak = (members as any[]).filter(
+            (m) => m.current_streak === 0 && m.users?.role === 'seller'
+          )
+          if (lowStreak.length > 0) {
+            alerts.push(`${lowStreak.length} vendedor(es) sem atividade recente`)
+          }
+        }
+        if ((missions ?? 0) > 10) {
+          alerts.push('Muitas missões pendentes — verifique a carga da equipe')
+        }
+        setRecentAlerts(alerts)
+      } catch (err) {
+        console.error('[GestorDashboard] Erro ao carregar dados:', err)
+      } finally {
+        setLoading(false)
       }
-      if ((missions ?? 0) > 10) {
-        alerts.push('Muitas missões pendentes — verifique a carga da equipe')
-      }
-      setRecentAlerts(alerts)
-      setLoading(false)
     }
 
     fetchData()

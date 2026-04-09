@@ -27,8 +27,10 @@ export function CoachWidget() {
 
   const fetchTip = async () => {
     setLoading(true)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 20_000)
     try {
-      const res = await fetch('/api/ai/coach-tip', { method: 'POST' })
+      const res = await fetch('/api/ai/coach-tip', { method: 'POST', signal: controller.signal })
       if (res.ok) {
         const data = await res.json()
         setTip(data.tip)
@@ -36,6 +38,7 @@ export function CoachWidget() {
     } catch {
       // Silently fail - widget is non-critical
     } finally {
+      clearTimeout(timeout)
       setLoading(false)
     }
   }

@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,17 +39,26 @@ interface TeamMemberHealth {
 export default function SaudeEquipePage() {
   const { user } = useAuth()
   const supabase = createClient()
-  const [loading, setLoading] = useState(true)
-  const [members, setMembers] = useState<TeamMemberHealth[]>([])
+  const cachedMembers = useRef(getCached<TeamMemberHealth[]>('saude-equipe'))
+  const [loading, setLoading] = useState(!cachedMembers.current)
+  const [members, setMembers] = useState<TeamMemberHealth[]>(cachedMembers.current ?? [])
 
   useEffect(() => {
     if (!user) return
+    let cancelled = false
 
     const fetchData = async () => {
-      const { data: teamData } = await supabase
+      const query = supabase
         .from('user_xp')
         .select('user_id, total_xp, current_level, current_streak, last_activity_date, users!inner(name, role)')
         .eq('organization_id', user.organization_id)
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20_000)
+      )
+
+      const { data: teamData } = await Promise.race([query, timeout])
+      if (cancelled) return
 
       if (teamData) {
         const mapped: TeamMemberHealth[] = (teamData as any[])
@@ -93,11 +103,16 @@ export default function SaudeEquipePage() {
           .sort((a, b) => a.engagement_score - b.engagement_score)
 
         setMembers(mapped)
+        setCache('saude-equipe', mapped, 3 * 60 * 1000)
       }
       setLoading(false)
     }
 
-    fetchData().catch(() => setLoading(false))
+    fetchData().catch(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
   }, [user])
 
   if (!user) return null

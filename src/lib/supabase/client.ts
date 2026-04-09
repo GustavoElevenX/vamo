@@ -15,7 +15,19 @@ export function createClient() {
   browserClient = createBrowserClient(url, key, {
     global: {
       fetch: (input, init) => {
-        // Create our own abort controller for the strict timeout
+        // Auth calls (token refresh, sign-in, etc.) must NOT be subject to
+        // the short query timeout — they can take longer and killing them
+        // causes the "black screen" / stuck-loading bug on session restore.
+        const reqUrl = typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : (input as Request).url
+        if (reqUrl.includes('/auth/')) {
+          return globalThis.fetch(input, init)
+        }
+
+        // Create our own abort controller for the strict timeout (data queries only)
         const controller = new AbortController()
         const timeout = setTimeout(() => {
           controller.abort(new Error('Timeout de requisição Supabase excedido'))
@@ -28,7 +40,7 @@ export function createClient() {
             clearTimeout(timeout)
             controller.abort(signal.reason)
           }, { once: true })
-          
+
           if (signal.aborted) {
             clearTimeout(timeout)
             controller.abort(signal.reason)

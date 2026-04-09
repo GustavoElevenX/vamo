@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -94,24 +95,37 @@ const DISC_NAMES: Record<string, string> = {
 
 export default function FeedbackIAPage() {
   const { user } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [discProfile, setDiscProfile] = useState<BehavioralProfile | null>(null)
+  const cachedProfile = useRef(getCached<BehavioralProfile>('disc-profile'))
+  const [loading, setLoading] = useState(!cachedProfile.current)
+  const [discProfile, setDiscProfile] = useState<BehavioralProfile | null>(cachedProfile.current)
 
   useEffect(() => {
     if (!user) return
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
 
     const fetchProfile = async () => {
       try {
-        const res = await fetch('/api/ai/behavioral-profile')
+        const res = await fetch('/api/ai/behavioral-profile', { signal: controller.signal })
         if (res.ok) {
           const data = await res.json()
-          if (data.profile) setDiscProfile(data.profile)
+          if (data.profile) {
+            setDiscProfile(data.profile)
+            setCache('disc-profile', data.profile, 10 * 60 * 1000)
+          }
         }
-      } catch { /* ignore */ }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return
+      }
       setLoading(false)
     }
 
-    fetchProfile().catch(() => setLoading(false))
+    fetchProfile().catch(() => setLoading(false)).finally(() => clearTimeout(timeout))
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+    }
   }, [user])
 
   if (!user) return null

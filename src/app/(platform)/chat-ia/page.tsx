@@ -101,6 +101,8 @@ export default function ChatIAPage() {
     try {
       const controller = new AbortController()
       abortRef.current = controller
+      // Timeout: abort if no response within 60s
+      const timeout = setTimeout(() => controller.abort(), 60_000)
 
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -112,6 +114,8 @@ export default function ChatIAPage() {
         }),
         signal: controller.signal,
       })
+
+      clearTimeout(timeout)
 
       if (!res.ok || !res.body) {
         setMessages((prev) =>

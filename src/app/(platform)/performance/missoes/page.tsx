@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -64,27 +65,42 @@ function getExpiration(createdAt: string) {
 export default function MissoesPage() {
   const { user } = useAuth()
   const supabase = createClient()
-  const [loading, setLoading] = useState(true)
-  const [missions, setMissions] = useState<Mission[]>([])
+  const cachedMissions = useRef(getCached<Mission[]>('perf-missoes'))
+  const [loading, setLoading] = useState(!cachedMissions.current)
+  const [missions, setMissions] = useState<Mission[]>(cachedMissions.current ?? [])
   const [accepting, setAccepting] = useState<string | null>(null)
   const [expandedPlaybook, setExpandedPlaybook] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
+    let cancelled = false
 
     const fetchMissions = async () => {
-      const { data } = await supabase
+      const query = supabase
         .from('ai_missions')
         .select('id, title, status, xp_reward, difficulty, created_at, is_collective, description, playbook_content')
         .eq('user_id', user.id)
         .in('status', ['pending', 'in_progress'])
         .order('created_at', { ascending: false })
 
-      setMissions((data ?? []) as Mission[])
-      setLoading(false)
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20_000)
+      )
+
+      const { data } = await Promise.race([query, timeout])
+      if (!cancelled) {
+        const items = (data ?? []) as Mission[]
+        setMissions(items)
+        setCache('perf-missoes', items, 3 * 60 * 1000)
+        setLoading(false)
+      }
     }
 
-    fetchMissions().catch(() => setLoading(false))
+    fetchMissions().catch(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
   }, [user])
 
   if (!user) return null

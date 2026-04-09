@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,8 +20,9 @@ export default function MissoesPage() {
   const { user } = useAuth()
   const supabase = createClient()
 
-  const [missions, setMissions] = useState<AIMission[]>([])
-  const [loading, setLoading] = useState(true)
+  const cachedMissions = useRef(getCached<AIMission[]>('missoes'))
+  const [missions, setMissions] = useState<AIMission[]>(cachedMissions.current ?? [])
+  const [loading, setLoading] = useState(!cachedMissions.current)
   const [generating, setGenerating] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [filter, setFilter] = useState<FilterStatus>('all')
@@ -29,21 +31,25 @@ export default function MissoesPage() {
 
   const isManager = user?.role === 'manager' || user?.role === 'admin'
 
-  const fetchMissions = async () => {
-    const res = await fetch('/api/ai/missions')
+  const fetchMissions = async (signal?: AbortSignal) => {
+    const res = await fetch('/api/ai/missions', { signal })
     if (res.ok) {
       const data = await res.json()
-      setMissions(data.missions ?? [])
+      const items = data.missions ?? []
+      setMissions(items)
+      setCache('missoes', items, 3 * 60 * 1000)
     }
     setLoading(false)
   }
 
   useEffect(() => {
     if (!user) return
-    fetchMissions().catch(() => setLoading(false))
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
+
+    fetchMissions(controller.signal).catch(() => setLoading(false)).finally(() => clearTimeout(timeout))
 
     if (isManager) {
-      // Fetch team missions overview
       const loadTeamMissions = async () => {
         const { data } = await supabase
           .from('ai_missions')
@@ -54,9 +60,8 @@ export default function MissoesPage() {
           .limit(20)
         setTeamMissions(data ?? [])
       }
-      loadTeamMissions()
+      loadTeamMissions().catch(() => {})
 
-      // Fetch diagnostic sessions for generation
       const loadSessions = async () => {
         const { data } = await supabase
           .from('diagnostic_sessions')
@@ -67,7 +72,12 @@ export default function MissoesPage() {
           .limit(5)
         setDiagnosticSessions(data ?? [])
       }
-      loadSessions()
+      loadSessions().catch(() => {})
+    }
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
     }
   }, [user])
 

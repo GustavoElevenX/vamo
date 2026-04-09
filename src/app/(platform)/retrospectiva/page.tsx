@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { getCached, setCache } from '@/lib/cache'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -41,36 +42,58 @@ const SECTIONS = [
 
 export default function RetrospectivaPage() {
   const { user } = useAuth()
-  const [retros, setRetros] = useState<RetroData[]>([])
-  const [loading, setLoading] = useState(true)
+  const cachedRetros = useRef(getCached<RetroData[]>('retros'))
+  const [retros, setRetros] = useState<RetroData[]>(cachedRetros.current ?? [])
+  const [loading, setLoading] = useState(!cachedRetros.current)
   const [generating, setGenerating] = useState(false)
 
-  const fetchRetros = async () => {
+  const abortRef = useRef<AbortController | null>(null)
+
+  const fetchRetros = async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/ai/retrospectiva')
+      const res = await fetch('/api/ai/retrospectiva', { signal })
+      if (!res.ok) return
       const data = await res.json()
-      setRetros(data.retrospectives || [])
-    } catch {
-      // ignore
+      const items = data.retrospectives || []
+      setRetros(items)
+      setCache('retros', items, 5 * 60 * 1000)
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (user) fetchRetros()
+    if (!user) return
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
+    abortRef.current = controller
+
+    fetchRetros(controller.signal).finally(() => clearTimeout(timeout))
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+    }
   }, [user])
 
   const handleGenerate = async () => {
     setGenerating(true)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
-      const res = await fetch('/api/ai/retrospectiva', { method: 'POST' })
+      const res = await fetch('/api/ai/retrospectiva', {
+        method: 'POST',
+        signal: controller.signal,
+      })
       if (res.ok) {
         await fetchRetros()
       }
     } catch {
       // ignore
     } finally {
+      clearTimeout(timeout)
       setGenerating(false)
     }
   }

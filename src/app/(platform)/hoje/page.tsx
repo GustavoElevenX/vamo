@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -58,36 +59,41 @@ interface KpiProgress {
   unit: string
 }
 
+interface HojeCache {
+  streak: number
+  priorityMission: MissionData | null
+  activeMissionCount: number
+  dailyKpi: KpiProgress | null
+  monthlyEarnings: number
+  projectedBonus: number
+  hasCheckinToday: boolean
+  lastRecognition: string | null
+}
+
 export default function HojePage() {
   const { user } = useAuth()
   const supabaseRef = useRef(createClient())
-  const [loading, setLoading] = useState(true)
-  const [streak, setStreak] = useState(0)
-  const [priorityMission, setPriorityMission] = useState<MissionData | null>(null)
-  const [activeMissionCount, setActiveMissionCount] = useState(0)
-  const [dailyKpi, setDailyKpi] = useState<KpiProgress | null>(null)
-  const [monthlyEarnings, setMonthlyEarnings] = useState(0)
-  const [projectedBonus, setProjectedBonus] = useState(0)
-  const [hasCheckinToday, setHasCheckinToday] = useState(false)
-  const [lastRecognition, setLastRecognition] = useState<string | null>(null)
+  const cached = useRef(getCached<HojeCache>('hoje'))
+  const [loading, setLoading] = useState(!cached.current)
+  const [streak, setStreak] = useState(cached.current?.streak ?? 0)
+  const [priorityMission, setPriorityMission] = useState<MissionData | null>(cached.current?.priorityMission ?? null)
+  const [activeMissionCount, setActiveMissionCount] = useState(cached.current?.activeMissionCount ?? 0)
+  const [dailyKpi, setDailyKpi] = useState<KpiProgress | null>(cached.current?.dailyKpi ?? null)
+  const [monthlyEarnings, setMonthlyEarnings] = useState(cached.current?.monthlyEarnings ?? 0)
+  const [projectedBonus, setProjectedBonus] = useState(cached.current?.projectedBonus ?? 0)
+  const [hasCheckinToday, setHasCheckinToday] = useState(cached.current?.hasCheckinToday ?? false)
+  const [lastRecognition, setLastRecognition] = useState<string | null>(cached.current?.lastRecognition ?? null)
 
   useEffect(() => {
     if (!user) return
+    let cancelled = false
 
     const fetchData = async () => {
       const supabase = supabaseRef.current
       const today = new Date().toISOString().split('T')[0]
       const monthStart = today.substring(0, 7) + '-01'
 
-      const [
-        { data: xpData },
-        { data: missions },
-        { data: kpiDefs },
-        { data: todayEntries },
-        { data: monthEntries },
-        { data: checkin },
-        { data: recentXp },
-      ] = await Promise.all([
+      const queries = Promise.all([
         // Streak
         supabase
           .from('user_xp')
@@ -141,61 +147,85 @@ export default function HojePage() {
           .maybeSingle(),
       ])
 
-      // Streak
-      setStreak(xpData?.current_streak ?? 0)
+      // Timeout safety: abort after 20s so the page never stays loading forever
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20_000)
+      )
 
-      // Missão prioritária
-      if (missions && missions.length > 0) {
-        setPriorityMission(missions[0])
-        setActiveMissionCount(missions.length)
-      }
+      const [
+        { data: xpData },
+        { data: missions },
+        { data: kpiDefs },
+        { data: todayEntries },
+        { data: monthEntries },
+        { data: checkin },
+        { data: recentXp },
+      ] = await Promise.race([queries, timeout])
 
-      // KPI diário
+      if (cancelled) return
+
+      // Compute all values
+      const newStreak = xpData?.current_streak ?? 0
+      const newPriorityMission = missions?.[0] ?? null
+      const newActiveMissionCount = missions?.length ?? 0
+
+      let newDailyKpi: KpiProgress | null = null
       if (kpiDefs && todayEntries) {
         const todayTotal = todayEntries
           .filter((e: any) => e.kpi_id === kpiDefs.id)
           .reduce((sum: number, e: any) => sum + (e.value || 0), 0)
-        const dailyTarget = (kpiDefs.targets as any)?.daily || 0
-
-        setDailyKpi({
+        newDailyKpi = {
           name: kpiDefs.name,
           current: todayTotal,
-          target: dailyTarget,
+          target: (kpiDefs.targets as any)?.daily || 0,
           unit: kpiDefs.unit,
-        })
+        }
       }
 
-      // Ganho financeiro do mês
+      let newMonthlyEarnings = 0
+      let newProjectedBonus = 0
       if (monthEntries) {
-        const totalPoints = monthEntries.reduce(
-          (sum: number, e: any) => sum + (e.points_earned || 0),
-          0
-        )
-        // Estimativa: 1 ponto = R$10 (simplificado)
-        setMonthlyEarnings(totalPoints * 10)
-        // Bonus por completar missão do dia
-        if (missions && missions[0]) {
-          setProjectedBonus(missions[0].xp_reward * 10)
-        }
+        const totalPoints = monthEntries.reduce((sum: number, e: any) => sum + (e.points_earned || 0), 0)
+        newMonthlyEarnings = totalPoints * 10
+        if (newPriorityMission) newProjectedBonus = newPriorityMission.xp_reward * 10
       }
 
-      // Check-in
-      setHasCheckinToday(!!checkin)
-
-      // Reconhecimento
+      const newHasCheckin = !!checkin
+      let newRecognition: string | null = null
       if (recentXp) {
-        const xpDate = new Date(recentXp.created_at)
-        const now = new Date()
-        const diffHours = (now.getTime() - xpDate.getTime()) / (1000 * 60 * 60)
-        if (diffHours <= 48) {
-          setLastRecognition(recentXp.description)
-        }
+        const diffHours = (Date.now() - new Date(recentXp.created_at).getTime()) / (1000 * 60 * 60)
+        if (diffHours <= 48) newRecognition = recentXp.description
       }
 
+      // Update state
+      setStreak(newStreak)
+      setPriorityMission(newPriorityMission)
+      setActiveMissionCount(newActiveMissionCount)
+      setDailyKpi(newDailyKpi)
+      setMonthlyEarnings(newMonthlyEarnings)
+      setProjectedBonus(newProjectedBonus)
+      setHasCheckinToday(newHasCheckin)
+      setLastRecognition(newRecognition)
       setLoading(false)
+
+      // Persist to cache for instant load on next visit
+      setCache<HojeCache>('hoje', {
+        streak: newStreak,
+        priorityMission: newPriorityMission,
+        activeMissionCount: newActiveMissionCount,
+        dailyKpi: newDailyKpi,
+        monthlyEarnings: newMonthlyEarnings,
+        projectedBonus: newProjectedBonus,
+        hasCheckinToday: newHasCheckin,
+        lastRecognition: newRecognition,
+      }, 3 * 60 * 1000) // 3 min TTL
     }
 
-    fetchData().catch(() => setLoading(false))
+    fetchData().catch(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
   }, [user])
 
   if (!user) return null

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { getCached, setCache } from '@/lib/cache'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { MobileNav } from '@/components/layout/mobile-nav'
@@ -32,9 +33,10 @@ export default function PlatformLayout({
 }) {
   const { user, loading, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [userXp, setUserXp] = useState<UserXp | null>(null)
-  const [currentLevel, setCurrentLevel] = useState<XpLevel | null>(null)
-  const [nextLevel, setNextLevel] = useState<XpLevel | null>(null)
+  const cachedXp = useRef(getCached<{ xp: UserXp; curr: XpLevel | null; next: XpLevel | null }>('layout-xp'))
+  const [userXp, setUserXp] = useState<UserXp | null>(cachedXp.current?.xp ?? null)
+  const [currentLevel, setCurrentLevel] = useState<XpLevel | null>(cachedXp.current?.curr ?? null)
+  const [nextLevel, setNextLevel] = useState<XpLevel | null>(cachedXp.current?.next ?? null)
   const router = useRouter()
   const pathname = usePathname()
   const supabaseRef = useRef(createClient())
@@ -140,12 +142,11 @@ export default function PlatformLayout({
 
       if (xp) {
         setUserXp(xp)
-        if (levels) {
-          const curr = levels.find((l: any) => l.level === xp.current_level)
-          const next = levels.find((l: any) => l.level === xp.current_level + 1)
-          setCurrentLevel(curr ?? null)
-          setNextLevel(next ?? null)
-        }
+        const curr = levels?.find((l: any) => l.level === xp.current_level) ?? null
+        const next = levels?.find((l: any) => l.level === xp.current_level + 1) ?? null
+        setCurrentLevel(curr)
+        setNextLevel(next)
+        setCache('layout-xp', { xp, curr, next }, 5 * 60 * 1000)
       }
     }
 
@@ -164,7 +165,16 @@ export default function PlatformLayout({
   }
 
   if (!user || !user.organization_id) {
-    return null
+    // Show loading spinner while the useEffect redirect fires.
+    // Previously this returned null, causing a black screen.
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Redirecionando...</p>
+        </div>
+      </div>
+    )
   }
 
   const handleSignOut = async () => {

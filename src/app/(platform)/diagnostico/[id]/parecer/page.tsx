@@ -70,16 +70,31 @@ export default function ParecerPage() {
 
   useEffect(() => {
     if (!user || !id) return
+    let cancelled = false
+
     const load = async () => {
-      const { data } = await supabase
+      const query = supabase
         .from('diagnostic_sessions')
         .select('*')
         .eq('id', id)
         .single()
-      setSession(data)
-      setLoading(false)
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20_000)
+      )
+
+      const { data } = await Promise.race([query, timeout])
+      if (!cancelled) {
+        setSession(data)
+        setLoading(false)
+      }
     }
-    load().catch(() => setLoading(false))
+
+    load().catch(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
   }, [user, id])
 
   if (!user) return null

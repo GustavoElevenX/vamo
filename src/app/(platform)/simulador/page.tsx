@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -63,8 +64,9 @@ export default function SimuladorPage() {
   const [streaming, setStreaming] = useState(false)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [generatingFeedback, setGeneratingFeedback] = useState(false)
-  const [history, setHistory] = useState<Session[]>([])
-  const [maxUnlocked, setMaxUnlocked] = useState(1)
+  const cachedHist = useRef(getCached<{ history: Session[]; maxUnlocked: number }>('sim-hist'))
+  const [history, setHistory] = useState<Session[]>(cachedHist.current?.history ?? [])
+  const [maxUnlocked, setMaxUnlocked] = useState(cachedHist.current?.maxUnlocked ?? 1)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = useCallback(() => {
@@ -78,30 +80,43 @@ export default function SimuladorPage() {
   // Load history and determine max unlocked difficulty
   useEffect(() => {
     if (!user) return
-    fetch('/api/ai/simulador')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
+
+    fetch('/api/ai/simulador', { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
         const sessions: Session[] = data.sessions || []
         setHistory(sessions)
-        // Unlock next difficulty if completed current
         let maxCompleted = 0
         for (const s of sessions) {
           if (s.completed && s.difficulty > maxCompleted) {
             maxCompleted = s.difficulty
           }
         }
-        setMaxUnlocked(Math.min(3, maxCompleted + 1))
+        const unlocked = Math.min(3, maxCompleted + 1)
+        setMaxUnlocked(unlocked)
+        setCache('sim-hist', { history: sessions, maxUnlocked: unlocked }, 5 * 60 * 1000)
       })
       .catch(() => {})
+      .finally(() => clearTimeout(timeout))
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+    }
   }, [user])
 
   const startSimulation = async () => {
     setStarting(true)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 60_000)
     try {
       const res = await fetch('/api/ai/simulador', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'start', difficulty }),
+        signal: controller.signal,
       })
       const data = await res.json()
       if (data.session) {
@@ -110,7 +125,10 @@ export default function SimuladorPage() {
         setFeedback(null)
         setPhase('chat')
       }
+    } catch {
+      // timeout or network error
     } finally {
+      clearTimeout(timeout)
       setStarting(false)
     }
   }
@@ -128,6 +146,8 @@ export default function SimuladorPage() {
     // Add placeholder for assistant
     setMessages([...newMessages, { role: 'assistant', content: '' }])
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 60_000)
     try {
       const res = await fetch('/api/ai/simulador', {
         method: 'POST',
@@ -137,6 +157,7 @@ export default function SimuladorPage() {
           sessionId: session.id,
           message: userMsg,
         }),
+        signal: controller.signal,
       })
 
       if (!res.ok) throw new Error('Erro')
@@ -158,6 +179,7 @@ export default function SimuladorPage() {
         { role: 'assistant', content: 'Desculpe, houve um erro na simulação. Tente novamente.' },
       ])
     } finally {
+      clearTimeout(timeout)
       setSending(false)
       setStreaming(false)
     }
@@ -166,18 +188,21 @@ export default function SimuladorPage() {
   const requestFeedback = async () => {
     if (!session) return
     setGeneratingFeedback(true)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
       const res = await fetch('/api/ai/simulador', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'feedback', sessionId: session.id }),
+        signal: controller.signal,
       })
       const data = await res.json()
       if (data.feedback) {
         setFeedback(data.feedback)
         setPhase('feedback')
         // Refresh history to update unlocked levels
-        const histRes = await fetch('/api/ai/simulador')
+        const histRes = await fetch('/api/ai/simulador', { signal: controller.signal })
         const histData = await histRes.json()
         const sessions: Session[] = histData.sessions || []
         setHistory(sessions)
@@ -189,7 +214,10 @@ export default function SimuladorPage() {
         }
         setMaxUnlocked(Math.min(3, maxCompleted + 1))
       }
+    } catch {
+      // timeout or network error
     } finally {
+      clearTimeout(timeout)
       setGeneratingFeedback(false)
     }
   }

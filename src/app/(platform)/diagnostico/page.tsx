@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,22 +14,40 @@ import type { DiagnosticSession } from '@/types'
 
 export default function DiagnosticoPage() {
   const { user } = useAuth()
-  const [sessions, setSessions] = useState<DiagnosticSession[]>([])
-  const [loading, setLoading] = useState(true)
+  const cachedSessions = useRef(getCached<DiagnosticSession[]>('diag-sessions'))
+  const [sessions, setSessions] = useState<DiagnosticSession[]>(cachedSessions.current ?? [])
+  const [loading, setLoading] = useState(!cachedSessions.current)
   const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      const { data } = await supabase
+    let cancelled = false
+
+    const load = async () => {
+      const query = supabase
         .from('diagnostic_sessions')
         .select('*')
         .eq('organization_id', user.organization_id)
         .order('created_at', { ascending: false })
-      setSessions(data ?? [])
-      setLoading(false)
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20_000)
+      )
+
+      const { data } = await Promise.race([query, timeout])
+      if (!cancelled) {
+        const items = data ?? []
+        setSessions(items)
+        setCache('diag-sessions', items, 3 * 60 * 1000)
+        setLoading(false)
+      }
     }
-    fetch().catch(() => setLoading(false))
+
+    load().catch(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
   }, [user])
 
   if (!user) return null

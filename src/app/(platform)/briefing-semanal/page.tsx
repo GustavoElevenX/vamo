@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EnergyThermometer } from '@/components/dashboard/energy-thermometer'
@@ -40,36 +41,58 @@ const BLOCKS = [
 
 export default function BriefingSemanalPage() {
   const { user } = useAuth()
-  const [briefings, setBriefings] = useState<BriefingData[]>([])
-  const [loading, setLoading] = useState(true)
+  const cachedBriefings = useRef(getCached<BriefingData[]>('briefings'))
+  const [briefings, setBriefings] = useState<BriefingData[]>(cachedBriefings.current ?? [])
+  const [loading, setLoading] = useState(!cachedBriefings.current)
   const [generating, setGenerating] = useState(false)
 
-  const fetchBriefings = async () => {
+  const abortRef = useRef<AbortController | null>(null)
+
+  const fetchBriefings = async (signal?: AbortSignal) => {
     try {
-      const res = await fetch('/api/ai/briefing-semanal')
+      const res = await fetch('/api/ai/briefing-semanal', { signal })
+      if (!res.ok) return
       const data = await res.json()
-      setBriefings(data.briefings || [])
-    } catch {
-      // ignore
+      const items = data.briefings || []
+      setBriefings(items)
+      setCache('briefings', items, 5 * 60 * 1000)
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (user) fetchBriefings()
+    if (!user) return
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
+    abortRef.current = controller
+
+    fetchBriefings(controller.signal).finally(() => clearTimeout(timeout))
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+    }
   }, [user])
 
   const handleGenerate = async () => {
     setGenerating(true)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
-      const res = await fetch('/api/ai/briefing-semanal', { method: 'POST' })
+      const res = await fetch('/api/ai/briefing-semanal', {
+        method: 'POST',
+        signal: controller.signal,
+      })
       if (res.ok) {
         await fetchBriefings()
       }
     } catch {
       // ignore
     } finally {
+      clearTimeout(timeout)
       setGenerating(false)
     }
   }

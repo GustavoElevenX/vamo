@@ -64,14 +64,17 @@ export default function RelatorioPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
 
-  const generateAnalysis = async () => {
+  const generateAnalysis = async (signal?: AbortSignal) => {
     setAiLoading(true)
     setAiError(null)
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
       const res = await fetch('/api/ai/diagnostic-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: id }),
+        signal: signal ?? controller.signal,
       })
       if (!res.ok) {
         const err = await res.json()
@@ -80,27 +83,44 @@ export default function RelatorioPage() {
       const data = await res.json()
       setAiAnalysis(data.analysis)
     } catch (error: any) {
-      setAiError(error.message)
+      if (error?.name !== 'AbortError') {
+        setAiError(error.message)
+      }
     } finally {
+      clearTimeout(timeout)
       setAiLoading(false)
     }
   }
 
   useEffect(() => {
     if (!user || !id) return
+    let cancelled = false
+
     const load = async () => {
-      const { data } = await supabase
+      const query = supabase
         .from('diagnostic_sessions')
         .select('*')
         .eq('id', id)
         .single()
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 20_000)
+      )
+
+      const { data } = await Promise.race([query, timeout])
+      if (cancelled) return
       setSession(data)
       setLoading(false)
       if (data?.status === 'completed') {
         generateAnalysis()
       }
     }
-    load().catch(() => setLoading(false))
+
+    load().catch(() => {
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => { cancelled = true }
   }, [user, id])
 
   if (!user) return null
@@ -402,7 +422,7 @@ export default function RelatorioPage() {
             Análise Aprofundada da VAMO IA
           </h3>
           {aiError && (
-            <Button size="sm" variant="outline" onClick={generateAnalysis}>
+            <Button size="sm" variant="outline" onClick={() => generateAnalysis()}>
               Tentar novamente
             </Button>
           )}

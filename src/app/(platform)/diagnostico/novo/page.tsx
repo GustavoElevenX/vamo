@@ -110,11 +110,14 @@ export default function NovoDiagnosticoPage() {
   const handleGerarPerguntas = async () => {
     setStep('gerando')
     setError('')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
       const res = await fetch('/api/ai/generate-diagnostic-questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ companyContext: ctx }),
+        signal: controller.signal,
       })
       const data = await res.json()
       if (!res.ok || !data.questions) throw new Error(data.error || 'Erro ao gerar perguntas')
@@ -123,8 +126,14 @@ export default function NovoDiagnosticoPage() {
       setAnswers({})
       setStep('questionario')
     } catch (err: any) {
-      setError(err.message)
+      if (err?.name === 'AbortError') {
+        setError('A geração das perguntas demorou demais. Tente novamente.')
+      } else {
+        setError(err.message)
+      }
       setStep('empresa')
+    } finally {
+      clearTimeout(timeout)
     }
   }
 

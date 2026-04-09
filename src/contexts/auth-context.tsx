@@ -17,7 +17,10 @@ const USER_CACHE_KEY = 'vamo_cached_user'
 
 function getCachedUser(): AppUser | null {
   try {
-    const raw = sessionStorage.getItem(USER_CACHE_KEY)
+    // Use localStorage so the cache survives tab/browser close.
+    // sessionStorage is per-tab and is lost when the tab is closed,
+    // which caused the black-screen bug on reopen.
+    const raw = localStorage.getItem(USER_CACHE_KEY)
     if (!raw) return null
     return JSON.parse(raw) as AppUser
   } catch {
@@ -28,9 +31,9 @@ function getCachedUser(): AppUser | null {
 function setCachedUser(user: AppUser | null) {
   try {
     if (user) {
-      sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user))
+      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user))
     } else {
-      sessionStorage.removeItem(USER_CACHE_KEY)
+      localStorage.removeItem(USER_CACHE_KEY)
     }
   } catch { /* ignore — private browsing or quota */ }
 }
@@ -151,9 +154,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initSession()
 
-    // Safety net: if initSession somehow hangs, force loading=false after 10s
+    // Safety net: if initSession somehow hangs, force loading=false after 5s
     // so the user never stares at a spinner forever.
-    const safetyTimeout = setTimeout(markReady, 10_000)
+    const safetyTimeout = setTimeout(markReady, 5_000)
 
     // 2) Listen for subsequent auth events (sign in, sign out, token refresh).
     //    Skip INITIAL_SESSION since initSession() already handled it.
@@ -174,9 +177,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
+    // 3) Periodic session keep-alive — forces token refresh every 4 min
+    //    so the session never silently expires while the user is idle.
+    const refreshInterval = setInterval(async () => {
+      if (!mounted) return
+      try {
+        const { error } = await supabase.auth.getUser()
+        if (error && mounted) {
+          // Token is irrecoverably expired — clear session
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+          setAppUser(null)
+          setCachedUser(null)
+        }
+      } catch {
+        // Network error — ignore, will retry next interval
+      }
+    }, 4 * 60 * 1000)
+
     return () => {
       mounted = false
       clearTimeout(safetyTimeout)
+      clearInterval(refreshInterval)
       subscription.unsubscribe()
     }
   }, [])

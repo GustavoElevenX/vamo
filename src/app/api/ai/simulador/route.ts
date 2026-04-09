@@ -142,20 +142,32 @@ REGRAS DO ROLEPLAY:
     ]
 
     const apiKey = process.env.OPENAI_API_KEY!
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: openAIMessages,
-        stream: true,
-        max_tokens: 300,
-        temperature: 0.7,
-      }),
-    })
+    // Timeout: abort if OpenAI doesn't respond within 30s
+    const openAIController = new AbortController()
+    const openAITimeout = setTimeout(() => openAIController.abort(), 30_000)
+
+    let response: Response
+    try {
+      response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: openAIMessages,
+          stream: true,
+          max_tokens: 300,
+          temperature: 0.7,
+        }),
+        signal: openAIController.signal,
+      })
+    } catch {
+      clearTimeout(openAITimeout)
+      return new Response(JSON.stringify({ error: 'Timeout na conexão com IA' }), { status: 504 })
+    }
+    clearTimeout(openAITimeout)
 
     if (!response.ok) {
       return new Response(JSON.stringify({ error: 'Erro na IA' }), { status: 502 })

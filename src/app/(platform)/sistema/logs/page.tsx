@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -57,14 +57,13 @@ const SOURCE_LABELS: Record<LogSource, string> = {
 }
 
 export default function SystemLogsPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
 
   const [filterLevel, setFilterLevel] = useState<'all' | LogLevel>('all')
   const [filterSource, setFilterSource] = useState<'all' | LogSource>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  if (!user) return null
 
   const filteredLogs = STATIC_LOGS.filter((log) => {
     if (filterLevel !== 'all' && log.level !== filterLevel) return false

@@ -1,13 +1,12 @@
 'use client'
 
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { GestorDashboard } from '@/components/dashboard/gestor-dashboard'
 import { VendedorDashboard } from '@/components/dashboard/vendedor-dashboard'
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
 
-  if (!user) return null
 
   // Gestor (manager) sees Dashboard & ROI
   if (user.role === 'manager') {

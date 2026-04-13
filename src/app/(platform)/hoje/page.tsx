@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent } from '@/components/ui/card'
@@ -71,7 +71,7 @@ interface HojeCache {
 }
 
 export default function HojePage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabaseRef = useRef(createClient())
   const cached = useRef(getCached<HojeCache>('hoje'))
   const [loading, setLoading] = useState(!cached.current)
@@ -93,7 +93,7 @@ export default function HojePage() {
       const today = new Date().toISOString().split('T')[0]
       const monthStart = today.substring(0, 7) + '-01'
 
-      const queries = Promise.all([
+      const queries = Promise.allSettled([
         // Streak
         supabase
           .from('user_xp')
@@ -152,15 +152,15 @@ export default function HojePage() {
         setTimeout(() => reject(new Error('timeout')), 20_000)
       )
 
-      const [
-        { data: xpData },
-        { data: missions },
-        { data: kpiDefs },
-        { data: todayEntries },
-        { data: monthEntries },
-        { data: checkin },
-        { data: recentXp },
-      ] = await Promise.race([queries, timeout])
+      const results = await Promise.race([queries, timeout])
+
+      const xpData = results[0].status === 'fulfilled' ? results[0].value.data : null
+      const missions = results[1].status === 'fulfilled' ? results[1].value.data : null
+      const kpiDefs = results[2].status === 'fulfilled' ? results[2].value.data : null
+      const todayEntries = results[3].status === 'fulfilled' ? results[3].value.data : null
+      const monthEntries = results[4].status === 'fulfilled' ? results[4].value.data : null
+      const checkin = results[5].status === 'fulfilled' ? results[5].value.data : null
+      const recentXp = results[6].status === 'fulfilled' ? results[6].value.data : null
 
       if (cancelled) return
 
@@ -228,7 +228,6 @@ export default function HojePage() {
     return () => { cancelled = true }
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

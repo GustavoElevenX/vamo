@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 
 interface BriefingContent {
@@ -22,7 +23,8 @@ export async function POST() {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id, organization_id, role')
     .eq('auth_id', authUser.id)
@@ -44,7 +46,7 @@ export async function POST() {
       { data: missions },
       { data: checkins },
     ] = await Promise.all([
-      supabase
+      adminClient
         .from('users')
         .select('id, name')
         .eq('organization_id', appUser.organization_id)
@@ -183,7 +185,8 @@ export async function GET() {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id, organization_id')
     .eq('auth_id', authUser.id)

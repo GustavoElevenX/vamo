@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -145,11 +145,10 @@ const severityConfig = {
 type FilterTab = 'all' | 'critical' | 'warning' | 'opportunity' | 'positive'
 
 export default function AlertasPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
   const [alerts, setAlerts] = useState<AIAlert[]>(ALERTS)
 
-  if (!user) return null
 
   const unreadCount = alerts.filter((a) => !a.read).length
 

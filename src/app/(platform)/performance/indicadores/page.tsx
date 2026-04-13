@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,9 +25,8 @@ const MY_KPIS = [
 ]
 
 export default function IndicadoresPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
 
-  if (!user) return null
 
   // Find best KPI to focus on (highest bonus / easiest gap)
   const bestFocusKpi = MY_KPIS.reduce((best, kpi) => {

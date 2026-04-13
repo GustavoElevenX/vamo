@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import type { ChecklistTemplate } from '@/types'
 export default function ChecklistPage() {
   const searchParams = useSearchParams()
   const checklistId = searchParams.get('id')
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
   const supabase = createClient()
 
@@ -50,7 +50,6 @@ export default function ChecklistPage() {
     fetch().catch(() => setLoading(false))
   }, [user, checklistId])
 
-  if (!user) return null
 
   const toggleItem = (itemId: string) => {
     setChecked((prev) => ({ ...prev, [itemId]: !prev[itemId] }))

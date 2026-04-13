@@ -35,14 +35,16 @@ CREATE POLICY "Admins can manage portfolio"
   );
 
 -- Permitir que consultores acessem dados das orgs da sua carteira
+-- Uses get_user_id() (SECURITY DEFINER) instead of JOIN users to avoid
+-- "infinite recursion detected in policy" errors.
+
 -- Política adicional para daily_checkins
 CREATE POLICY "Consultants can view portfolio checkins"
   ON daily_checkins FOR SELECT
   USING (
     organization_id IN (
       SELECT cp.organization_id FROM consultant_portfolio cp
-      JOIN users u ON u.id = cp.consultant_user_id
-      WHERE u.auth_id = auth.uid()
+      WHERE cp.consultant_user_id = get_user_id()
     )
   );
 
@@ -52,8 +54,7 @@ CREATE POLICY "Consultants can view portfolio briefings"
   USING (
     organization_id IN (
       SELECT cp.organization_id FROM consultant_portfolio cp
-      JOIN users u ON u.id = cp.consultant_user_id
-      WHERE u.auth_id = auth.uid()
+      WHERE cp.consultant_user_id = get_user_id()
     )
   );
 
@@ -63,7 +64,6 @@ CREATE POLICY "Consultants can view portfolio retrospectives"
   USING (
     organization_id IN (
       SELECT cp.organization_id FROM consultant_portfolio cp
-      JOIN users u ON u.id = cp.consultant_user_id
-      WHERE u.auth_id = auth.uid()
+      WHERE cp.consultant_user_id = get_user_id()
     )
   );

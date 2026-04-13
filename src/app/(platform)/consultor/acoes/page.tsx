@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +22,7 @@ interface PendingAction {
 }
 
 export default function ConsultorAcoesPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabaseRef = useRef(createClient())
   const [actions, setActions] = useState<PendingAction[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,113 +31,116 @@ export default function ConsultorAcoesPage() {
     if (!user) return
 
     const fetchActions = async () => {
-      const supabase = supabaseRef.current
+      try {
+        const supabase = supabaseRef.current
 
-      const { data: portfolio } = await supabase
-        .from('consultant_portfolio')
-        .select('organization_id')
-        .eq('consultant_user_id', user.id)
+        const { data: portfolio, error: portfolioError } = await supabase
+          .from('consultant_portfolio')
+          .select('organization_id')
+          .eq('consultant_user_id', user.id)
 
-      if (!portfolio || portfolio.length === 0) {
-        setLoading(false)
-        return
-      }
-
-      const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
-
-      const [
-        { data: orgs },
-        { data: sellers },
-        { data: checkins },
-        { data: diagnostics },
-      ] = await Promise.all([
-        supabase.from('organizations').select('id, name').in('id', orgIds),
-        supabase
-          .from('users')
-          .select('id, name, organization_id')
-          .in('organization_id', orgIds)
-          .eq('role', 'seller')
-          .eq('active', true),
-        supabase
-          .from('daily_checkins')
-          .select('user_id, energy_level, organization_id')
-          .in('organization_id', orgIds)
-          .gte('checkin_date', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]),
-        supabase
-          .from('diagnostic_sessions')
-          .select('organization_id, health_pct')
-          .in('organization_id', orgIds)
-          .eq('status', 'completed'),
-      ])
-
-      const orgMap: Record<string, string> = {}
-      for (const org of orgs || []) orgMap[org.id] = org.name
-
-      const pendingActions: PendingAction[] = []
-
-      // Orgs without diagnostics
-      for (const orgId of orgIds) {
-        const hasDiag = (diagnostics || []).some((d: any) => d.organization_id === orgId)
-        if (!hasDiag) {
-          pendingActions.push({
-            id: `no-diag-${orgId}`,
-            org_name: orgMap[orgId] || 'Cliente',
-            type: 'no_diagnostic',
-            description: 'Cliente sem diagnóstico realizado. Agendar sessão.',
-            urgency: 'alta',
-          })
+        if (portfolioError || !portfolio || portfolio.length === 0) {
+          return
         }
-      }
 
-      // Low energy sellers
-      const sellerCheckins: Record<string, number[]> = {}
-      for (const c of checkins || []) {
-        if (!sellerCheckins[c.user_id]) sellerCheckins[c.user_id] = []
-        sellerCheckins[c.user_id].push(c.energy_level)
-      }
+        const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
 
-      for (const seller of sellers || []) {
-        const energies = sellerCheckins[seller.id] || []
-        if (energies.length > 0) {
-          const avg = energies.reduce((a, b) => a + b, 0) / energies.length
-          if (avg <= 2) {
+        const results = await Promise.allSettled([
+          supabase.from('organizations').select('id, name').in('id', orgIds),
+          supabase
+            .from('users')
+            .select('id, name, organization_id')
+            .in('organization_id', orgIds)
+            .eq('role', 'seller')
+            .eq('active', true),
+          supabase
+            .from('daily_checkins')
+            .select('user_id, energy_level, organization_id')
+            .in('organization_id', orgIds)
+            .gte('checkin_date', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]),
+          supabase
+            .from('diagnostic_sessions')
+            .select('organization_id, health_pct')
+            .in('organization_id', orgIds)
+            .eq('status', 'completed'),
+        ])
+
+        const orgs = results[0].status === 'fulfilled' ? results[0].value.data : []
+        const sellers = results[1].status === 'fulfilled' ? results[1].value.data : []
+        const checkins = results[2].status === 'fulfilled' ? results[2].value.data : []
+        const diagnostics = results[3].status === 'fulfilled' ? results[3].value.data : []
+
+        const orgMap: Record<string, string> = {}
+        for (const org of orgs || []) orgMap[org.id] = org.name
+
+        const pendingActions: PendingAction[] = []
+
+        // Orgs without diagnostics
+        for (const orgId of orgIds) {
+          const hasDiag = (diagnostics || []).some((d: any) => d.organization_id === orgId)
+          if (!hasDiag) {
             pendingActions.push({
-              id: `burnout-${seller.id}`,
-              org_name: orgMap[seller.organization_id] || 'Cliente',
-              type: 'burnout_risk',
-              description: `${seller.name} com energia média ${avg.toFixed(1)}/5 na semana. Risco de burnout.`,
+              id: `no-diag-${orgId}`,
+              org_name: orgMap[orgId] || 'Cliente',
+              type: 'no_diagnostic',
+              description: 'Cliente sem diagnóstico realizado. Agendar sessão.',
               urgency: 'alta',
-              user_name: seller.name,
             })
           }
         }
-      }
 
-      // Low health diagnostics
-      for (const diag of diagnostics || []) {
-        if (diag.health_pct < 40) {
-          pendingActions.push({
-            id: `low-health-${diag.organization_id}`,
-            org_name: orgMap[diag.organization_id] || 'Cliente',
-            type: 'low_engagement',
-            description: `Saúde da empresa em ${diag.health_pct}%. Ação urgente necessária.`,
-            urgency: 'alta',
-          })
+        // Low energy sellers
+        const sellerCheckins: Record<string, number[]> = {}
+        for (const c of checkins || []) {
+          if (!sellerCheckins[c.user_id]) sellerCheckins[c.user_id] = []
+          sellerCheckins[c.user_id].push(c.energy_level)
         }
+
+        for (const seller of sellers || []) {
+          const energies = sellerCheckins[seller.id] || []
+          if (energies.length > 0) {
+            const avg = energies.reduce((a, b) => a + b, 0) / energies.length
+            if (avg <= 2) {
+              pendingActions.push({
+                id: `burnout-${seller.id}`,
+                org_name: orgMap[seller.organization_id] || 'Cliente',
+                type: 'burnout_risk',
+                description: `${seller.name} com energia média ${avg.toFixed(1)}/5 na semana. Risco de burnout.`,
+                urgency: 'alta',
+                user_name: seller.name,
+              })
+            }
+          }
+        }
+
+        // Low health diagnostics
+        for (const diag of diagnostics || []) {
+          if (diag.health_pct < 40) {
+            pendingActions.push({
+              id: `low-health-${diag.organization_id}`,
+              org_name: orgMap[diag.organization_id] || 'Cliente',
+              type: 'low_engagement',
+              description: `Saúde da empresa em ${diag.health_pct}%. Ação urgente necessária.`,
+              urgency: 'alta',
+            })
+          }
+        }
+
+        // Sort by urgency
+        const urgencyOrder = { alta: 0, media: 1, baixa: 2 }
+        pendingActions.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency])
+
+        setActions(pendingActions)
+      } catch {
+        // silently handle unexpected errors
+      } finally {
+        setLoading(false)
       }
-
-      // Sort by urgency
-      const urgencyOrder = { alta: 0, media: 1, baixa: 2 }
-      pendingActions.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency])
-
-      setActions(pendingActions)
-      setLoading(false)
     }
 
-    fetchActions().catch(() => setLoading(false))
+    fetchActions()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

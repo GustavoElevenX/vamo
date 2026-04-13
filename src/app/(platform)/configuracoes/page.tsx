@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { User, Target, Trophy, Settings } from 'lucide-react'
 
@@ -12,9 +12,8 @@ const settingsSections = [
 ]
 
 export default function ConfiguracoesPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
 
-  if (!user) return null
 
   const visible = settingsSections.filter(
     (s) => !s.roles || s.roles.includes(user.role)

@@ -1,6 +1,7 @@
 // VAMO IA — Dicas do coach via OpenAI
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 import { buildCoachTipPrompt } from '@/lib/ai/prompts'
 import type { CoachTip } from '@/lib/ai/types'
@@ -17,7 +18,8 @@ export async function POST() {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id, name, organization_id')
     .eq('auth_id', authUser.id)

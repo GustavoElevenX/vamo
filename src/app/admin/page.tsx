@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Building2, Users, ClipboardCheck, TrendingUp } from 'lucide-react'
+import { PageLoading } from '@/components/ui/page-loading'
 
 export default function AdminDashboardPage() {
   const { user } = useAuth()
@@ -32,7 +33,7 @@ export default function AdminDashboardPage() {
     fetchStats()
   }, [user])
 
-  if (!user) return null
+  if (!user) return <PageLoading />
 
   return (
     <div className="space-y-6">

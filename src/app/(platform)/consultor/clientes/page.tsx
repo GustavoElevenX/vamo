@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +25,7 @@ interface ClientData {
 }
 
 export default function ConsultorClientesPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabaseRef = useRef(createClient())
   const [clients, setClients] = useState<ClientData[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,72 +34,68 @@ export default function ConsultorClientesPage() {
     if (!user) return
 
     const fetchClients = async () => {
-      const supabase = supabaseRef.current
+      try {
+        const supabase = supabaseRef.current
 
-      // Get consultant's portfolio
-      const { data: portfolio } = await supabase
-        .from('consultant_portfolio')
-        .select('organization_id')
-        .eq('consultant_user_id', user.id)
+        const { data: portfolio, error: portfolioErr } = await supabase
+          .from('consultant_portfolio')
+          .select('organization_id')
+          .eq('consultant_user_id', user.id)
 
-      if (!portfolio || portfolio.length === 0) {
+        if (portfolioErr) console.error('[Consultor/Clientes] Portfolio error:', portfolioErr)
+
+        if (!portfolio || portfolio.length === 0) {
+          setLoading(false)
+          return
+        }
+
+        const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
+
+        const results = await Promise.allSettled([
+          supabase.from('organizations').select('id, name').in('id', orgIds),
+          supabase.from('users').select('id, organization_id').in('organization_id', orgIds)
+            .eq('role', 'seller').eq('active', true),
+          supabase.from('diagnostic_sessions').select('organization_id, health_pct, quadrant')
+            .in('organization_id', orgIds).eq('status', 'completed')
+            .order('created_at', { ascending: false }),
+        ])
+
+        const orgs = results[0].status === 'fulfilled' ? results[0].value.data : []
+        const sellers = results[1].status === 'fulfilled' ? results[1].value.data : []
+        const diagnostics = results[2].status === 'fulfilled' ? results[2].value.data : []
+
+        const clientsData: ClientData[] = (orgs || []).map((org: any) => {
+          const orgSellers = (sellers || []).filter((s: any) => s.organization_id === org.id)
+          const latestDiag = (diagnostics || []).find((d: any) => d.organization_id === org.id)
+          const health = latestDiag?.health_pct ?? null
+          let status: 'saudavel' | 'atencao' | 'risco' = 'saudavel'
+          if (health !== null) {
+            if (health < 40) status = 'risco'
+            else if (health < 65) status = 'atencao'
+          }
+
+          return {
+            organization_id: org.id,
+            org_name: org.name,
+            seller_count: orgSellers.length,
+            avg_engagement: health ? Math.round(health) : 0,
+            alerts: status === 'risco' ? 1 : 0,
+            health_status: status,
+            last_diagnostic_health: health,
+          }
+        })
+
+        setClients(clientsData)
+      } catch (err) {
+        console.error('[Consultor/Clientes] Erro:', err)
+      } finally {
         setLoading(false)
-        return
       }
-
-      const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
-
-      // Get org details
-      const { data: orgs } = await supabase
-        .from('organizations')
-        .select('id, name')
-        .in('id', orgIds)
-
-      // Get sellers per org
-      const { data: sellers } = await supabase
-        .from('users')
-        .select('id, organization_id')
-        .in('organization_id', orgIds)
-        .eq('role', 'seller')
-        .eq('active', true)
-
-      // Get latest diagnostics per org
-      const { data: diagnostics } = await supabase
-        .from('diagnostic_sessions')
-        .select('organization_id, health_pct, quadrant')
-        .in('organization_id', orgIds)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-
-      const clientsData: ClientData[] = (orgs || []).map((org: any) => {
-        const orgSellers = (sellers || []).filter((s: any) => s.organization_id === org.id)
-        const latestDiag = (diagnostics || []).find((d: any) => d.organization_id === org.id)
-        const health = latestDiag?.health_pct ?? null
-        let status: 'saudavel' | 'atencao' | 'risco' = 'saudavel'
-        if (health !== null) {
-          if (health < 40) status = 'risco'
-          else if (health < 65) status = 'atencao'
-        }
-
-        return {
-          organization_id: org.id,
-          org_name: org.name,
-          seller_count: orgSellers.length,
-          avg_engagement: health ? Math.round(health) : 0,
-          alerts: status === 'risco' ? 1 : 0,
-          health_status: status,
-          last_diagnostic_health: health,
-        }
-      })
-
-      setClients(clientsData)
-      setLoading(false)
     }
 
-    fetchClients().catch(() => setLoading(false))
+    fetchClients()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

@@ -12,7 +12,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { data: requestingUser } = await supabase
+    // Use admin client to bypass RLS infinite recursion on users table
+    const adminClient = createAdminClient()
+    const { data: requestingUser } = await adminClient
       .from('users')
       .select('id, organization_id, role')
       .eq('auth_id', authUser.id)
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     // Check if email already exists in this org
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await adminClient
       .from('users')
       .select('id')
       .eq('email', email)
@@ -52,7 +54,6 @@ export async function POST(request: Request) {
     }
 
     // Create auth user with admin client (bypasses email confirmation)
-    const adminClient = createAdminClient()
     const { data: newAuthUser, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password,

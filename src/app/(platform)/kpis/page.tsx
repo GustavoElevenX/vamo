@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Plus, Target } from 'lucide-react'
 import type { KpiDefinition, KpiEntry } from '@/types'
 
 export default function KpisPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [kpis, setKpis] = useState<KpiDefinition[]>([])
   const [entries, setEntries] = useState<KpiEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -21,32 +21,39 @@ export default function KpisPage() {
   useEffect(() => {
     if (!user) return
     const fetch = async () => {
-      const today = new Date().toISOString().split('T')[0]
+      try {
+        const today = new Date().toISOString().split('T')[0]
 
-      const [{ data: kpiDefs }, { data: todayEntries }] = await Promise.all([
-        supabase
-          .from('kpi_definitions')
-          .select('*')
-          .eq('organization_id', user.organization_id)
-          .eq('active', true)
-          .order('name'),
-        supabase
-          .from('kpi_entries')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('recorded_at', `${today}T00:00:00`)
-          .lte('recorded_at', `${today}T23:59:59`)
-          .order('recorded_at', { ascending: false }),
-      ])
+        const results = await Promise.allSettled([
+          supabase
+            .from('kpi_definitions')
+            .select('*')
+            .eq('organization_id', user.organization_id)
+            .eq('active', true)
+            .order('name'),
+          supabase
+            .from('kpi_entries')
+            .select('*')
+            .eq('user_id', user.id)
+            .gte('recorded_at', `${today}T00:00:00`)
+            .lte('recorded_at', `${today}T23:59:59`)
+            .order('recorded_at', { ascending: false }),
+        ])
 
-      setKpis(kpiDefs ?? [])
-      setEntries(todayEntries ?? [])
-      setLoading(false)
+        const kpiDefs = results[0].status === 'fulfilled' ? results[0].value.data : null
+        const todayEntries = results[1].status === 'fulfilled' ? results[1].value.data : null
+
+        setKpis(kpiDefs ?? [])
+        setEntries(todayEntries ?? [])
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch().catch(() => setLoading(false))
+    fetch()
   }, [user])
 
-  if (!user) return null
 
   return (
     <div className="space-y-6">

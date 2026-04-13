@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -53,7 +53,7 @@ const AREA_COLORS: Record<string, string> = {
 }
 
 export default function NovoDiagnosticoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
   const supabase = createClient()
 
@@ -82,7 +82,6 @@ export default function NovoDiagnosticoPage() {
   const [saving, setSaving] = useState(false)
   const [savingTimeout, setSavingTimeout] = useState(false)
 
-  if (!user) return null
 
   const setField = (field: keyof CompanyContext, value: any) =>
     setCtx((prev) => ({ ...prev, [field]: value }))

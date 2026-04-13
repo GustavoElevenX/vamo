@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -53,7 +53,7 @@ const SELLER_SUGGESTIONS: Suggestion[] = [
 let msgIdCounter = 0
 
 export default function ChatIAPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)

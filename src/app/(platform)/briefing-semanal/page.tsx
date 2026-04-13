@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -40,7 +40,7 @@ const BLOCKS = [
 ] as const
 
 export default function BriefingSemanalPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const cachedBriefings = useRef(getCached<BriefingData[]>('briefings'))
   const [briefings, setBriefings] = useState<BriefingData[]>(cachedBriefings.current ?? [])
   const [loading, setLoading] = useState(!cachedBriefings.current)
@@ -97,7 +97,6 @@ export default function BriefingSemanalPage() {
     }
   }
 
-  if (!user) return null
 
   const latest = briefings[0] || null
 

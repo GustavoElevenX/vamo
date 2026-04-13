@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { checkAndAwardBadges } from '@/lib/services/badge.service'
 
 export async function POST(request: Request) {
@@ -10,7 +11,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id, organization_id')
     .eq('auth_id', user.id)

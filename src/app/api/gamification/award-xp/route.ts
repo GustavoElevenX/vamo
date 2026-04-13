@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { awardXp } from '@/lib/services/xp.service'
 
 export async function POST(request: Request) {
@@ -11,7 +12,8 @@ export async function POST(request: Request) {
   }
 
   // Get app user
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id, organization_id, role')
     .eq('auth_id', user.id)

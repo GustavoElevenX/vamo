@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +21,7 @@ interface EarnedBadge extends BadgeType {
 }
 
 export default function ConquistasPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [userXp, setUserXp] = useState<UserXp | null>(null)
@@ -36,43 +36,46 @@ export default function ConquistasPage() {
     if (!user) return
 
     const fetchAll = async () => {
-      const [
-        { data: xp },
-        { data: levels },
-        { data: badges },
-        { data: userBadges },
-      ] = await Promise.all([
-        supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
-        supabase.from('xp_levels').select('*').eq('organization_id', user.organization_id).order('level', { ascending: true }),
-        supabase.from('badges').select('*').eq('organization_id', user.organization_id).eq('active', true),
-        supabase.from('user_badges').select('badge_id, earned_at').eq('user_id', user.id),
-      ])
+      try {
+        const results = await Promise.allSettled([
+          supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase.from('xp_levels').select('*').eq('organization_id', user.organization_id).order('level', { ascending: true }),
+          supabase.from('badges').select('*').eq('organization_id', user.organization_id).eq('active', true),
+          supabase.from('user_badges').select('badge_id, earned_at').eq('user_id', user.id),
+        ])
 
-      setUserXp(xp)
-      setAllLevels((levels ?? []) as XpLevel[])
-      setAllBadges((badges ?? []) as BadgeType[])
-      setTotalBadgeCount(badges?.length ?? 0)
+        const xp = results[0].status === 'fulfilled' ? results[0].value.data : null
+        const levels = results[1].status === 'fulfilled' ? results[1].value.data : null
+        const badges = results[2].status === 'fulfilled' ? results[2].value.data : null
+        const userBadges = results[3].status === 'fulfilled' ? results[3].value.data : null
 
-      const earnedMap = new Map<string, string>()
-      if (userBadges) {
-        for (const ub of userBadges) {
-          earnedMap.set(ub.badge_id, ub.earned_at)
+        setUserXp(xp)
+        setAllLevels((levels ?? []) as XpLevel[])
+        setAllBadges((badges ?? []) as BadgeType[])
+        setTotalBadgeCount(badges?.length ?? 0)
+
+        const earnedMap = new Map<string, string>()
+        if (userBadges) {
+          for (const ub of userBadges) {
+            earnedMap.set(ub.badge_id, ub.earned_at)
+          }
         }
-      }
-      setEarnedBadgeIds(earnedMap)
+        setEarnedBadgeIds(earnedMap)
 
-      if (xp && levels) {
-        setCurrentLevel(levels.find((l: XpLevel) => l.level === xp.current_level) ?? null)
-        setNextLevel(levels.find((l: XpLevel) => l.level === xp.current_level + 1) ?? null)
+        if (xp && levels) {
+          setCurrentLevel(levels.find((l: XpLevel) => l.level === xp.current_level) ?? null)
+          setNextLevel(levels.find((l: XpLevel) => l.level === xp.current_level + 1) ?? null)
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
-    fetchAll().catch(() => setLoading(false))
+    fetchAll()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

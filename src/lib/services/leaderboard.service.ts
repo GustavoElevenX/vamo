@@ -6,63 +6,81 @@ export async function getLeaderboard(
   organizationId: string,
   periodType: PeriodType = 'weekly'
 ): Promise<LeaderboardEntry[]> {
-  const { start, end } = getPeriodDates(periodType)
+  try {
+    const { start, end } = getPeriodDates(periodType)
 
-  // Get XP earned in the period
-  const { data: transactions } = await supabase
-    .from('xp_transactions')
-    .select('user_id, amount')
-    .eq('organization_id', organizationId)
-    .gte('created_at', start.toISOString())
-    .lte('created_at', end.toISOString())
+    // Get XP earned in the period
+    const { data: transactions, error: txError } = await supabase
+      .from('xp_transactions')
+      .select('user_id, amount')
+      .eq('organization_id', organizationId)
+      .gte('created_at', start.toISOString())
+      .lte('created_at', end.toISOString())
 
-  if (!transactions?.length) return []
+    if (txError) {
+      console.error('Error fetching xp_transactions:', txError)
+      return []
+    }
 
-  // Aggregate XP per user
-  const userXpMap = new Map<string, number>()
-  for (const tx of transactions) {
-    userXpMap.set(tx.user_id, (userXpMap.get(tx.user_id) ?? 0) + tx.amount)
-  }
+    if (!transactions?.length) return []
 
-  // Get user details
-  const userIds = Array.from(userXpMap.keys())
-  const { data: users } = await supabase
-    .from('users')
-    .select('id, name, avatar_url')
-    .in('id', userIds)
+    // Aggregate XP per user
+    const userXpMap = new Map<string, number>()
+    for (const tx of transactions) {
+      userXpMap.set(tx.user_id, (userXpMap.get(tx.user_id) ?? 0) + tx.amount)
+    }
 
-  // Get user levels
-  const { data: userXps } = await supabase
-    .from('user_xp')
-    .select('user_id, current_level, total_xp')
-    .in('user_id', userIds)
-    .eq('organization_id', organizationId)
+    // Get user details
+    const userIds = Array.from(userXpMap.keys())
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, name, avatar_url')
+      .in('id', userIds)
 
-  const userMap = new Map(users?.map((u) => [u.id, u]) ?? [])
-  const levelMap = new Map(userXps?.map((x) => [x.user_id, x]) ?? [])
+    if (usersError) {
+      console.error('Error fetching users:', usersError)
+    }
 
-  // Build and sort leaderboard
-  const entries: LeaderboardEntry[] = Array.from(userXpMap.entries())
-    .map(([userId, xp]) => {
-      const user = userMap.get(userId)
-      const xpData = levelMap.get(userId)
-      return {
-        user_id: userId,
-        user_name: user?.name ?? 'Desconhecido',
-        avatar_url: user?.avatar_url ?? null,
-        total_xp: xp,
-        rank: 0,
-        level: xpData?.current_level ?? 1,
-      }
+    // Get user levels
+    const { data: userXps, error: xpError } = await supabase
+      .from('user_xp')
+      .select('user_id, current_level, total_xp')
+      .in('user_id', userIds)
+      .eq('organization_id', organizationId)
+
+    if (xpError) {
+      console.error('Error fetching user_xp:', xpError)
+    }
+
+    const userMap = new Map(users?.map((u) => [u.id, u]) ?? [])
+    const levelMap = new Map(userXps?.map((x) => [x.user_id, x]) ?? [])
+
+    // Build and sort leaderboard
+    const entries: LeaderboardEntry[] = Array.from(userXpMap.entries())
+      .map(([userId, xp]) => {
+        const user = userMap.get(userId)
+        const xpData = levelMap.get(userId)
+        return {
+          user_id: userId,
+          user_name: user?.name ?? 'Desconhecido',
+          avatar_url: user?.avatar_url ?? null,
+          total_xp: xp,
+          rank: 0,
+          level: xpData?.current_level ?? 1,
+        }
+      })
+      .sort((a, b) => b.total_xp - a.total_xp)
+
+    // Assign ranks
+    entries.forEach((entry, index) => {
+      entry.rank = index + 1
     })
-    .sort((a, b) => b.total_xp - a.total_xp)
 
-  // Assign ranks
-  entries.forEach((entry, index) => {
-    entry.rank = index + 1
-  })
-
-  return entries
+    return entries
+  } catch (err) {
+    console.error('Unexpected error in getLeaderboard:', err)
+    return []
+  }
 }
 
 function getPeriodDates(periodType: PeriodType) {

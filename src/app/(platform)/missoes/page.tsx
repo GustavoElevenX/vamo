@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 type FilterStatus = 'all' | 'pending' | 'in_progress' | 'completed'
 
 export default function MissoesPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
 
   const cachedMissions = useRef(getCached<AIMission[]>('missoes'))
@@ -129,7 +129,6 @@ export default function MissoesPage() {
     }
   }
 
-  if (!user) return null
 
   const filteredMissions = filter === 'all' ? missions : missions.filter((m) => m.status === filter)
 

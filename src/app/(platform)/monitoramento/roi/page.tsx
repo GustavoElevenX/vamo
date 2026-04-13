@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,9 +18,8 @@ import {
 } from 'lucide-react'
 
 export default function ROIPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
 
-  if (!user) return null
 
   const roi = {
     investimento: 2500,

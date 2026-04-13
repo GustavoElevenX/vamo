@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -53,7 +53,7 @@ interface Session {
 type Phase = 'select' | 'chat' | 'feedback'
 
 export default function SimuladorPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [phase, setPhase] = useState<Phase>('select')
   const [difficulty, setDifficulty] = useState(1)
   const [starting, setStarting] = useState(false)
@@ -229,7 +229,6 @@ export default function SimuladorPage() {
     setFeedback(null)
   }
 
-  if (!user) return null
 
   const difficultyConfig = [
     { level: 1, label: 'Iniciante', desc: 'Objeção de preço', color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },

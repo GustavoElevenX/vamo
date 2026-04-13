@@ -73,8 +73,8 @@ export default function OnboardingPage() {
         })
       }
 
-      router.push('/dashboard')
-      router.refresh()
+      // Force full navigation to clear cached auth state and load fresh user with org
+      window.location.href = '/dashboard'
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao criar organização'
       setError(message)

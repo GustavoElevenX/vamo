@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -116,12 +116,11 @@ const INITIAL_RULES: Rule[] = [
 ]
 
 export default function RegrasGatilhosPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [rules, setRules] = useState<Rule[]>(INITIAL_RULES)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [newRule, setNewRule] = useState({ event: '', action: '' })
 
-  if (!user) return null
 
   const toggleRule = (id: string) => {
     setRules(rules.map((r) => (r.id === id ? { ...r, active: !r.active } : r)))

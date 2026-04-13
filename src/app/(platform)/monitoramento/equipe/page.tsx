@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +32,7 @@ interface TeamMember {
 }
 
 export default function MonitoramentoEquipePage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<TeamMember[]>([])
@@ -41,16 +41,16 @@ export default function MonitoramentoEquipePage() {
     if (!user) return
 
     const fetchData = async () => {
-      const { data: teamData } = await supabase
-        .from('user_xp')
-        .select('user_id, total_xp, current_level, current_streak, last_activity_date, users!inner(name, role)')
-        .eq('organization_id', user.organization_id)
+      try {
+        const { data: teamData } = await supabase
+          .from('user_xp')
+          .select('user_id, total_xp, current_level, current_streak, last_activity_date, users!inner(name, role)')
+          .eq('organization_id', user.organization_id)
 
-      if (teamData) {
-        const mapped: TeamMember[] = await Promise.all(
-          (teamData as any[])
-            .filter((m) => m.users?.role === 'seller')
-            .map(async (m) => {
+        if (teamData) {
+          const sellers = (teamData as any[]).filter((m) => m.users?.role === 'seller')
+          const results = await Promise.allSettled(
+            sellers.map(async (m) => {
               const { count: missionsCompleted } = await supabase
                 .from('ai_missions')
                 .select('*', { count: 'exact', head: true })
@@ -72,17 +72,24 @@ export default function MonitoramentoEquipePage() {
                 trend,
               }
             })
-        )
+          )
 
-        setMembers(mapped.sort((a, b) => b.total_xp - a.total_xp))
+          const mapped: TeamMember[] = results
+            .filter((r): r is PromiseFulfilledResult<TeamMember> => r.status === 'fulfilled')
+            .map((r) => r.value)
+
+          setMembers(mapped.sort((a, b) => b.total_xp - a.total_xp))
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
-    fetchData().catch(() => setLoading(false))
+    fetchData()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

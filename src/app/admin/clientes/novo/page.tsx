@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft } from 'lucide-react'
+import { PageLoading } from '@/components/ui/page-loading'
 
 export default function NovoClientePage() {
   const { user } = useAuth()
@@ -21,7 +22,7 @@ export default function NovoClientePage() {
   const [primaryColor, setPrimaryColor] = useState('#6366f1')
   const [submitting, setSubmitting] = useState(false)
 
-  if (!user) return null
+  if (!user) return <PageLoading />
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

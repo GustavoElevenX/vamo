@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ import { ArrowLeft } from 'lucide-react'
 import type { KpiDefinition } from '@/types'
 
 export default function RegistrarKpiPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
   const supabase = createClient()
 
@@ -36,7 +36,6 @@ export default function RegistrarKpiPage() {
     fetch().catch(console.error)
   }, [user])
 
-  if (!user) return null
 
   const selectedDef = kpis.find((k) => k.id === selectedKpi)
 

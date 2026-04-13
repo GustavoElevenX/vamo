@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,7 +47,7 @@ interface IndividualGoal {
 }
 
 export default function MetasPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
 
   const [companyGoal, setCompanyGoal] = useState<CompanyGoal>({
@@ -77,7 +77,6 @@ export default function MetasPage() {
   const [aiSuggestionAccepted, setAiSuggestionAccepted] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  if (!user) return null
 
   const handleIndividualGoalChange = (id: string, value: string) => {
     setIndividualGoals((prev) =>

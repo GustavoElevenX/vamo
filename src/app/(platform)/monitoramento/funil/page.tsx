@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -42,9 +42,8 @@ const VELOCITY_METRICS = [
 ]
 
 export default function FunilPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
 
-  if (!user) return null
 
   const maxVolume = Math.max(...FUNNEL_STAGES.map((s) => s.currentVolume))
 

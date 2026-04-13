@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import type { User, UserXp } from '@/types'
 
 export default function MemberDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
   const supabase = createClient()
 
@@ -26,20 +26,29 @@ export default function MemberDetailPage() {
   useEffect(() => {
     if (!user || !id) return
     const fetch = async () => {
-      const [{ data: m }, { data: x }, { count }] = await Promise.all([
-        supabase.from('users').select('*').eq('id', id).maybeSingle(),
-        supabase.from('user_xp').select('*').eq('user_id', id).maybeSingle(),
-        supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', id),
-      ])
-      setMember(m)
-      setXp(x)
-      setBadgeCount(count ?? 0)
-      setLoading(false)
+      try {
+        const results = await Promise.allSettled([
+          supabase.from('users').select('*').eq('id', id).maybeSingle(),
+          supabase.from('user_xp').select('*').eq('user_id', id).maybeSingle(),
+          supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', id),
+        ])
+
+        const m = results[0].status === 'fulfilled' ? results[0].value.data : null
+        const x = results[1].status === 'fulfilled' ? results[1].value.data : null
+        const count = results[2].status === 'fulfilled' ? results[2].value.count : null
+
+        setMember(m)
+        setXp(x)
+        setBadgeCount(count ?? 0)
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch().catch(() => setLoading(false))
+    fetch()
   }, [user, id])
 
-  if (!user) return null
 
   if (loading) {
     return (

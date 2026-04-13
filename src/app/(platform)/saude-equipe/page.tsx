@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,7 +37,7 @@ interface TeamMemberHealth {
 }
 
 export default function SaudeEquipePage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const cachedMembers = useRef(getCached<TeamMemberHealth[]>('saude-equipe'))
   const [loading, setLoading] = useState(!cachedMembers.current)
@@ -115,7 +115,6 @@ export default function SaudeEquipePage() {
     return () => { cancelled = true }
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

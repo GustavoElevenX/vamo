@@ -45,11 +45,11 @@ export default function PlatformLayout({
   useEffect(() => {
     if (loading) return
     if (!user) {
-      router.push('/login')
+      window.location.href = '/login'
       return
     }
     if (!user.organization_id) {
-      router.push('/onboarding')
+      window.location.href = '/onboarding'
       return
     }
 
@@ -127,7 +127,7 @@ export default function PlatformLayout({
 
     const fetchXp = async () => {
       const supabase = supabaseRef.current
-      const [{ data: xp }, { data: levels }] = await Promise.all([
+      const results = await Promise.allSettled([
         supabase
           .from('user_xp')
           .select('*')
@@ -139,6 +139,11 @@ export default function PlatformLayout({
           .eq('organization_id', user.organization_id)
           .order('level', { ascending: true }),
       ])
+
+      const xpResult = results[0].status === 'fulfilled' ? results[0].value : null
+      const levelsResult = results[1].status === 'fulfilled' ? results[1].value : null
+      const xp = xpResult?.data
+      const levels = levelsResult?.data
 
       if (xp) {
         setUserXp(xp)

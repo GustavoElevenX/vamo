@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Swords, Calendar, Users, User } from 'lucide-react'
 import type { Challenge, ChallengeParticipant } from '@/types'
 
 export default function DesafiosPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [challenges, setChallenges] = useState<(Challenge & { participants?: ChallengeParticipant[] })[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -33,7 +33,6 @@ export default function DesafiosPage() {
     fetch().catch(() => setLoading(false))
   }, [user])
 
-  if (!user) return null
 
   const now = new Date()
 

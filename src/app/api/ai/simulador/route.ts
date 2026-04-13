@@ -1,6 +1,7 @@
 // VAMO IA — Simulador de Proposta (roleplay de vendas)
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 
 export const runtime = 'nodejs'
@@ -41,7 +42,8 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
   }
 
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id, organization_id, name')
     .eq('auth_id', authUser.id)
@@ -302,7 +304,8 @@ export async function GET() {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
   }
 
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id')
     .eq('auth_id', authUser.id)

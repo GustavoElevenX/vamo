@@ -1,6 +1,7 @@
 // VAMO IA — Geração de missões via OpenAI
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
 import { buildMissionGenerationPrompt } from '@/lib/ai/prompts'
 import type { DiagnosticArea } from '@/types'
@@ -40,7 +41,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'sessionId é obrigatório' }, { status: 400 })
   }
 
-  const { data: appUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: appUser } = await adminClient
     .from('users')
     .select('id, organization_id')
     .eq('auth_id', authUser.id)

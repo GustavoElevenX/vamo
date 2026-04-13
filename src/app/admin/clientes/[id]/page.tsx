@@ -26,6 +26,7 @@ import {
 import { ROLE_LABELS } from '@/lib/constants'
 import { toast } from 'sonner'
 import type { Organization, User, UserRole } from '@/types'
+import { PageLoading } from '@/components/ui/page-loading'
 
 export default function ClienteDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -175,7 +176,7 @@ export default function ClienteDetailPage() {
     setActionUserId(null)
   }
 
-  if (!user) return null
+  if (!user) return <PageLoading />
 
   if (loading) {
     return (

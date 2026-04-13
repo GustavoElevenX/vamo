@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 
@@ -25,7 +26,8 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Buscar contexto do negócio ──
-  const { data: dbUser } = await supabase
+  const adminClient = createAdminClient()
+  const { data: dbUser } = await adminClient
     .from('users')
     .select('organization_id')
     .eq('auth_id', authUser.id)
@@ -57,7 +59,7 @@ export async function POST(req: NextRequest) {
         .eq('organization_id', orgId)
         .eq('active', true)
         .limit(10),
-      supabase
+      adminClient
         .from('users')
         .select('id, name, role')
         .eq('organization_id', orgId)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -147,7 +147,7 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 }
 
 export default function CriteriosPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [activeTab, setActiveTab] = useState<Tab>('kpis')
   const [kpis, setKpis] = useState<KPI[]>(DEFAULT_KPIS)
   const [crms, setCrms] = useState<CRMConfig[]>(CRM_LIST)
@@ -179,7 +179,6 @@ export default function CriteriosPage() {
     level_titles: [...DEFAULT_LEVEL_TITLES],
   })
 
-  if (!user) return null
 
   const connectedCrm = crms.find((c) => c.status === 'connected')
   const enabledAlerts = alerts.filter((a) => a.enabled).length

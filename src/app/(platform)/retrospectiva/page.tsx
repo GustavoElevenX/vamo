@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { getCached, setCache } from '@/lib/cache'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,7 +41,7 @@ const SECTIONS = [
 ] as const
 
 export default function RetrospectivaPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const cachedRetros = useRef(getCached<RetroData[]>('retros'))
   const [retros, setRetros] = useState<RetroData[]>(cachedRetros.current ?? [])
   const [loading, setLoading] = useState(!cachedRetros.current)
@@ -98,7 +98,6 @@ export default function RetrospectivaPage() {
     }
   }
 
-  if (!user) return null
 
   const latest = retros[0] || null
 

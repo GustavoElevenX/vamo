@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,14 +10,13 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 export default function PerfilPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
 
   const [name, setName] = useState(user?.name ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  if (!user) return null
 
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 

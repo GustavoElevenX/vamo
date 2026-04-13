@@ -8,28 +8,28 @@ export async function updateChallengeProgress(
   challengeId: string,
   progress: number
 ) {
-  const { data: challenge } = await supabase
+  const { data: challenge, error: challengeError } = await supabase
     .from('challenges')
     .select('*')
     .eq('id', challengeId)
     .single()
 
-  if (!challenge) throw new Error('Desafio não encontrado')
+  if (challengeError || !challenge) throw new Error('Desafio não encontrado')
 
-  const { data: participant } = await supabase
+  const { data: participant, error: participantError } = await supabase
     .from('challenge_participants')
     .select('*')
     .eq('challenge_id', challengeId)
     .eq('user_id', userId)
     .single()
 
-  if (!participant) throw new Error('Não participa deste desafio')
+  if (participantError || !participant) throw new Error('Não participa deste desafio')
   if (participant.completed) return { alreadyCompleted: true }
 
   const target = (challenge.criteria as { target?: number })?.target ?? 100
   const completed = progress >= target
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('challenge_participants')
     .update({
       progress,
@@ -37,6 +37,11 @@ export async function updateChallengeProgress(
       completed_at: completed ? new Date().toISOString() : null,
     })
     .eq('id', participant.id)
+
+  if (updateError) {
+    console.error('Error updating challenge_participants:', updateError)
+    throw new Error('Erro ao atualizar progresso do desafio')
+  }
 
   if (completed) {
     await awardXp(supabase, {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,7 +13,7 @@ import type { DiagnosticSession, DiagnosticAnswer } from '@/types'
 
 export default function DiagnosticoDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
   const supabase = createClient()
 
@@ -43,7 +43,6 @@ export default function DiagnosticoDetailPage() {
     fetch().catch(() => setLoading(false))
   }, [user, id])
 
-  if (!user) return null
 
   if (loading) {
     return (

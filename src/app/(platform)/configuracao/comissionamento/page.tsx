@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +20,7 @@ interface CommissionConfig {
 }
 
 export default function ComissionamentoConfigPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [commission, setCommission] = useState<CommissionConfig>({
     aliquota_base: '4',
     acelerador_threshold: '110',
@@ -30,7 +30,6 @@ export default function ComissionamentoConfigPage() {
     elegibilidade: '80',
   })
 
-  if (!user) return null
 
   const exampleRevenue = 25000
   const baseComm = Math.round(exampleRevenue * (parseFloat(commission.aliquota_base) / 100))

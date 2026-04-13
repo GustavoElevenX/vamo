@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DIAGNOSTIC_AREAS } from '@/lib/constants'
 import type { DiagnosticTemplate, DiagnosticQuestion } from '@/types'
+import { PageLoading } from '@/components/ui/page-loading'
 
 export default function AdminTemplatesPage() {
   const { user } = useAuth()
@@ -33,7 +34,7 @@ export default function AdminTemplatesPage() {
     fetchTemplates()
   }, [user])
 
-  if (!user) return null
+  if (!user) return <PageLoading />
 
   return (
     <div className="space-y-6">

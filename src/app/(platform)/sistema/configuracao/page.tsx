@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +17,7 @@ type SyncFrequency = '5min' | '15min' | '30min' | '1h'
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 export default function ConfiguracaoAvancadaPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
 
   const [syncFreq, setSyncFreq] = useState<SyncFrequency>('15min')
@@ -26,7 +26,6 @@ export default function ConfiguracaoAvancadaPage() {
   const [logLevel, setLogLevel] = useState<LogLevel>('info')
   const [saving, setSaving] = useState(false)
 
-  if (!user) return null
 
   const handleSave = async () => {
     setSaving(true)

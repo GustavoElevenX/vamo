@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -147,7 +147,7 @@ const EMPTY_MISSION: Omit<Mission, 'id'> = {
 }
 
 export default function PlanoAcaoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
 
   const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS)
@@ -157,7 +157,6 @@ export default function PlanoAcaoPage() {
   const [showNewForm, setShowNewForm] = useState(false)
   const [newMission, setNewMission] = useState(EMPTY_MISSION)
 
-  if (!user) return null
 
   const filteredMissions = missions.filter((m) => {
     if (filterType !== 'all' && m.type !== filterType) return false

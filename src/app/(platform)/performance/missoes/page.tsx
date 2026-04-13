@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -63,7 +63,7 @@ function getExpiration(createdAt: string) {
 }
 
 export default function MissoesPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const cachedMissions = useRef(getCached<Mission[]>('perf-missoes'))
   const [loading, setLoading] = useState(!cachedMissions.current)
@@ -103,7 +103,6 @@ export default function MissoesPage() {
     return () => { cancelled = true }
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

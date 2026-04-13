@@ -28,12 +28,28 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError('Email ou senha inválidos.')
       setLoading(false)
       return
+    }
+
+    // Pre-cache user record via server API route (bypasses RLS) so the auth context
+    // finds it instantly on /dashboard, avoiding the safety timeout redirect.
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
+      if (res.ok) {
+        const appUser = await res.json()
+        if (appUser && !appUser.error) {
+          try {
+            localStorage.setItem('vamo_cached_user', JSON.stringify(appUser))
+          } catch { /* ignore */ }
+        }
+      }
+    } catch {
+      // Non-critical — auth context will resolve on its own
     }
 
     router.push('/dashboard')

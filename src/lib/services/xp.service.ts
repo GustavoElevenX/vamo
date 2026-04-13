@@ -26,21 +26,29 @@ export async function awardXp(
   if (txError) throw txError
 
   // Get or create user XP record
-  const { data: userXp } = await supabase
+  const { data: userXp, error: userXpError } = await supabase
     .from('user_xp')
     .select('*')
     .eq('user_id', userId)
     .eq('organization_id', organizationId)
     .maybeSingle()
 
+  if (userXpError) {
+    console.error('Error fetching user_xp:', userXpError)
+  }
+
   const newTotalXp = (userXp?.total_xp ?? 0) + amount
 
   // Check level up
-  const { data: levels } = await supabase
+  const { data: levels, error: levelsError } = await supabase
     .from('xp_levels')
     .select('*')
     .eq('organization_id', organizationId)
     .order('level', { ascending: false })
+
+  if (levelsError) {
+    console.error('Error fetching xp_levels:', levelsError)
+  }
 
   let newLevel = 1
   if (levels) {
@@ -75,7 +83,7 @@ export async function awardXp(
   longestStreak = Math.max(longestStreak, currentStreak)
 
   if (userXp) {
-    await supabase
+    const { error: updateError } = await supabase
       .from('user_xp')
       .update({
         total_xp: newTotalXp,
@@ -85,8 +93,12 @@ export async function awardXp(
         last_activity_date: today,
       })
       .eq('id', userXp.id)
+
+    if (updateError) {
+      console.error('Error updating user_xp:', updateError)
+    }
   } else {
-    await supabase.from('user_xp').insert({
+    const { error: insertError } = await supabase.from('user_xp').insert({
       user_id: userId,
       organization_id: organizationId,
       total_xp: newTotalXp,
@@ -95,6 +107,10 @@ export async function awardXp(
       longest_streak: longestStreak,
       last_activity_date: today,
     })
+
+    if (insertError) {
+      console.error('Error inserting user_xp:', insertError)
+    }
   }
 
   const leveledUp = userXp ? newLevel > userXp.current_level : false

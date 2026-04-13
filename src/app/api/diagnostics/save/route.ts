@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
@@ -15,7 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { data: appUser } = await supabase
+    const adminClient = createAdminClient()
+    const { data: appUser } = await adminClient
       .from('users')
       .select('id, organization_id')
       .eq('auth_id', authUser.id)

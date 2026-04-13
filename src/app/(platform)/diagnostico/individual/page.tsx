@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -55,7 +55,7 @@ function simulateBurnout(userId: string): boolean {
 }
 
 export default function DiagnosticoIndividualPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabaseRef = useRef(createClient())
 
   const [collaborators, setCollaborators] = useState<CollaboratorData[]>([])
@@ -137,7 +137,6 @@ export default function DiagnosticoIndividualPage() {
     return () => { cancelled = true }
   }, [user?.id, user?.organization_id])
 
-  if (!user) return null
 
   if (loading) {
     return (

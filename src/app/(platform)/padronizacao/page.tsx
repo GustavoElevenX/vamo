@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { BookOpen, CheckSquare } from 'lucide-react'
 import type { Playbook, ChecklistTemplate } from '@/types'
 
 export default function PadronizacaoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [checklists, setChecklists] = useState<ChecklistTemplate[]>([])
   const [loading, setLoading] = useState(true)
@@ -20,27 +20,33 @@ export default function PadronizacaoPage() {
   useEffect(() => {
     if (!user) return
     const fetch = async () => {
-      const [{ data: pb }, { data: cl }] = await Promise.all([
-        supabase
-          .from('playbooks')
-          .select('*')
-          .eq('organization_id', user.organization_id)
-          .order('order_index'),
-        supabase
-          .from('checklist_templates')
-          .select('*')
-          .eq('organization_id', user.organization_id)
-          .eq('active', true)
-          .order('title'),
-      ])
-      setPlaybooks(pb ?? [])
-      setChecklists(cl ?? [])
-      setLoading(false)
+      try {
+        const results = await Promise.allSettled([
+          supabase
+            .from('playbooks')
+            .select('*')
+            .eq('organization_id', user.organization_id)
+            .order('order_index'),
+          supabase
+            .from('checklist_templates')
+            .select('*')
+            .eq('organization_id', user.organization_id)
+            .eq('active', true)
+            .order('title'),
+        ])
+        const pb = results[0].status === 'fulfilled' ? results[0].value.data : null
+        const cl = results[1].status === 'fulfilled' ? results[1].value.data : null
+        setPlaybooks(pb ?? [])
+        setChecklists(cl ?? [])
+      } catch {
+        // individual query failures already handled by allSettled
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch().catch(() => setLoading(false))
+    fetch()
   }, [user])
 
-  if (!user) return null
 
   return (
     <div className="space-y-6">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -321,7 +321,7 @@ DISC_QUESTIONS.forEach((q) => {
 })
 
 export default function PerfilComportamentalPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [step, setStep] = useState(0) // 0 = intro, 1..TOTAL_Q = questions, TOTAL_Q+1 = result
   const [answers, setAnswers] = useState<BehavioralAnswer[]>([])
   const [profile, setProfile] = useState<BehavioralProfile | null>(null)
@@ -388,7 +388,6 @@ export default function PerfilComportamentalPage() {
     setError(null)
   }
 
-  if (!user) return null
 
   if (loading) {
     return (

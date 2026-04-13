@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -173,7 +173,7 @@ const STATIC_POSTS: FeedEvent[] = [
 ]
 
 export default function FeedRecompensasPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [feed, setFeed] = useState<FeedEvent[]>([])
@@ -184,28 +184,29 @@ export default function FeedRecompensasPage() {
     if (!user) return
 
     const fetchData = async () => {
-      const [
-        { data: recentBadges },
-        { data: recentMissions },
-      ] = await Promise.all([
-        supabase
-          .from('user_badges')
-          .select('*, badges!inner(name), users!inner(name)')
-          .eq('badges.organization_id', user.organization_id)
-          .order('earned_at', { ascending: false })
-          .limit(10),
-        supabase
-          .from('ai_missions')
-          .select('*, users!inner(name)')
-          .eq('organization_id', user.organization_id)
-          .eq('status', 'completed')
-          .order('completed_at', { ascending: false })
-          .limit(10),
-      ])
+      try {
+        const results = await Promise.allSettled([
+          supabase
+            .from('user_badges')
+            .select('*, badges!inner(name), users!inner(name)')
+            .eq('badges.organization_id', user.organization_id)
+            .order('earned_at', { ascending: false })
+            .limit(10),
+          supabase
+            .from('ai_missions')
+            .select('*, users!inner(name)')
+            .eq('organization_id', user.organization_id)
+            .eq('status', 'completed')
+            .order('completed_at', { ascending: false })
+            .limit(10),
+        ])
 
-      const feedEvents: FeedEvent[] = []
+        const recentBadges = results[0].status === 'fulfilled' ? results[0].value.data : null
+        const recentMissions = results[1].status === 'fulfilled' ? results[1].value.data : null
 
-      if (recentBadges) {
+        const feedEvents: FeedEvent[] = []
+
+        if (recentBadges) {
         for (const b of recentBadges as any[]) {
           const name = b.users?.name ?? 'Usuario'
           feedEvents.push({
@@ -235,17 +236,20 @@ export default function FeedRecompensasPage() {
         }
       }
 
-      // Merge DB events with static posts, sort by timestamp
-      const allEvents = [...feedEvents, ...STATIC_POSTS]
-      allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      setFeed(allEvents.slice(0, 20))
-      setLoading(false)
+        // Merge DB events with static posts, sort by timestamp
+        const allEvents = [...feedEvents, ...STATIC_POSTS]
+        allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        setFeed(allEvents.slice(0, 20))
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
     }
 
-    fetchData().catch(() => setLoading(false))
+    fetchData()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

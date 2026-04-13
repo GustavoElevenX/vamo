@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -88,11 +88,10 @@ const STATUS_CONFIG: Record<IntegrationStatus, { label: string; color: string; i
 }
 
 export default function IntegracoesPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const [syncing, setSyncing] = useState<string | null>(null)
 
-  if (!user) return null
 
   const handleSync = async (integrationId: string) => {
     setSyncing(integrationId)

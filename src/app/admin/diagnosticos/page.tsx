@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Eye, Plus } from 'lucide-react'
 import { DIAGNOSTIC_QUADRANTS } from '@/lib/constants'
 import type { DiagnosticSession } from '@/types'
+import { PageLoading } from '@/components/ui/page-loading'
 
 export default function AdminDiagnosticosPage() {
   const { user } = useAuth()
@@ -36,7 +37,7 @@ export default function AdminDiagnosticosPage() {
     fetchSessions()
   }, [user])
 
-  if (!user) return null
+  if (!user) return <PageLoading />
 
   return (
     <div className="space-y-6">

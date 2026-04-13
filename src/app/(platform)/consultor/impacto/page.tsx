@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -17,7 +17,7 @@ function formatCurrency(value: number): string {
 }
 
 export default function ConsultorImpactoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabaseRef = useRef(createClient())
   const [loading, setLoading] = useState(true)
   const [totalSellers, setTotalSellers] = useState(0)
@@ -30,60 +30,62 @@ export default function ConsultorImpactoPage() {
     if (!user) return
 
     const fetchData = async () => {
-      const supabase = supabaseRef.current
+      try {
+        const supabase = supabaseRef.current
 
-      const { data: portfolio } = await supabase
-        .from('consultant_portfolio')
-        .select('organization_id')
-        .eq('consultant_user_id', user.id)
+        const { data: portfolio, error: portfolioError } = await supabase
+          .from('consultant_portfolio')
+          .select('organization_id')
+          .eq('consultant_user_id', user.id)
 
-      if (!portfolio || portfolio.length === 0) {
+        if (portfolioError || !portfolio || portfolio.length === 0) {
+          return
+        }
+
+        const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
+        setTotalClients(orgIds.length)
+
+        const [sellersResult, kpiResult, missionsResult] = await Promise.allSettled([
+          supabase
+            .from('users')
+            .select('id')
+            .in('organization_id', orgIds)
+            .eq('role', 'seller')
+            .eq('active', true),
+          supabase
+            .from('kpi_entries')
+            .select('points_earned')
+            .in('organization_id', orgIds),
+          supabase
+            .from('ai_missions')
+            .select('status, xp_reward')
+            .in('organization_id', orgIds)
+            .eq('status', 'completed'),
+        ])
+
+        const sellers = sellersResult.status === 'fulfilled' ? sellersResult.value.data : null
+        const kpiEntries = kpiResult.status === 'fulfilled' ? kpiResult.value.data : null
+        const missions = missionsResult.status === 'fulfilled' ? missionsResult.value.data : null
+
+        setTotalSellers(sellers?.length || 0)
+
+        const points = (kpiEntries || []).reduce((sum: number, e: any) => sum + (e.points_earned || 0), 0)
+        setTotalPoints(points)
+
+        setTotalMissionsCompleted(missions?.length || 0)
+
+        // Estimated revenue: points * R$10 (simplified multiplier)
+        setEstimatedRevenue(points * 10)
+      } catch {
+        // silent fail — state keeps defaults
+      } finally {
         setLoading(false)
-        return
       }
-
-      const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
-      setTotalClients(orgIds.length)
-
-      const [
-        { data: sellers },
-        { data: kpiEntries },
-        { data: missions },
-      ] = await Promise.all([
-        supabase
-          .from('users')
-          .select('id')
-          .in('organization_id', orgIds)
-          .eq('role', 'seller')
-          .eq('active', true),
-        supabase
-          .from('kpi_entries')
-          .select('points_earned')
-          .in('organization_id', orgIds),
-        supabase
-          .from('ai_missions')
-          .select('status, xp_reward')
-          .in('organization_id', orgIds)
-          .eq('status', 'completed'),
-      ])
-
-      setTotalSellers(sellers?.length || 0)
-
-      const points = (kpiEntries || []).reduce((sum: number, e: any) => sum + (e.points_earned || 0), 0)
-      setTotalPoints(points)
-
-      setTotalMissionsCompleted(missions?.length || 0)
-
-      // Estimated revenue: points * R$10 (simplified multiplier)
-      setEstimatedRevenue(points * 10)
-
-      setLoading(false)
     }
 
-    fetchData().catch(() => setLoading(false))
+    fetchData()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

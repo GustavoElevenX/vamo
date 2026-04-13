@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import type { KpiDefinition } from '@/types'
 
 export default function ConfigKpisPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
 
   const [kpis, setKpis] = useState<KpiDefinition[]>([])
@@ -45,7 +45,6 @@ export default function ConfigKpisPage() {
     setLoading(false)
   }
 
-  if (!user) return null
 
   const openCreate = () => {
     setEditingKpi(null)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -64,7 +64,7 @@ function ToggleSwitch({
 }
 
 export default function GamificacaoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [levels, setLevels] = useState<Level[]>(INITIAL_LEVELS)
   const [rankingPublic, setRankingPublic] = useState(true)
   const [badgesPublic, setBadgesPublic] = useState(true)
@@ -72,7 +72,6 @@ export default function GamificacaoPage() {
   const [surveyFrequency, setSurveyFrequency] = useState('semanal')
   const [wellbeingThreshold, setWellbeingThreshold] = useState(40)
 
-  if (!user) return null
 
   const updateLevelName = (position: number, name: string) => {
     setLevels(levels.map((l) => (l.position === position ? { ...l, name } : l)))

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -113,13 +113,12 @@ function HealthIndicator({ health }: { health: 'healthy' | 'degraded' | 'down' }
 }
 
 export default function IntegracoesPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [integrations, setIntegrations] = useState<Integration[]>(INITIAL_INTEGRATIONS)
   const [syncFrequency, setSyncFrequency] = useState('15min')
   const [syncing, setSyncing] = useState<string | null>(null)
   const [connecting, setConnecting] = useState<string | null>(null)
 
-  if (!user) return null
 
   const handleConnect = async (id: string) => {
     setConnecting(id)

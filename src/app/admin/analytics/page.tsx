@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart3, TrendingUp, Users, Building2 } from 'lucide-react'
+import { PageLoading } from '@/components/ui/page-loading'
 
 export default function AdminAnalyticsPage() {
   const { user } = useAuth()
@@ -51,7 +52,7 @@ export default function AdminAnalyticsPage() {
     fetchStats()
   }, [user])
 
-  if (!user) return null
+  if (!user) return <PageLoading />
 
   const cards = [
     { label: 'Organizações', value: stats.totalOrgs, icon: Building2, sub: 'clientes ativos' },

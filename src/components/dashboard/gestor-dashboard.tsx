@@ -75,11 +75,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
 
     const fetchData = async () => {
       try {
-        const [
-          { data: members },
-          { count: missions },
-          { count: diagnostics },
-        ] = await Promise.all([
+        const results = await Promise.allSettled([
           supabase
             .from('user_xp')
             .select('user_id, total_xp, current_level, current_streak, users!inner(name, role)')
@@ -95,16 +91,27 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             .from('diagnostic_sessions')
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', user.organization_id),
+          supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', user.organization_id)
+            .eq('role', 'seller')
+            .eq('active', true),
         ])
 
-        const { count: total } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
-          .eq('role', 'seller')
-          .eq('active', true)
+        const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
+          r.status === 'fulfilled' ? r.value : fallback
 
-        setTeamSize(total ?? 0)
+        const membersResult = val(results[0], { data: null } as any)
+        const missionsResult = val(results[1], { count: 0 } as any)
+        const diagnosticsResult = val(results[2], { count: 0 } as any)
+        const totalResult = val(results[3], { count: 0 } as any)
+
+        const members = membersResult.data
+        const missions = missionsResult.count
+        const diagnostics = diagnosticsResult.count
+
+        setTeamSize(totalResult.count ?? 0)
         setActiveMissions(missions ?? 0)
         setDiagnosticCount(diagnostics ?? 0)
 

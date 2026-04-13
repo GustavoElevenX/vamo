@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -19,7 +19,7 @@ interface RankingUser {
 }
 
 export default function RankingPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [period, setPeriod] = useState<PeriodType>('weekly')
   const [rankings, setRankings] = useState<RankingUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,7 +50,6 @@ export default function RankingPage() {
     fetch().catch(() => setLoading(false))
   }, [user, period])
 
-  if (!user) return null
 
   const podiumIcons = [
     <Trophy key="1" className="h-5 w-5 text-yellow-500" />,

@@ -118,14 +118,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
       try {
         const today = new Date().toISOString().split('T')[0]
 
-        const [
-          { data: xp },
-          { count: badges },
-          { count: kpis },
-          { data: missions },
-          { data: allXp },
-          { count: sellers },
-        ] = await Promise.all([
+        const results = await Promise.allSettled([
           supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
           supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('kpi_entries').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
@@ -139,14 +132,25 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             .eq('organization_id', user.organization_id).eq('role', 'seller').eq('active', true),
         ])
 
-        setUserXp(xp)
-        setBadgeCount(badges ?? 0)
-        setTodayKpiCount(kpis ?? 0)
-        setActiveMissions((missions ?? []) as MissionSummary[])
-        setTotalSellers(sellers ?? 0)
+        const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
+          r.status === 'fulfilled' ? r.value : fallback
 
-        if (allXp) {
-          const rank = allXp.findIndex((r: { user_id: string }) => r.user_id === user.id)
+        const xpResult = val(results[0], { data: null, error: null } as any)
+        const badgesResult = val(results[1], { count: 0 } as any)
+        const kpisResult = val(results[2], { count: 0 } as any)
+        const missionsResult = val(results[3], { data: [] } as any)
+        const allXpResult = val(results[4], { data: [] } as any)
+        const sellersResult = val(results[5], { count: 0 } as any)
+
+        const xp = xpResult.data
+        setUserXp(xp)
+        setBadgeCount(badgesResult.count ?? 0)
+        setTodayKpiCount(kpisResult.count ?? 0)
+        setActiveMissions((missionsResult.data ?? []) as MissionSummary[])
+        setTotalSellers(sellersResult.count ?? 0)
+
+        if (allXpResult.data) {
+          const rank = allXpResult.data.findIndex((r: { user_id: string }) => r.user_id === user.id)
           setMyRank(rank >= 0 ? rank + 1 : null)
         }
 

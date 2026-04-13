@@ -39,36 +39,23 @@ function setCachedUser(user: AppUser | null) {
 }
 
 async function fetchOrCreateAppUser(
-  supabase: ReturnType<typeof createClient>,
-  supabaseUser: SupabaseUser
+  _supabase: ReturnType<typeof createClient>,
+  _supabaseUser: SupabaseUser
 ): Promise<AppUser | null> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('auth_id', supabaseUser.id)
-    .maybeSingle()
-
-  if (data) return data as AppUser
-
-  if (!data && (error === null || error?.code === 'PGRST116')) {
-    const name = supabaseUser.user_metadata?.name || supabaseUser.email || 'Usuário'
-    const role = supabaseUser.user_metadata?.role || 'admin'
-
-    const { data: created } = await supabase
-      .from('users')
-      .insert({
-        auth_id: supabaseUser.id,
-        name,
-        email: supabaseUser.email!,
-        role,
-      })
-      .select()
-      .maybeSingle()
-
-    return created as AppUser | null
+  // Uses server-side API route with admin client to bypass RLS entirely.
+  // This avoids the "infinite recursion detected in policy for relation 'users'" error
+  // caused by consultant RLS policies referencing the users table.
+  const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
+  if (!res.ok) {
+    console.error('[Auth] /api/auth/me respondeu com status', res.status)
+    return null
   }
-
-  return null
+  const user = await res.json()
+  if (user.error) {
+    console.error('[Auth] /api/auth/me erro:', user.error)
+    return null
+  }
+  return user as AppUser
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -101,21 +88,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const user = await fetchOrCreateAppUser(supabase, supabaseUser)
         if (mounted) {
-          setAppUser(user)
-          setCachedUser(user)
+          if (user) {
+            setAppUser(user)
+            setCachedUser(user)
+          }
+          // If user is null (DB query failed) but we already have a cached/active user,
+          // keep the existing one — don't clear state on transient DB errors.
+          // This prevents the login→redirect→login loop on slow Supabase free tier.
         }
       } catch (err) {
         console.error('[Auth] Erro ao buscar usuário, tentando novamente...', err)
         // Retry once — free tier DB can fail intermittently
         try {
           const user = await fetchOrCreateAppUser(supabase, supabaseUser)
-          if (mounted) {
+          if (mounted && user) {
             setAppUser(user)
             setCachedUser(user)
           }
         } catch {
-          if (mounted) setAppUser(null)
-          // Don't clear cache here — stale data is better than none
+          // Don't clear user/cache — stale data is better than redirect loop
         }
       }
     }
@@ -154,9 +145,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initSession()
 
-    // Safety net: if initSession somehow hangs, force loading=false after 5s
+    // Safety net: if initSession somehow hangs, force loading=false after 10s
     // so the user never stares at a spinner forever.
-    const safetyTimeout = setTimeout(markReady, 5_000)
+    // (was 5s — too aggressive for Supabase free tier, caused redirect to /login
+    //  before resolveUser could complete on slow connections)
+    const safetyTimeout = setTimeout(markReady, 10_000)
 
     // 2) Listen for subsequent auth events (sign in, sign out, token refresh).
     //    Skip INITIAL_SESSION since initSession() already handled it.

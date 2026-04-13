@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -94,7 +94,7 @@ const DISC_NAMES: Record<string, string> = {
 }
 
 export default function FeedbackIAPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const cachedProfile = useRef(getCached<BehavioralProfile>('disc-profile'))
   const [loading, setLoading] = useState(!cachedProfile.current)
   const [discProfile, setDiscProfile] = useState<BehavioralProfile | null>(cachedProfile.current)
@@ -128,7 +128,6 @@ export default function FeedbackIAPage() {
     }
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

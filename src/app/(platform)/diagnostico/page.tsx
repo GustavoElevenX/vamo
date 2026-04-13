@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +13,7 @@ import { DIAGNOSTIC_QUADRANTS } from '@/lib/constants'
 import type { DiagnosticSession } from '@/types'
 
 export default function DiagnosticoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const cachedSessions = useRef(getCached<DiagnosticSession[]>('diag-sessions'))
   const [sessions, setSessions] = useState<DiagnosticSession[]>(cachedSessions.current ?? [])
   const [loading, setLoading] = useState(!cachedSessions.current)
@@ -50,7 +50,6 @@ export default function DiagnosticoPage() {
     return () => { cancelled = true }
   }, [user])
 
-  if (!user) return null
 
   return (
     <div className="space-y-6">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -21,7 +21,7 @@ interface ClientHealth {
 }
 
 export default function ConsultorSaudeCarteiraPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabaseRef = useRef(createClient())
   const [clients, setClients] = useState<ClientHealth[]>([])
   const [loading, setLoading] = useState(true)
@@ -30,65 +30,66 @@ export default function ConsultorSaudeCarteiraPage() {
     if (!user) return
 
     const fetchData = async () => {
-      const supabase = supabaseRef.current
+      try {
+        const supabase = supabaseRef.current
 
-      const { data: portfolio } = await supabase
-        .from('consultant_portfolio')
-        .select('organization_id')
-        .eq('consultant_user_id', user.id)
+        const { data: portfolio, error: portfolioError } = await supabase
+          .from('consultant_portfolio')
+          .select('organization_id')
+          .eq('consultant_user_id', user.id)
 
-      if (!portfolio || portfolio.length === 0) {
-        setLoading(false)
-        return
-      }
-
-      const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
-
-      const [
-        { data: orgs },
-        { data: sellers },
-        { data: diagnostics },
-      ] = await Promise.all([
-        supabase.from('organizations').select('id, name').in('id', orgIds),
-        supabase
-          .from('users')
-          .select('id, organization_id')
-          .in('organization_id', orgIds)
-          .eq('role', 'seller')
-          .eq('active', true),
-        supabase
-          .from('diagnostic_sessions')
-          .select('organization_id, health_pct')
-          .in('organization_id', orgIds)
-          .eq('status', 'completed')
-          .order('created_at', { ascending: false }),
-      ])
-
-      const result: ClientHealth[] = (orgs || []).map((org: any) => {
-        const latestDiag = (diagnostics || []).find((d: any) => d.organization_id === org.id)
-        const health = latestDiag?.health_pct ?? 50
-        let status: 'saudavel' | 'atencao' | 'risco' = 'saudavel'
-        if (health < 40) status = 'risco'
-        else if (health < 65) status = 'atencao'
-
-        return {
-          org_id: org.id,
-          org_name: org.name,
-          health_pct: health,
-          status,
-          seller_count: (sellers || []).filter((s: any) => s.organization_id === org.id).length,
+        if (portfolioError || !portfolio || portfolio.length === 0) {
+          return
         }
-      })
 
-      result.sort((a, b) => a.health_pct - b.health_pct)
-      setClients(result)
-      setLoading(false)
+        const orgIds = portfolio.map((p: { organization_id: string }) => p.organization_id)
+
+        const [orgsResult, sellersResult, diagnosticsResult] = await Promise.allSettled([
+          supabase.from('organizations').select('id, name').in('id', orgIds),
+          supabase
+            .from('users')
+            .select('id, organization_id')
+            .in('organization_id', orgIds)
+            .eq('role', 'seller')
+            .eq('active', true),
+          supabase
+            .from('diagnostic_sessions')
+            .select('organization_id, health_pct')
+            .in('organization_id', orgIds)
+            .eq('status', 'completed')
+            .order('created_at', { ascending: false }),
+        ])
+
+        const orgs = orgsResult.status === 'fulfilled' ? orgsResult.value.data : null
+        const sellers = sellersResult.status === 'fulfilled' ? sellersResult.value.data : null
+        const diagnostics = diagnosticsResult.status === 'fulfilled' ? diagnosticsResult.value.data : null
+
+        const result: ClientHealth[] = (orgs || []).map((org: any) => {
+          const latestDiag = (diagnostics || []).find((d: any) => d.organization_id === org.id)
+          const health = latestDiag?.health_pct ?? 50
+          let status: 'saudavel' | 'atencao' | 'risco' = 'saudavel'
+          if (health < 40) status = 'risco'
+          else if (health < 65) status = 'atencao'
+
+          return {
+            org_id: org.id,
+            org_name: org.name,
+            health_pct: health,
+            status,
+            seller_count: (sellers || []).filter((s: any) => s.organization_id === org.id).length,
+          }
+        })
+
+        result.sort((a, b) => a.health_pct - b.health_pct)
+        setClients(result)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    fetchData().catch(() => setLoading(false))
+    fetchData()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

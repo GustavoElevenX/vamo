@@ -23,13 +23,15 @@ export async function completeMission(
   if (mission.status === 'completed') throw new Error('Missão já completada')
 
   // Update mission status
-  await supabase
+  const { error: updateError } = await supabase
     .from('ai_missions')
     .update({
       status: 'completed',
       completed_at: new Date().toISOString(),
     })
     .eq('id', missionId)
+
+  if (updateError) throw new Error('Erro ao atualizar status da missão')
 
   // Award XP
   const xpResult = await awardXp(supabase, {

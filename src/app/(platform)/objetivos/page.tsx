@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +24,7 @@ interface StepCard {
 }
 
 export default function ObjetivosPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const router = useRouter()
 
   // In a real app, status would come from the backend
@@ -59,7 +59,6 @@ export default function ObjetivosPage() {
     },
   ])
 
-  if (!user) return null
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -11,7 +11,7 @@ import { ROLE_LABELS } from '@/lib/constants'
 import type { User } from '@/types'
 
 export default function EquipePage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [members, setMembers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -31,7 +31,6 @@ export default function EquipePage() {
     fetch().catch(() => setLoading(false))
   }, [user])
 
-  if (!user) return null
 
   return (
     <div className="space-y-6">

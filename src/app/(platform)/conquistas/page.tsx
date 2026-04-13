@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,7 @@ import { BADGE_RARITIES } from '@/lib/constants'
 import type { Badge as BadgeType, UserBadge, BadgeRarity } from '@/types'
 
 export default function ConquistasPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [badges, setBadges] = useState<BadgeType[]>([])
   const [earned, setEarned] = useState<UserBadge[]>([])
   const [loading, setLoading] = useState(true)
@@ -19,27 +19,34 @@ export default function ConquistasPage() {
   useEffect(() => {
     if (!user) return
     const fetch = async () => {
-      const [{ data: allBadges }, { data: userBadges }] = await Promise.all([
-        supabase
-          .from('badges')
-          .select('*')
-          .eq('organization_id', user.organization_id)
-          .eq('active', true)
-          .order('rarity', { ascending: true }),
-        supabase
-          .from('user_badges')
-          .select('*')
-          .eq('user_id', user.id),
-      ])
+      try {
+        const results = await Promise.allSettled([
+          supabase
+            .from('badges')
+            .select('*')
+            .eq('organization_id', user.organization_id)
+            .eq('active', true)
+            .order('rarity', { ascending: true }),
+          supabase
+            .from('user_badges')
+            .select('*')
+            .eq('user_id', user.id),
+        ])
 
-      setBadges(allBadges ?? [])
-      setEarned(userBadges ?? [])
-      setLoading(false)
+        const allBadges = results[0].status === 'fulfilled' ? results[0].value.data : null
+        const userBadges = results[1].status === 'fulfilled' ? results[1].value.data : null
+
+        setBadges(allBadges ?? [])
+        setEarned(userBadges ?? [])
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
     }
-    fetch().catch(() => setLoading(false))
+    fetch()
   }, [user])
 
-  if (!user) return null
 
   const earnedIds = new Set(earned.map((e) => e.badge_id))
 

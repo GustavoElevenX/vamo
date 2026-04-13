@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import { BADGE_RARITIES } from '@/lib/constants'
 import type { Badge as BadgeType, RewardCatalog, Challenge, BadgeRarity } from '@/types'
 
 export default function ConfigGamificacaoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
 
   const [badges, setBadges] = useState<BadgeType[]>([])
@@ -57,18 +57,27 @@ export default function ConfigGamificacaoPage() {
 
   const fetchAll = async () => {
     if (!user) return
-    const [{ data: b }, { data: r }, { data: c }] = await Promise.all([
-      supabase.from('badges').select('*').eq('organization_id', user.organization_id).order('name'),
-      supabase.from('rewards_catalog').select('*').eq('organization_id', user.organization_id).order('cost_xp'),
-      supabase.from('challenges').select('*').eq('organization_id', user.organization_id).order('created_at', { ascending: false }),
-    ])
-    setBadges(b ?? [])
-    setRewards(r ?? [])
-    setChallenges(c ?? [])
-    setLoading(false)
+    try {
+      const results = await Promise.allSettled([
+        supabase.from('badges').select('*').eq('organization_id', user.organization_id).order('name'),
+        supabase.from('rewards_catalog').select('*').eq('organization_id', user.organization_id).order('cost_xp'),
+        supabase.from('challenges').select('*').eq('organization_id', user.organization_id).order('created_at', { ascending: false }),
+      ])
+
+      const b = results[0].status === 'fulfilled' ? results[0].value.data : null
+      const r = results[1].status === 'fulfilled' ? results[1].value.data : null
+      const c = results[2].status === 'fulfilled' ? results[2].value.data : null
+
+      setBadges(b ?? [])
+      setRewards(r ?? [])
+      setChallenges(c ?? [])
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (!user) return null
 
   const handleSaveBadge = async () => {
     if (!user || saving) return

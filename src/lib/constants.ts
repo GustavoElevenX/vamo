@@ -257,6 +257,6 @@ export const ROLE_HOME: Record<string, string> = {
   manager: '/monitoramento',
   seller: '/hoje',
   developer: '/sistema/logs',
-  admin: '/admin',
+  admin: '/monitoramento',
   consultant: '/consultor/clientes',
 }

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Plus, Building2, Eye } from 'lucide-react'
 import type { Organization } from '@/types'
+import { PageLoading } from '@/components/ui/page-loading'
 
 export default function ClientesPage() {
   const { user } = useAuth()
@@ -35,7 +36,7 @@ export default function ClientesPage() {
     fetchOrgs()
   }, [user])
 
-  if (!user) return null
+  if (!user) return <PageLoading />
 
   return (
     <div className="space-y-6">

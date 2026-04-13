@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -44,7 +44,7 @@ const HISTORY = [
 ]
 
 export default function MonitoramentoComissionamentoPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [team, setTeam] = useState<TeamCommission[]>([])
@@ -54,46 +54,54 @@ export default function MonitoramentoComissionamentoPage() {
     if (!user) return
 
     const fetchData = async () => {
-      const { data: members } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('organization_id', user.organization_id)
-        .eq('role', 'seller')
-        .eq('active', true)
+      try {
+        const { data: members } = await supabase
+          .from('users')
+          .select('id, name')
+          .eq('organization_id', user.organization_id)
+          .eq('role', 'seller')
+          .eq('active', true)
 
-      if (members) {
-        const commissions: TeamCommission[] = await Promise.all(
-          members.map(async (member: { id: string; name: string }) => {
-            const { count: missionsCompleted } = await supabase
-              .from('ai_missions')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', member.id)
-              .eq('status', 'completed')
+        if (members) {
+          const settled = await Promise.allSettled(
+            members.map(async (member: { id: string; name: string }) => {
+              const { count: missionsCompleted } = await supabase
+                .from('ai_missions')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', member.id)
+                .eq('status', 'completed')
 
-            const missionBonus = (missionsCompleted ?? 0) * 75
-            const kpiBonus = Math.floor(Math.random() * 800)
-            return {
-              user_id: member.id,
-              name: member.name,
-              base_salary: 2500,
-              mission_bonus: missionBonus,
-              kpi_bonus: kpiBonus,
-              total: 2500 + missionBonus + kpiBonus,
-              status: 'pending' as const,
-              missions_completed: missionsCompleted ?? 0,
-            }
-          })
-        )
+              const missionBonus = (missionsCompleted ?? 0) * 75
+              const kpiBonus = Math.floor(Math.random() * 800)
+              return {
+                user_id: member.id,
+                name: member.name,
+                base_salary: 2500,
+                mission_bonus: missionBonus,
+                kpi_bonus: kpiBonus,
+                total: 2500 + missionBonus + kpiBonus,
+                status: 'pending' as const,
+                missions_completed: missionsCompleted ?? 0,
+              }
+            })
+          )
 
-        setTeam(commissions.sort((a, b) => b.total - a.total))
+          const commissions: TeamCommission[] = settled
+            .filter((r): r is PromiseFulfilledResult<TeamCommission> => r.status === 'fulfilled')
+            .map(r => r.value)
+
+          setTeam(commissions.sort((a, b) => b.total - a.total))
+        }
+      } catch {
+        // individual query failures already handled by allSettled
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
-    fetchData().catch(() => setLoading(false))
+    fetchData()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

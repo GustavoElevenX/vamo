@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +33,7 @@ interface MissionSummary {
 }
 
 export default function PerformancePage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [userXp, setUserXp] = useState<UserXp | null>(null)
@@ -49,56 +49,59 @@ export default function PerformancePage() {
     if (!user) return
 
     const fetchAll = async () => {
-      const today = new Date().toISOString().split('T')[0]
+      try {
+        const today = new Date().toISOString().split('T')[0]
 
-      const [
-        { data: xp },
-        { count: badges },
-        { count: kpis },
-        { data: missions },
-        { data: allXp },
-        { count: sellers },
-      ] = await Promise.all([
-        supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
-        supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-        supabase.from('kpi_entries').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
-          .gte('recorded_at', `${today}T00:00:00`).lte('recorded_at', `${today}T23:59:59`),
-        supabase.from('ai_missions').select('id, title, status, xp_reward, difficulty')
-          .eq('user_id', user.id).in('status', ['pending', 'in_progress'])
-          .order('created_at', { ascending: false }).limit(4),
-        supabase.from('user_xp').select('user_id, total_xp').eq('organization_id', user.organization_id)
-          .order('total_xp', { ascending: false }),
-        supabase.from('users').select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id).eq('role', 'seller').eq('active', true),
-      ])
+        const results = await Promise.allSettled([
+          supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
+          supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('kpi_entries').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+            .gte('recorded_at', `${today}T00:00:00`).lte('recorded_at', `${today}T23:59:59`),
+          supabase.from('ai_missions').select('id, title, status, xp_reward, difficulty')
+            .eq('user_id', user.id).in('status', ['pending', 'in_progress'])
+            .order('created_at', { ascending: false }).limit(4),
+          supabase.from('user_xp').select('user_id, total_xp').eq('organization_id', user.organization_id)
+            .order('total_xp', { ascending: false }),
+          supabase.from('users').select('*', { count: 'exact', head: true })
+            .eq('organization_id', user.organization_id).eq('role', 'seller').eq('active', true),
+        ])
 
-      setUserXp(xp)
-      setBadgeCount(badges ?? 0)
-      setTodayKpiCount(kpis ?? 0)
-      setActiveMissions((missions ?? []) as MissionSummary[])
-      setTotalSellers(sellers ?? 0)
+        const xp = results[0].status === 'fulfilled' ? results[0].value.data : null
+        const badges = results[1].status === 'fulfilled' ? results[1].value.count : null
+        const kpis = results[2].status === 'fulfilled' ? results[2].value.count : null
+        const missions = results[3].status === 'fulfilled' ? results[3].value.data : null
+        const allXp = results[4].status === 'fulfilled' ? results[4].value.data : null
+        const sellers = results[5].status === 'fulfilled' ? results[5].value.count : null
 
-      if (allXp) {
-        const rank = allXp.findIndex((r: { user_id: string }) => r.user_id === user.id)
-        setMyRank(rank >= 0 ? rank + 1 : null)
-      }
+        setUserXp(xp)
+        setBadgeCount(badges ?? 0)
+        setTodayKpiCount(kpis ?? 0)
+        setActiveMissions((missions ?? []) as MissionSummary[])
+        setTotalSellers(sellers ?? 0)
 
-      if (xp) {
-        const { data: levels } = await supabase
-          .from('xp_levels').select('*').eq('organization_id', user.organization_id).order('level', { ascending: true })
-        if (levels) {
-          setCurrentLevel(levels.find((l: XpLevel) => l.level === xp.current_level) ?? null)
-          setNextLevel(levels.find((l: XpLevel) => l.level === xp.current_level + 1) ?? null)
+        if (allXp) {
+          const rank = allXp.findIndex((r: { user_id: string }) => r.user_id === user.id)
+          setMyRank(rank >= 0 ? rank + 1 : null)
         }
-      }
 
-      setLoading(false)
+        if (xp) {
+          const { data: levels } = await supabase
+            .from('xp_levels').select('*').eq('organization_id', user.organization_id).order('level', { ascending: true })
+          if (levels) {
+            setCurrentLevel(levels.find((l: XpLevel) => l.level === xp.current_level) ?? null)
+            setNextLevel(levels.find((l: XpLevel) => l.level === xp.current_level + 1) ?? null)
+          }
+        }
+      } catch {
+        // individual query failures already handled by allSettled
+      } finally {
+        setLoading(false)
+      }
     }
 
-    fetchAll().catch(() => setLoading(false))
+    fetchAll()
   }, [user])
 
-  if (!user) return null
 
   if (loading) {
     return (

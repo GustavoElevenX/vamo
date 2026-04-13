@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuth } from '@/hooks/use-auth'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -112,7 +112,7 @@ function StatusBadge({ status }: { status: 'verde' | 'amarelo' | 'vermelho' }) {
 }
 
 export default function KpisPage() {
-  const { user } = useAuth()
+  const { user } = useRequiredAuth()
   const [kpis, setKpis] = useState<KPI[]>(INITIAL_KPIS)
   const [aiAccepted, setAiAccepted] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -123,7 +123,6 @@ export default function KpisPage() {
     unit: '',
   })
 
-  if (!user) return null
 
   const activeCount = kpis.filter((k) => k.active).length
 

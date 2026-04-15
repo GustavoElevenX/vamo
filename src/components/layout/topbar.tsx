@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from './theme-toggle'
+import { NotificationsBell } from './notifications-bell'
 import { XpBar } from '@/components/gamification/xp-bar'
 import { ROLE_LABELS } from '@/lib/constants'
 import type { User, UserXp, XpLevel } from '@/types'
@@ -74,6 +75,8 @@ export function Topbar({ user, userXp, currentLevel, nextLevel, onMenuToggle, on
 
       {/* Right */}
       <div className="flex items-center gap-2 shrink-0">
+        {/* Sino de notificações — apenas para vendedores */}
+        {user.role === 'seller' && <NotificationsBell />}
         <ThemeToggle />
 
         <DropdownMenu>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -14,21 +13,14 @@ export default function EquipePage() {
   const { user } = useRequiredAuth()
   const [members, setMembers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('organization_id', user.organization_id)
-        .eq('active', true)
-        .order('name')
-      setMembers(data ?? [])
-      setLoading(false)
-    }
-    fetch().catch(() => setLoading(false))
+    fetch('/api/team/members')
+      .then((r) => r.json())
+      .then((d) => setMembers(d.members ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [user])
 
 

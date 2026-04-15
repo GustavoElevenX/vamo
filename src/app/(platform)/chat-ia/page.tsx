@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { ActionCard } from '@/components/ai/action-card'
+import type { ChatMessage, ActionCard as ActionCardType, ActionPayload, ActionStatus } from '@/types/chat'
 import {
   Send,
   Sparkles,
@@ -18,13 +20,9 @@ import {
   TrendingUp,
   ArrowDown,
   ChevronRight,
+  Plus,
+  AlertCircle,
 } from 'lucide-react'
-
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-  id: number
-}
 
 interface Suggestion {
   icon: React.ReactNode
@@ -33,12 +31,12 @@ interface Suggestion {
 }
 
 const MANAGER_SUGGESTIONS: Suggestion[] = [
-  { icon: <Target className="h-4 w-4" />, label: 'Criar missão', prompt: 'Crie uma missão eficiente para minha equipe de vendas esta semana, focada em aumentar conversão.' },
-  { icon: <BarChart3 className="h-4 w-4" />, label: 'Analisar KPIs', prompt: 'Quais KPIs devo priorizar para monitorar agora e quais sinais de alerta devo observar?' },
-  { icon: <Zap className="h-4 w-4" />, label: 'Plano de ação', prompt: 'Monte um plano de ação passo a passo para ajudar minha equipe a bater a meta mensal.' },
-  { icon: <Users className="h-4 w-4" />, label: 'Motivar equipe', prompt: 'Como devo abordar um vendedor com baixa performance sem desmotivá-lo ainda mais?' },
-  { icon: <MessageCircle className="h-4 w-4" />, label: 'Dar feedback', prompt: 'Como estruturar um feedback de performance eficaz e construtivo para minha equipe?' },
-  { icon: <TrendingUp className="h-4 w-4" />, label: 'Identificar gargalos', prompt: 'Quais são os principais gargalos que costumam impedir equipes de vendas de bater metas?' },
+  { icon: <Target className="h-4 w-4" />, label: 'Criar missão', prompt: 'Crie uma missão de prospecção para minha equipe esta semana.' },
+  { icon: <Users className="h-4 w-4" />, label: 'Adicionar vendedor', prompt: 'Quero adicionar um novo vendedor na equipe.' },
+  { icon: <Zap className="h-4 w-4" />, label: 'Dar XP de bônus', prompt: 'Quero premiar o melhor vendedor da semana com XP bônus.' },
+  { icon: <BarChart3 className="h-4 w-4" />, label: 'Analisar KPIs', prompt: 'Quais KPIs devo priorizar e quais sinais de alerta devo observar?' },
+  { icon: <MessageCircle className="h-4 w-4" />, label: 'Gerar briefing', prompt: 'Gere o briefing semanal da minha equipe.' },
+  { icon: <TrendingUp className="h-4 w-4" />, label: 'Plano de ação', prompt: 'Monte um plano de ação para ajudar minha equipe a bater a meta mensal.' },
 ]
 
 const SELLER_SUGGESTIONS: Suggestion[] = [
@@ -50,11 +48,14 @@ const SELLER_SUGGESTIONS: Suggestion[] = [
   { icon: <Users className="h-4 w-4" />, label: 'Follow-up eficiente', prompt: 'Como fazer um follow-up com cliente que sumiu sem ser chato ou inconveniente?' },
 ]
 
+const ACTION_DELIMITER = '\n---ACTION---\n'
+
 let msgIdCounter = 0
+let actionIdCounter = 0
 
 export default function ChatIAPage() {
   const { user } = useRequiredAuth()
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
@@ -76,6 +77,21 @@ export default function ChatIAPage() {
     if (messages.length > 0) scrollToBottom()
   }, [messages, scrollToBottom])
 
+  useEffect(() => {
+    const prefill = sessionStorage.getItem('chat_prefill')
+    if (prefill) {
+      sessionStorage.removeItem('chat_prefill')
+      setInput(prefill)
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto'
+          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 160) + 'px'
+          textareaRef.current.focus()
+        }
+      }, 50)
+    }
+  }, [])
+
   const handleScroll = () => {
     const el = containerRef.current
     if (!el) return
@@ -85,7 +101,7 @@ export default function ChatIAPage() {
   const sendMessage = async (text: string) => {
     if (!text.trim() || streaming) return
 
-    const userMsg: Message = { role: 'user', content: text.trim(), id: ++msgIdCounter }
+    const userMsg: ChatMessage = { role: 'user', content: text.trim(), id: ++msgIdCounter }
     const updatedMessages = [...messages, userMsg]
     setMessages(updatedMessages)
     setInput('')
@@ -101,14 +117,28 @@ export default function ChatIAPage() {
     try {
       const controller = new AbortController()
       abortRef.current = controller
-      // Timeout: abort if no response within 60s
       const timeout = setTimeout(() => controller.abort(), 60_000)
 
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: updatedMessages.map(({ role, content }) => ({ role, content })),
+          messages: updatedMessages.map(({ role, content, actionCard }) => {
+            let serializedContent = content
+            if (actionCard) {
+              const p = JSON.stringify(actionCard.action.params)
+              if (actionCard.status === 'completed') {
+                serializedContent += `\n[AÇÃO EXECUTADA: ${actionCard.action.action}(${p}) → ${actionCard.result?.message ?? 'sucesso'}]`
+              } else if (actionCard.status === 'failed') {
+                serializedContent += `\n[AÇÃO FALHOU: ${actionCard.action.action}(${p}) → ERRO: ${actionCard.result?.message ?? 'erro desconhecido'}]`
+              } else if (actionCard.status === 'rejected') {
+                serializedContent += `\n[AÇÃO RECUSADA pelo usuário: ${actionCard.action.action}(${p})]`
+              } else {
+                serializedContent += `\n[AÇÃO AGUARDANDO APROVAÇÃO: ${actionCard.action.action}(${p})]`
+              }
+            }
+            return { role, content: serializedContent }
+          }),
           role,
           userName: user?.name ?? 'Usuário',
         }),
@@ -134,9 +164,37 @@ export default function ChatIAPage() {
         const { done, value } = await reader.read()
         if (done) break
         fullText += decoder.decode(value, { stream: true })
+
+        const displayText = fullText.includes(ACTION_DELIMITER)
+          ? fullText.split(ACTION_DELIMITER)[0]
+          : fullText
+
         setMessages((prev) =>
-          prev.map((m) => (m.id === aiMsgId ? { ...m, content: fullText } : m))
+          prev.map((m) => (m.id === aiMsgId ? { ...m, content: displayText } : m))
         )
+      }
+
+      if (fullText.includes(ACTION_DELIMITER)) {
+        const [textContent, actionJson] = fullText.split(ACTION_DELIMITER)
+        try {
+          const actionPayload: ActionPayload = JSON.parse(actionJson.trim())
+          const actionCard: ActionCardType = {
+            id: `action-${++actionIdCounter}`,
+            action: actionPayload,
+            status: 'pending',
+          }
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMsgId ? { ...m, content: textContent.trim(), actionCard } : m
+            )
+          )
+        } catch {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === aiMsgId ? { ...m, content: textContent.trim() } : m
+            )
+          )
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return
@@ -149,6 +207,95 @@ export default function ChatIAPage() {
       setStreaming(false)
       abortRef.current = null
     }
+  }
+
+  const handleApprove = async (messageId: number) => {
+    const msg = messages.find((m) => m.id === messageId)
+    if (!msg?.actionCard) return
+
+    updateActionStatus(messageId, 'executing')
+
+    try {
+      const res = await fetch('/api/ai/chat/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: msg.actionCard.action.action,
+          params: msg.actionCard.action.params,
+        }),
+      })
+
+      const result = await res.json()
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId && m.actionCard
+            ? {
+                ...m,
+                actionCard: {
+                  ...m.actionCard,
+                  status: result.success ? 'completed' : 'failed',
+                  result,
+                },
+              }
+            : m
+        )
+      )
+    } catch {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId && m.actionCard
+            ? {
+                ...m,
+                actionCard: {
+                  ...m.actionCard,
+                  status: 'failed',
+                  result: { success: false, message: 'Erro de conexão ao executar ação' },
+                },
+              }
+            : m
+        )
+      )
+    }
+  }
+
+  const handleReject = (messageId: number) => {
+    updateActionStatus(messageId, 'rejected')
+  }
+
+  const handleRetry = (messageId: number) => {
+    const msg = messages.find((m) => m.id === messageId)
+    if (!msg?.actionCard) return
+
+    const errorMsg = msg.actionCard.result?.message ?? ''
+    const isPermanentError = errorMsg.includes('já está cadastrado') ||
+      errorMsg.includes('não encontrado') ||
+      errorMsg.includes('inválido') ||
+      errorMsg.includes('obrigatório')
+
+    if (isPermanentError) {
+      updateActionStatus(messageId, 'rejected')
+      const action = msg.actionCard.action.action
+      const hints: Record<string, string> = {
+        add_seller: 'Preciso corrigir o cadastro do vendedor. Qual dado devo mudar?',
+        create_mission: 'A missão falhou. Como devo ajustar?',
+        define_kpi: 'O KPI falhou. Como devo ajustar?',
+      }
+      const hint = hints[action] || `A ação falhou (${errorMsg}). Pode corrigir?`
+      sendMessage(hint)
+    } else {
+      handleApprove(messageId)
+    }
+  }
+
+  const updateActionStatus = (messageId: number, status: ActionStatus) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId && m.actionCard
+          ? { ...m, actionCard: { ...m.actionCard, status } }
+          : m
+      )
+    )
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -176,190 +323,258 @@ export default function ChatIAPage() {
     setStreaming(false)
   }
 
+  const lastExchangeNeedsAction = useMemo(() => {
+    if (streaming || messages.length < 2) return false
+    const lastAI = messages.at(-1)
+    const lastUser = messages.at(-2)
+    if (!lastAI || lastAI.role !== 'assistant') return false
+    if (lastAI.actionCard) return false
+    if (!lastUser || lastUser.role !== 'user') return false
+    const hasEmail = /@/.test(lastUser.content)
+    const aiDescribedAction = /vou cadastrar|vou criar|vou adicionar|vou registrar|vou dar|vou gerar/i.test(lastAI.content)
+    return hasEmail && aiDescribedAction
+  }, [messages, streaming])
+
   const lastMsgIsStreaming = streaming && messages.at(-1)?.role === 'assistant' && messages.at(-1)?.content === ''
+  const hasMessages = messages.length > 0
 
   return (
-    <div className="relative flex flex-col h-[calc(100vh-4rem)]">
+    <div className="relative flex flex-col h-[calc(100vh-4rem)] bg-background">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b bg-background/95 backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+      <div className="flex items-center justify-between px-4 md:px-6 py-3.5 border-b border-border/60 bg-background/95 backdrop-blur-sm shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/25 shrink-0">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
           </div>
           <div>
-            <p className="text-sm font-semibold leading-none">VAMO IA</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              {role === 'manager' ? 'Assistente de Gestão Comercial' : 'Coach Pessoal de Vendas'}
+            <p className="text-sm font-semibold leading-none tracking-tight">VAMO IA</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {role === 'manager' ? 'Consultora de Performance Comercial' : 'Coach Pessoal de Vendas'}
             </p>
           </div>
         </div>
 
-        {messages.length > 0 && (
+        {hasMessages && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
             onClick={clearChat}
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Nova conversa
+            <span className="hidden sm:inline">Nova conversa</span>
           </Button>
         )}
       </div>
 
-      {/* ── Messages ── */}
+      {/* ── Messages Container ── */}
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto scroll-smooth"
       >
-        {/* Welcome state */}
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center px-4 pt-10 pb-6 gap-8 max-w-2xl mx-auto">
+        {/* Welcome / Empty State */}
+        {!hasMessages && (
+          <div className="flex flex-col items-center justify-center min-h-full px-4 py-10">
+            <div className="w-full max-w-2xl">
 
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-                <Sparkles className="h-7 w-7 text-primary" />
+              {/* Hero */}
+              <div className="flex flex-col items-center gap-4 text-center mb-10">
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/25 to-primary/10 ring-1 ring-primary/20 shadow-lg shadow-primary/10">
+                  <Sparkles className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">
+                    {firstName ? `Olá, ${firstName}!` : 'Olá!'}
+                  </h1>
+                  <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
+                    {role === 'manager'
+                      ? 'Sou sua consultora de performance comercial. Posso criar missões, adicionar vendedores, analisar KPIs e muito mais.'
+                      : 'Sou seu coach de vendas. Posso ajudar com scripts, técnicas de fechamento, negociação e estratégias para bater sua meta.'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold">
-                  {firstName ? `Olá, ${firstName}!` : 'Olá!'}
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-                  {role === 'manager'
-                    ? 'Como posso ajudar sua gestão hoje?'
-                    : 'Como posso te ajudar a vender mais hoje?'}
+
+              {/* Suggestion Cards */}
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-widest px-1">
+                  Comece com uma sugestão
                 </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => sendMessage(s.prompt)}
+                      className="group text-left p-4 rounded-xl border border-border/70 bg-card hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted/80 text-muted-foreground group-hover:bg-primary/15 group-hover:text-primary transition-colors mt-0.5">
+                          {s.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground mb-0.5">{s.label}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{s.prompt}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0 mt-1 group-hover:text-primary/50 transition-all group-hover:translate-x-0.5" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Suggestion cards */}
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {suggestions.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => sendMessage(s.prompt)}
-                  className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-all duration-150"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    {s.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.label}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{s.prompt.slice(0, 52)}…</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0 group-hover:text-primary/60 transition-colors" />
-                </button>
-              ))}
+              <p className="text-center text-xs text-muted-foreground/50 mt-8">
+                Ou digite sua pergunta abaixo para uma conversa livre
+              </p>
             </div>
           </div>
         )}
 
-        {/* Messages list */}
-        {messages.length > 0 && (
-          <div className="flex flex-col gap-1 px-4 py-5 max-w-3xl mx-auto">
-            {messages.map((msg, i) => {
-              const isUser = msg.role === 'user'
-              const isLastAI = !isUser && i === messages.length - 1
+        {/* Messages List */}
+        {hasMessages && (
+          <div className="w-full max-w-3xl mx-auto px-4 py-6">
+            <div className="space-y-4">
+              {messages.map((msg, idx) => {
+                const isUser = msg.role === 'user'
+                const isLastMsg = idx === messages.length - 1
 
-              return (
-                <div key={msg.id} className={`flex gap-3 group ${isUser ? 'justify-end' : 'justify-start'} mb-1`}>
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-3 group ${isUser ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {/* AI Avatar */}
+                    {!isUser && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 ring-1 ring-primary/20 mt-0.5 self-start">
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                    )}
 
-                  {/* AI avatar */}
-                  {!isUser && (
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 mt-1 self-start">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                  )}
+                    <div className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} max-w-[82%] sm:max-w-[72%]`}>
+                      {/* Bubble */}
+                      <div
+                        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed break-words transition-all ${
+                          isUser
+                            ? 'bg-primary text-primary-foreground rounded-br-sm shadow-sm'
+                            : 'bg-muted/70 text-foreground rounded-bl-sm border border-border/40'
+                        }`}
+                      >
+                        {/* Typing dots */}
+                        {isLastMsg && lastMsgIsStreaming ? (
+                          <span className="flex gap-1.5 items-center h-5">
+                            <span className="w-2 h-2 rounded-full bg-current opacity-50 animate-bounce [animation-delay:0ms]" />
+                            <span className="w-2 h-2 rounded-full bg-current opacity-50 animate-bounce [animation-delay:150ms]" />
+                            <span className="w-2 h-2 rounded-full bg-current opacity-50 animate-bounce [animation-delay:300ms]" />
+                          </span>
+                        ) : (
+                          <>
+                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                            {isLastMsg && streaming && msg.content !== '' && (
+                              <span className="inline-block w-0.5 h-4 bg-current ml-1 align-middle animate-pulse opacity-60" />
+                            )}
+                          </>
+                        )}
+                      </div>
 
-                  <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'} max-w-[78%]`}>
-                    <div
-                      className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                        isUser
-                          ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                          : 'bg-muted/80 rounded-tl-sm'
-                      }`}
-                    >
-                      {/* Typing indicator */}
-                      {isLastAI && lastMsgIsStreaming ? (
-                        <span className="flex gap-1 items-center h-4">
-                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:120ms]" />
-                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:240ms]" />
-                        </span>
-                      ) : (
-                        <>
-                          {msg.content}
-                          {/* Streaming cursor */}
-                          {isLastAI && streaming && msg.content !== '' && (
-                            <span className="inline-block w-0.5 h-3.5 bg-muted-foreground/60 ml-0.5 align-middle animate-pulse" />
+                      {/* Action Card */}
+                      {!isUser && msg.actionCard && !streaming && (
+                        <div className="w-full">
+                          <ActionCard
+                            actionCard={msg.actionCard}
+                            onApprove={() => handleApprove(msg.id)}
+                            onReject={() => handleReject(msg.id)}
+                            onRetry={() => handleRetry(msg.id)}
+                          />
+                        </div>
+                      )}
+
+                      {/* Copy button */}
+                      {!isUser && msg.content && !streaming && (
+                        <button
+                          onClick={() => copyMessage(msg.content, msg.id)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          {copiedId === msg.id ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-500" />
+                              <span>Copiado</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>Copiar</span>
+                            </>
                           )}
-                        </>
+                        </button>
                       )}
                     </div>
 
-                    {/* Copy button for AI messages */}
-                    {!isUser && msg.content && !streaming && (
-                      <button
-                        onClick={() => copyMessage(msg.content, msg.id)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        {copiedId === msg.id ? (
-                          <><Check className="h-3 w-3 text-emerald-500" /> Copiado</>
-                        ) : (
-                          <><Copy className="h-3 w-3" /> Copiar</>
-                        )}
-                      </button>
-                    )}
+                    {isUser && <div className="w-8 shrink-0" />}
                   </div>
+                )
+              })}
 
-                  {/* User avatar placeholder for alignment */}
-                  {isUser && <div className="w-7 shrink-0" />}
-                </div>
-              )
-            })}
-
-            {/* Quick follow-ups after first exchange */}
-            {messages.length === 2 && !streaming && (
-              <div className="flex flex-wrap gap-2 mt-2 pl-10">
-                {suggestions.slice(0, 3).map((s) => (
+              {/* Action missing safeguard */}
+              {lastExchangeNeedsAction && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 mt-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-400">Card de ação não apareceu?</p>
+                    <p className="text-xs text-amber-700/70 dark:text-amber-500/70 mt-0.5">Clique em prosseguir para continuar a ação.</p>
+                  </div>
                   <button
-                    key={s.label}
-                    onClick={() => sendMessage(s.prompt)}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all"
+                    onClick={() => sendMessage('pode prosseguir com a ação agora')}
+                    className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors"
                   >
-                    <span className="text-muted-foreground">{s.icon}</span>
-                    {s.label}
+                    Prosseguir
                   </button>
-                ))}
-              </div>
-            )}
+                </div>
+              )}
 
-            <div ref={messagesEndRef} />
+              {/* Quick follow-up suggestions after first exchange */}
+              {messages.length === 2 && !streaming && (
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-border/30">
+                  <p className="w-full text-xs text-muted-foreground/60 uppercase tracking-widest font-medium mb-1">
+                    Próximos passos
+                  </p>
+                  {suggestions.slice(0, 3).map((s, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => sendMessage(s.prompt)}
+                      className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg border border-border/60 bg-card hover:bg-muted/50 hover:border-primary/40 transition-all text-muted-foreground hover:text-foreground"
+                    >
+                      <Plus className="h-3.5 w-3.5 opacity-50" />
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div ref={messagesEndRef} className="h-2" />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Scroll to bottom */}
+      {/* Scroll to Bottom */}
       {showScrollBtn && (
-        <div className="absolute bottom-[84px] right-5 z-10">
+        <div className="absolute bottom-24 right-4 z-20 md:right-6">
           <Button
             size="icon"
             variant="secondary"
-            className="rounded-full h-8 w-8 shadow-md border"
+            className="rounded-full h-9 w-9 shadow-lg border border-border/60 hover:scale-105 transition-transform"
             onClick={scrollToBottom}
           >
-            <ArrowDown className="h-3.5 w-3.5" />
+            <ArrowDown className="h-4 w-4" />
           </Button>
         </div>
       )}
 
-      {/* ── Input area ── */}
-      <div className="shrink-0 border-t bg-background/95 backdrop-blur-sm px-4 py-3">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+      {/* ── Input Bar ── */}
+      <div className="shrink-0 border-t border-border/60 bg-background/95 backdrop-blur-md px-4 md:px-6 py-4">
+        <div className="w-full max-w-3xl mx-auto">
+          <div className="flex items-end gap-3 rounded-2xl border border-border/80 bg-card/90 px-4 py-3 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15 transition-all duration-200 shadow-sm hover:shadow-md">
             <Textarea
               ref={textareaRef}
               value={input}
@@ -367,24 +582,29 @@ export default function ChatIAPage() {
               onKeyDown={handleKeyDown}
               placeholder={
                 role === 'manager'
-                  ? 'Pergunte sobre sua equipe, metas ou missões...'
+                  ? 'Peça qualquer coisa: criar missão, adicionar vendedor, dar XP...'
                   : 'Pergunte sobre vendas, objeções ou suas missões...'
               }
               rows={1}
-              className="flex-1 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0 min-h-[28px] max-h-[160px] placeholder:text-muted-foreground/60"
+              className="flex-1 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0 min-h-6 max-h-36 placeholder:text-muted-foreground/50"
               disabled={streaming}
             />
-            <Button
-              size="icon"
-              className="h-8 w-8 rounded-xl shrink-0 mb-0.5"
-              onClick={() => sendMessage(input)}
-              disabled={!input.trim() || streaming}
-            >
-              <Send className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              {streaming && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent opacity-70" />
+              )}
+              <Button
+                size="icon"
+                className="h-8 w-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all hover:shadow-md disabled:opacity-40"
+                onClick={() => sendMessage(input)}
+                disabled={!input.trim() || streaming}
+              >
+                <Send className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
-          <p className="text-center text-[11px] text-muted-foreground/60 mt-1.5">
-            Enter para enviar · Shift+Enter para nova linha
+          <p className="text-center text-[11px] text-muted-foreground/50 mt-2 px-2">
+            <span className="font-medium">↵ Enter</span> para enviar · <span className="font-medium">Shift + ↵</span> para nova linha
           </p>
         </div>
       </div>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,101 +11,27 @@ import {
   TrendingUp,
   CheckCircle2,
   Brain,
-  Bell,
   Eye,
-  MessageCircle,
-  Target,
-  Users,
-  BarChart3,
-  Flame,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react'
 
 type AlertSeverity = 'critical' | 'warning' | 'opportunity' | 'positive'
 
 interface AIAlert {
   id: string
+  organization_id: string
+  type: string
   severity: AlertSeverity
   title: string
-  description: string
-  timestamp: string
+  description: string | null
+  entity_type: string | null
+  entity_id: string | null
+  entity_name?: string | null
+  quick_action: string | null
   read: boolean
-  action: string
+  created_at: string
 }
-
-const ALERTS: AIAlert[] = [
-  {
-    id: '1',
-    severity: 'critical',
-    title: 'João Silva não acessa o CRM há 5 dias',
-    description: 'Último acesso em 14/03/2026. Risco de desengajamento identificado pela VAMO IA. Recomendação: contato direto.',
-    timestamp: 'Há 2 horas',
-    read: false,
-    action: 'Contatar',
-  },
-  {
-    id: '2',
-    severity: 'critical',
-    title: 'Meta mensal em risco — equipe em 45% da meta',
-    description: 'Com 60% do mês decorrido, a equipe atingiu apenas 45% da meta. Projeção atual: 75% ao final do mês.',
-    timestamp: 'Há 3 horas',
-    read: false,
-    action: 'Ver Projeção',
-  },
-  {
-    id: '3',
-    severity: 'warning',
-    title: '3 vendedores sem missão ativa',
-    description: 'Carlos, Fernanda e Lucas estão sem missões atribuídas há 2+ dias. Atribuir missões mantém o engajamento.',
-    timestamp: 'Há 5 horas',
-    read: false,
-    action: 'Atribuir Missões',
-  },
-  {
-    id: '4',
-    severity: 'warning',
-    title: 'Taxa de conversão caiu 15% esta semana',
-    description: 'A taxa de conversão de propostas caiu de 32% para 27%. Possível causa: aumento de leads frios no pipeline.',
-    timestamp: 'Há 8 horas',
-    read: true,
-    action: 'Analisar',
-  },
-  {
-    id: '5',
-    severity: 'opportunity',
-    title: 'Cliente X mostrou interesse em upgrade',
-    description: 'Cliente acessou página de planos 3x esta semana. Oportunidade de upsell estimada em R$ 4.200/mês.',
-    timestamp: 'Há 1 dia',
-    read: false,
-    action: 'Ver Oportunidade',
-  },
-  {
-    id: '6',
-    severity: 'opportunity',
-    title: 'Padrão detectado: vendas sobem às terças',
-    description: 'Análise de 90 dias mostra que terças-feiras têm 23% mais fechamentos. Considere concentrar follow-ups nesse dia.',
-    timestamp: 'Há 1 dia',
-    read: true,
-    action: 'Ver Padrão',
-  },
-  {
-    id: '7',
-    severity: 'positive',
-    title: 'Maria atingiu 120% da meta',
-    description: 'Parabéns! Maria superou a meta mensal com 12 dias de antecedência. Considere reconhecimento público.',
-    timestamp: 'Há 2 dias',
-    read: true,
-    action: 'Reconhecer',
-  },
-  {
-    id: '8',
-    severity: 'positive',
-    title: 'Streak recorde: Ana com 15 dias consecutivos',
-    description: 'Ana completou missões por 15 dias seguidos — novo recorde da equipe. Engajamento exemplar.',
-    timestamp: 'Há 2 dias',
-    read: false,
-    action: 'Parabenizar',
-  },
-]
 
 const severityConfig = {
   critical: {
@@ -142,13 +68,124 @@ const severityConfig = {
   },
 }
 
+const ACTION_LABELS: Record<string, string> = {
+  contact: 'Contatar',
+  assign_mission: 'Atribuir Missão',
+  award_xp: 'Dar XP',
+  review_kpi: 'Revisar KPI',
+  chat: 'Falar com a IA',
+}
+
 type FilterTab = 'all' | 'critical' | 'warning' | 'opportunity' | 'positive'
 
-export default function AlertasPage() {
-  const { user } = useRequiredAuth()
-  const [activeTab, setActiveTab] = useState<FilterTab>('all')
-  const [alerts, setAlerts] = useState<AIAlert[]>(ALERTS)
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return 'agora'
+  if (minutes < 60) return `há ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `há ${hours}h`
+  const days = Math.floor(hours / 24)
+  return `há ${days} dia${days > 1 ? 's' : ''}`
+}
 
+export default function AlertasPage() {
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState<FilterTab>('all')
+  const [alerts, setAlerts] = useState<AIAlert[]>([])
+  const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadAlerts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/ai/alerts')
+      if (!res.ok) throw new Error('Erro ao carregar alertas')
+      const data = await res.json()
+      setAlerts(data.alerts || [])
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const generateAlerts = async () => {
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai/alerts/generate', { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Erro ao gerar alertas')
+      }
+      await loadAlerts()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  useEffect(() => {
+    loadAlerts()
+  }, [loadAlerts])
+
+  // Se não há alertas e não estamos carregando, gerar automaticamente
+  useEffect(() => {
+    if (!loading && alerts.length === 0 && !generating && !error) {
+      generateAlerts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
+
+  const markAsRead = async (id: string) => {
+    setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, read: true } : a))
+    await fetch('/api/ai/alerts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alertId: id }),
+    })
+  }
+
+  const markAllRead = async () => {
+    setAlerts((prev) => prev.map((a) => ({ ...a, read: true })))
+    await fetch('/api/ai/alerts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markAllRead: true }),
+    })
+  }
+
+  const handleAction = (alert: AIAlert) => {
+    if (!alert.quick_action) return
+    markAsRead(alert.id)
+
+    const name = alert.entity_name || 'vendedor'
+    switch (alert.quick_action) {
+      case 'contact':
+        if (alert.entity_id) router.push(`/equipe/${alert.entity_id}`)
+        else router.push('/equipe')
+        break
+      case 'assign_mission':
+        // Navegar para chat com prompt pré-preenchido
+        sessionStorage.setItem('chat_prefill', `Crie uma missão para ${name} baseada no que está acontecendo: ${alert.title}`)
+        router.push('/chat-ia')
+        break
+      case 'award_xp':
+        sessionStorage.setItem('chat_prefill', `Dê XP de bônus para ${name}: ${alert.title}`)
+        router.push('/chat-ia')
+        break
+      case 'review_kpi':
+        router.push('/kpis')
+        break
+      case 'chat':
+        sessionStorage.setItem('chat_prefill', alert.title)
+        router.push('/chat-ia')
+        break
+    }
+  }
 
   const unreadCount = alerts.filter((a) => !a.read).length
 
@@ -164,13 +201,9 @@ export default function AlertasPage() {
     { key: 'positive', label: 'Positivos', count: alerts.filter((a) => a.severity === 'positive').length },
   ]
 
-  const markAsRead = (id: string) => {
-    setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, read: true } : a))
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
             Alertas da VAMO IA
@@ -181,86 +214,156 @@ export default function AlertasPage() {
             )}
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Insights e alertas gerados automaticamente pela VAMO IA
+            Insights gerados a partir de dados reais da sua equipe
           </p>
         </div>
-        <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-          <Brain className="h-5 w-5 text-violet-500" />
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" className="text-xs" onClick={markAllRead}>
+              <Eye className="h-3.5 w-3.5 mr-1" />
+              Marcar todos lidos
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="text-xs"
+            onClick={generateAlerts}
+            disabled={generating}
+          >
+            {generating ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+                Atualizar alertas
+              </>
+            )}
+          </Button>
+          <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <Brain className="h-5 w-5 text-violet-500" />
+          </div>
         </div>
       </div>
 
+      {error && (
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-red-500">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filter Tabs */}
-      <div className="flex gap-2 flex-wrap">
-        {tabs.map((tab) => (
-          <Button
-            key={tab.key}
-            variant={activeTab === tab.key ? 'default' : 'outline'}
-            size="sm"
-            className="text-xs"
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-            <Badge variant="secondary" className="ml-1.5 text-[10px] h-4 min-w-4">
-              {tab.count}
-            </Badge>
-          </Button>
-        ))}
-      </div>
+      {!loading && alerts.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {tabs.map((tab) => (
+            <Button
+              key={tab.key}
+              variant={activeTab === tab.key ? 'default' : 'outline'}
+              size="sm"
+              className="text-xs"
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+              <Badge variant="secondary" className="ml-1.5 text-[10px] h-4 min-w-4">
+                {tab.count}
+              </Badge>
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 rounded-lg border border-border/50 bg-muted/20 animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && alerts.length === 0 && !generating && (
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center">
+            <Sparkles className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Nenhum alerta ainda.</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Clique em &ldquo;Atualizar alertas&rdquo; para gerar insights baseados na sua equipe.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alert Feed */}
-      <div className="space-y-3">
-        {filteredAlerts.map((alert) => {
-          const config = severityConfig[alert.severity]
-          const Icon = config.icon
+      {!loading && (
+        <div className="space-y-3">
+          {filteredAlerts.map((alert) => {
+            const config = severityConfig[alert.severity]
+            const Icon = config.icon
+            const actionLabel = alert.quick_action ? ACTION_LABELS[alert.quick_action] : null
 
-          return (
-            <Card
-              key={alert.id}
-              className={`border-border/50 border-l-4 ${config.borderColor} ${!alert.read ? config.bgColor : ''} transition-colors`}
-            >
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-start gap-3">
-                  <div className={`h-8 w-8 rounded-lg ${config.badgeColor} flex items-center justify-center shrink-0 mt-0.5`}>
-                    <Icon className={`h-4 w-4 ${config.iconColor}`} />
-                  </div>
+            return (
+              <Card
+                key={alert.id}
+                className={`border-border/50 border-l-4 ${config.borderColor} ${!alert.read ? config.bgColor : ''} transition-colors`}
+              >
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`h-8 w-8 rounded-lg ${config.badgeColor} flex items-center justify-center shrink-0 mt-0.5`}>
+                      <Icon className={`h-4 w-4 ${config.iconColor}`} />
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className={`text-sm font-medium ${!alert.read ? '' : 'text-muted-foreground'}`}>
-                        {alert.title}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className={`text-sm font-medium ${!alert.read ? '' : 'text-muted-foreground'}`}>
+                          {alert.title}
+                        </p>
+                        {!alert.read && (
+                          <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                        )}
+                      </div>
+                      {alert.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {alert.description}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/60 mt-1.5">{timeAgo(alert.created_at)}</p>
+                    </div>
+
+                    <div className="flex flex-col gap-1 shrink-0">
+                      {actionLabel && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-[10px] h-7 px-2"
+                          onClick={() => handleAction(alert)}
+                        >
+                          {actionLabel}
+                        </Button>
+                      )}
                       {!alert.read && (
-                        <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-[10px] h-7 px-2"
+                          onClick={() => markAsRead(alert.id)}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Marcar lido
+                        </Button>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {alert.description}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1.5">{alert.timestamp}</p>
                   </div>
-
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <Button variant="outline" size="sm" className="text-[10px] h-7 px-2">
-                      {alert.action}
-                    </Button>
-                    {!alert.read && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-[10px] h-7 px-2"
-                        onClick={() => markAsRead(alert.id)}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Marcar lido
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

@@ -75,6 +75,13 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       ],
     },
     {
+      key: 'mensagens',
+      label: 'Comunicação',
+      items: [
+        { label: 'Mensagens', href: '/mensagens', icon: 'Mail' },
+      ],
+    },
+    {
       key: 'diagnostico',
       label: 'Diagnóstico',
       prefix: '1',
@@ -138,6 +145,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       items: [
         { label: 'Meu Dia', href: '/hoje', icon: 'Sun' },
         { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
+        { label: 'Mensagens', href: '/mensagens', icon: 'Mail' },
       ],
     },
     {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ensureSellerSetup } from '@/lib/services/seller-setup.service'
 
 export async function POST(request: Request) {
   try {
@@ -68,44 +69,23 @@ export async function POST(request: Request) {
       )
     }
 
-    // Upsert into users table as seller
-    // (a Supabase trigger may auto-create a row on auth.user creation, so we upsert to update it)
-    const { data: newUser, error: dbError } = await adminClient
-      .from('users')
-      .upsert(
-        {
-          auth_id: newAuthUser.user.id,
-          organization_id: requestingUser.organization_id,
-          name,
-          email,
-          role: 'seller',
-          active: true,
-        },
-        { onConflict: 'auth_id' }
-      )
-      .select('id, name, email, role, active')
-      .single()
-
-    if (dbError || !newUser) {
-      // Rollback: delete the auth user if DB insert failed
-      await adminClient.auth.admin.deleteUser(newAuthUser.user.id)
-      console.error('DB error:', dbError)
-      return NextResponse.json({ error: 'Erro ao salvar usuário' }, { status: 500 })
-    }
-
-    // Initialize XP record for the new seller (upsert to avoid duplicates)
-    await adminClient.from('user_xp').upsert(
-      {
-        user_id: newUser.id,
-        organization_id: requestingUser.organization_id,
-        total_xp: 0,
-        current_level: 1,
-        current_streak: 0,
-      },
-      { onConflict: 'user_id' }
+    // Ensure users row has organization_id set + user_xp record exists
+    const setup = await ensureSellerSetup(
+      adminClient,
+      newAuthUser.user.id,
+      requestingUser.organization_id,
+      name,
+      email
     )
 
-    return NextResponse.json({ user: newUser }, { status: 201 })
+    if (!setup) {
+      await adminClient.auth.admin.deleteUser(newAuthUser.user.id)
+      return NextResponse.json({ error: 'Erro ao configurar usuário no banco' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      user: { id: setup.id, name, email, role: 'seller', active: true }
+    }, { status: 201 })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erro interno'
     console.error('Invite error:', error)

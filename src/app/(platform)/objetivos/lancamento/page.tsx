@@ -18,7 +18,7 @@ import {
   Swords,
   Gift,
   HeartPulse,
-  Send,
+  PartyPopper,
 } from 'lucide-react'
 
 interface ChecklistItem {
@@ -37,10 +37,18 @@ interface TeamMember {
   risk_level: 'healthy' | 'attention' | 'burnout'
 }
 
+interface ProgramLaunch {
+  id: string
+  launch_message: string
+  team_member_ids: string[]
+  created_at: string
+}
+
 export default function LancamentoPage() {
   const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
+  const [existingLaunch, setExistingLaunch] = useState<ProgramLaunch | null>(null)
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
     {
       id: 'diagnostico',
@@ -88,12 +96,37 @@ export default function LancamentoPage() {
     'Olá equipe! Estamos lançando nosso programa de gamificação. Complete missões, ganhe XP e troque por recompensas reais. Vamos juntos bater nossas metas!'
   )
   const [launching, setLaunching] = useState(false)
+  const [launchError, setLaunchError] = useState<string | null>(null)
   const [hasBurnoutRisk, setHasBurnoutRisk] = useState(false)
+
+  // Chave de persistência de checkboxes manuais no localStorage
+  const persistKey = user ? `launch-checklist-manual-${user.organization_id}` : null
 
   useEffect(() => {
     if (!user) return
 
     const fetchData = async () => {
+      // Verificar se já existe um lançamento
+      const launchRes = await fetch('/api/launch')
+      if (launchRes.ok) {
+        const { launch } = await launchRes.json()
+        if (launch) {
+          setExistingLaunch(launch)
+          setLoading(false)
+          return
+        }
+      }
+
+      // Carregar checkboxes manuais persistidos
+      let savedManual: Record<string, boolean> = {}
+      if (persistKey) {
+        try {
+          savedManual = JSON.parse(localStorage.getItem(persistKey) ?? '{}')
+        } catch {
+          savedManual = {}
+        }
+      }
+
       // Check diagnostic sessions
       const { count: diagCount } = await supabase
         .from('diagnostic_sessions')
@@ -116,12 +149,11 @@ export default function LancamentoPage() {
       const sellers: TeamMember[] = (teamData as any[] ?? [])
         .filter((m) => m.users?.role === 'seller')
         .map((m) => {
-          const streak = m.current_streak ?? 0
           const daysSinceActivity = m.last_activity_date
             ? Math.floor((Date.now() - new Date(m.last_activity_date).getTime()) / 86400000)
             : 99
           let risk_level: 'healthy' | 'attention' | 'burnout' = 'healthy'
-          if (daysSinceActivity > 7 || streak === 0) risk_level = 'attention'
+          if (daysSinceActivity > 7 || (m.current_streak ?? 0) === 0) risk_level = 'attention'
           if (daysSinceActivity > 14) risk_level = 'burnout'
           return {
             user_id: m.user_id,
@@ -136,7 +168,7 @@ export default function LancamentoPage() {
       const burnoutMembers = sellers.filter((s) => s.risk_level === 'burnout')
       setHasBurnoutRisk(burnoutMembers.length > 0)
 
-      // Auto-check items based on data
+      // Auto-check itens com base em dados + restaurar checkboxes manuais
       setChecklist((prev) =>
         prev.map((item) => {
           if (item.id === 'diagnostico' && (diagCount ?? 0) > 0) {
@@ -148,6 +180,10 @@ export default function LancamentoPage() {
           if (item.id === 'burnout' && burnoutMembers.length === 0) {
             return { ...item, checked: true, autoChecked: true }
           }
+          // Restaurar estado manual salvo
+          if (savedManual[item.id] !== undefined) {
+            return { ...item, checked: savedManual[item.id] }
+          }
           return item
         })
       )
@@ -158,7 +194,6 @@ export default function LancamentoPage() {
     fetchData().catch(() => setLoading(false))
   }, [user])
 
-
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -167,12 +202,64 @@ export default function LancamentoPage() {
     )
   }
 
+  // Estado: programa já foi lançado
+  if (existingLaunch) {
+    const launchedAt = new Date(existingLaunch.created_at)
+    const formatted = launchedAt.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Lançamento</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Checklist pré-lançamento e ativação para a equipe
+          </p>
+        </div>
+
+        <Card className="border-emerald-500/30 bg-emerald-500/5">
+          <CardContent className="py-8">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <PartyPopper className="h-8 w-8 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-emerald-600">Programa Lançado!</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Lançado em {formatted} para{' '}
+                  <strong>{existingLaunch.team_member_ids.length}</strong>{' '}
+                  {existingLaunch.team_member_ids.length === 1 ? 'vendedor' : 'vendedores'}
+                </p>
+              </div>
+              <div className="w-full max-w-md rounded-lg border border-emerald-500/20 bg-background px-4 py-3 text-sm text-left text-muted-foreground italic">
+                "{existingLaunch.launch_message}"
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const toggleChecklist = (id: string) => {
-    setChecklist((prev) =>
-      prev.map((item) =>
+    setChecklist((prev) => {
+      const next = prev.map((item) =>
         item.id === id && !item.autoChecked ? { ...item, checked: !item.checked } : item
       )
-    )
+      // Persistir apenas os checkboxes manuais
+      if (persistKey) {
+        const manual: Record<string, boolean> = {}
+        next.forEach((item) => {
+          if (!item.autoChecked) manual[item.id] = item.checked
+        })
+        localStorage.setItem(persistKey, JSON.stringify(manual))
+      }
+      return next
+    })
   }
 
   const toggleMember = (userId: string) => {
@@ -184,12 +271,47 @@ export default function LancamentoPage() {
   const completedCount = checklist.filter((item) => item.checked).length
   const allComplete = completedCount === checklist.length
   const progressPercent = (completedCount / checklist.length) * 100
+  const selectedMembers = teamMembers.filter((m) => m.included)
 
   const handleLaunch = async () => {
     if (!allComplete) return
+    if (selectedMembers.length === 0) {
+      setLaunchError('Selecione ao menos um vendedor para o lançamento.')
+      return
+    }
     setLaunching(true)
-    await new Promise((r) => setTimeout(r, 1500))
-    setLaunching(false)
+    setLaunchError(null)
+
+    try {
+      const res = await fetch('/api/launch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          launch_message: launchMessage,
+          team_member_ids: selectedMembers.map((m) => m.user_id),
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setLaunchError(data.error ?? 'Erro ao lançar programa.')
+        setLaunching(false)
+        return
+      }
+
+      // Limpar persistência e mostrar estado de sucesso
+      if (persistKey) localStorage.removeItem(persistKey)
+      setExistingLaunch({
+        id: data.launch.id,
+        launch_message: launchMessage,
+        team_member_ids: selectedMembers.map((m) => m.user_id),
+        created_at: data.launch.created_at,
+      })
+    } catch {
+      setLaunchError('Erro de conexão. Tente novamente.')
+      setLaunching(false)
+    }
   }
 
   return (
@@ -305,11 +427,18 @@ export default function LancamentoPage() {
       {/* Team assignment panel */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Users className="h-4 w-4 text-blue-500" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-500" />
+              </div>
+              <CardTitle className="text-sm font-medium">Equipe Participante</CardTitle>
             </div>
-            <CardTitle className="text-sm font-medium">Equipe Participante</CardTitle>
+            {teamMembers.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {selectedMembers.length}/{teamMembers.length} selecionados
+              </span>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -374,17 +503,21 @@ export default function LancamentoPage() {
             placeholder="Escreva uma mensagem personalizada para a equipe..."
           />
           <p className="text-xs text-muted-foreground mt-1.5">
-            Esta mensagem será enviada para todos os vendedores selecionados.
+            Esta mensagem será enviada como notificação in-app para os{' '}
+            <strong>{selectedMembers.length}</strong> vendedor(es) selecionados.
           </p>
         </CardContent>
       </Card>
 
       {/* Launch button */}
-      <div className="flex justify-center pt-2">
+      <div className="flex flex-col items-center gap-3 pt-2">
+        {launchError && (
+          <p className="text-sm text-red-500 text-center">{launchError}</p>
+        )}
         <Button
           size="lg"
           onClick={handleLaunch}
-          disabled={!allComplete || launching}
+          disabled={!allComplete || launching || selectedMembers.length === 0}
           className="px-8 py-6 text-base gap-2"
         >
           {launching ? (
@@ -399,13 +532,17 @@ export default function LancamentoPage() {
             </span>
           )}
         </Button>
+        {!allComplete && (
+          <p className="text-center text-xs text-muted-foreground">
+            Complete todos os {checklist.length} itens do checklist para habilitar o lançamento.
+          </p>
+        )}
+        {allComplete && selectedMembers.length === 0 && (
+          <p className="text-center text-xs text-muted-foreground">
+            Selecione ao menos um vendedor para lançar.
+          </p>
+        )}
       </div>
-
-      {!allComplete && (
-        <p className="text-center text-xs text-muted-foreground">
-          Complete todos os {checklist.length} itens do checklist para habilitar o lançamento.
-        </p>
-      )}
     </div>
   )
 }

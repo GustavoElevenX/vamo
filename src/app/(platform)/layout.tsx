@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { getCached, setCache } from '@/lib/cache'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -9,7 +9,7 @@ import { MobileNav } from '@/components/layout/mobile-nav'
 import { useAuth } from '@/hooks/use-auth'
 import { DailyCheckinModal } from '@/components/checkin/daily-checkin-modal'
 import { ChatFAB } from '@/components/ai/chat-fab'
-import { createClient } from '@/lib/supabase/client'
+import { PasswordChangeModal } from '@/components/auth/password-change-modal'
 import {
   MANAGER_ONLY_ROUTES,
   SELLER_ONLY_ROUTES,
@@ -33,13 +33,17 @@ export default function PlatformLayout({
 }) {
   const { user, loading, signOut } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const cachedXp = useRef(getCached<{ xp: UserXp; curr: XpLevel | null; next: XpLevel | null }>('layout-xp'))
-  const [userXp, setUserXp] = useState<UserXp | null>(cachedXp.current?.xp ?? null)
-  const [currentLevel, setCurrentLevel] = useState<XpLevel | null>(cachedXp.current?.curr ?? null)
-  const [nextLevel, setNextLevel] = useState<XpLevel | null>(cachedXp.current?.next ?? null)
+  const [userXp, setUserXp] = useState<UserXp | null>(
+    () => getCached<{ xp: UserXp; curr: XpLevel | null; next: XpLevel | null }>('layout-xp')?.xp ?? null
+  )
+  const [currentLevel, setCurrentLevel] = useState<XpLevel | null>(
+    () => getCached<{ xp: UserXp; curr: XpLevel | null; next: XpLevel | null }>('layout-xp')?.curr ?? null
+  )
+  const [nextLevel, setNextLevel] = useState<XpLevel | null>(
+    () => getCached<{ xp: UserXp; curr: XpLevel | null; next: XpLevel | null }>('layout-xp')?.next ?? null
+  )
   const router = useRouter()
   const pathname = usePathname()
-  const supabaseRef = useRef(createClient())
 
   // Redirect in effect to avoid setState-during-render warning
   useEffect(() => {
@@ -126,29 +130,14 @@ export default function PlatformLayout({
     if (!user.organization_id) return
 
     const fetchXp = async () => {
-      const supabase = supabaseRef.current
-      const results = await Promise.allSettled([
-        supabase
-          .from('user_xp')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle(),
-        supabase
-          .from('xp_levels')
-          .select('*')
-          .eq('organization_id', user.organization_id)
-          .order('level', { ascending: true }),
-      ])
-
-      const xpResult = results[0].status === 'fulfilled' ? results[0].value : null
-      const levelsResult = results[1].status === 'fulfilled' ? results[1].value : null
-      const xp = xpResult?.data
-      const levels = levelsResult?.data
+      const res = await fetch('/api/user/xp')
+      if (!res.ok) return
+      const { xp, levels } = await res.json()
 
       if (xp) {
         setUserXp(xp)
-        const curr = levels?.find((l: any) => l.level === xp.current_level) ?? null
-        const next = levels?.find((l: any) => l.level === xp.current_level + 1) ?? null
+        const curr = levels?.find((l: XpLevel) => l.level === xp.current_level) ?? null
+        const next = levels?.find((l: XpLevel) => l.level === xp.current_level + 1) ?? null
         setCurrentLevel(curr)
         setNextLevel(next)
         setCache('layout-xp', { xp, curr, next }, 5 * 60 * 1000)
@@ -189,6 +178,9 @@ export default function PlatformLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Modal de troca de senha — aparece automaticamente no primeiro acesso de vendedores criados pela IA */}
+      <PasswordChangeModal />
+
       {/* Check-in Diário — aparece 1x/dia para vendedores */}
       <DailyCheckinModal />
 

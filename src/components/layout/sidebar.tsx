@@ -39,12 +39,14 @@ import {
   ChevronDown,
   Newspaper,
   RefreshCw,
+  Mail,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG, ROLE_LABELS } from '@/lib/constants'
 import type { NavGroup } from '@/lib/constants'
 import type { UserRole } from '@/types'
+import { useAlertsCount } from '@/hooks/use-alerts-count'
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
@@ -81,6 +83,7 @@ const iconMap: Record<string, LucideIcon> = {
   Wrench,
   Newspaper,
   RefreshCw,
+  Mail,
 }
 
 interface SidebarProps {
@@ -100,6 +103,7 @@ function isGroupActive(group: NavGroup, pathname: string): boolean {
 export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
   const pathname = usePathname()
   const groups = NAV_CONFIG[role] || NAV_CONFIG.seller
+  const alertsCount = useAlertsCount(role === 'manager' || role === 'admin')
 
   // Initialize collapsed state: only the active group is expanded
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
@@ -227,8 +231,13 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                           />
                         )}
                         <span className="truncate">{item.label}</span>
-                        {item.badge === 'alert' && (
-                          <span className="ml-auto h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                        {item.badge === 'alert' && alertsCount > 0 && (
+                          <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shrink-0">
+                            {alertsCount > 9 ? '9+' : alertsCount}
+                          </span>
+                        )}
+                        {item.badge === 'alert' && alertsCount === 0 && (
+                          <span className="ml-auto h-2 w-2 rounded-full bg-muted-foreground/20 shrink-0" />
                         )}
                       </Link>
                     )

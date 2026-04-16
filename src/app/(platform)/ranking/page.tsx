@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -23,31 +22,23 @@ export default function RankingPage() {
   const [period, setPeriod] = useState<PeriodType>('weekly')
   const [rankings, setRankings] = useState<RankingUser[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     if (!user) return
-    const fetch = async () => {
-      setLoading(true)
-      const { data } = await supabase
-        .from('user_xp')
-        .select('user_id, total_xp, current_level, users!inner(name, avatar_url)')
-        .eq('organization_id', user.organization_id)
-        .order('total_xp', { ascending: false })
-        .limit(50)
-
-      const mapped = (data ?? []).map((row: any) => ({
-        user_id: row.user_id,
-        name: row.users?.name ?? 'Usuário',
-        avatar_url: row.users?.avatar_url ?? null,
-        total_xp: row.total_xp,
-        current_level: row.current_level,
-      }))
-
-      setRankings(mapped)
-      setLoading(false)
-    }
-    fetch().catch(() => setLoading(false))
+    setLoading(true)
+    fetch('/api/team/performance', { credentials: 'same-origin' })
+      .then((res) => res.ok ? res.json() : { members: [] })
+      .then(({ members }) => {
+        setRankings((members ?? []).map((m: any) => ({
+          user_id: m.user_id,
+          name: m.name,
+          avatar_url: m.avatar_url ?? null,
+          total_xp: m.total_xp,
+          current_level: m.current_level,
+        })))
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [user, period])
 
 

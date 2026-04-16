@@ -61,13 +61,11 @@ export function EnergyThermometer({ organizationId }: EnergyThermometerProps) {
       const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0]
       const today = now.toISOString().split('T')[0]
 
-      // Get all sellers in the org
-      const { data: sellers } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('organization_id', organizationId)
-        .eq('role', 'seller')
-        .eq('active', true)
+      // Get all sellers in the org via admin-backed API to bypass RLS
+      const membersRes = await fetch('/api/team/members', { credentials: 'same-origin' })
+      const sellers: { id: string; name: string }[] = membersRes.ok
+        ? ((await membersRes.json()).members ?? []).map((m: any) => ({ id: m.id, name: m.name }))
+        : []
 
       if (!sellers || sellers.length === 0) {
         setLoading(false)

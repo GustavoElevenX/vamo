@@ -52,35 +52,34 @@ export default function PerformancePage() {
       try {
         const today = new Date().toISOString().split('T')[0]
 
-        const results = await Promise.allSettled([
-          supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
-          supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('kpi_entries').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
-            .gte('recorded_at', `${today}T00:00:00`).lte('recorded_at', `${today}T23:59:59`),
-          supabase.from('ai_missions').select('id, title, status, xp_reward, difficulty')
-            .eq('user_id', user.id).in('status', ['pending', 'in_progress'])
-            .order('created_at', { ascending: false }).limit(4),
-          supabase.from('user_xp').select('user_id, total_xp').eq('organization_id', user.organization_id)
-            .order('total_xp', { ascending: false }),
-          supabase.from('users').select('*', { count: 'exact', head: true })
-            .eq('organization_id', user.organization_id).eq('role', 'seller').eq('active', true),
+        const [results, perfRes] = await Promise.all([
+          Promise.allSettled([
+            supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
+            supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+            supabase.from('kpi_entries').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+              .gte('recorded_at', `${today}T00:00:00`).lte('recorded_at', `${today}T23:59:59`),
+            supabase.from('ai_missions').select('id, title, status, xp_reward, difficulty')
+              .eq('user_id', user.id).in('status', ['pending', 'in_progress'])
+              .order('created_at', { ascending: false }).limit(4),
+          ]),
+          fetch('/api/team/performance', { credentials: 'same-origin' }),
         ])
 
         const xp = results[0].status === 'fulfilled' ? results[0].value.data : null
         const badges = results[1].status === 'fulfilled' ? results[1].value.count : null
         const kpis = results[2].status === 'fulfilled' ? results[2].value.count : null
         const missions = results[3].status === 'fulfilled' ? results[3].value.data : null
-        const allXp = results[4].status === 'fulfilled' ? results[4].value.data : null
-        const sellers = results[5].status === 'fulfilled' ? results[5].value.count : null
 
         setUserXp(xp)
         setBadgeCount(badges ?? 0)
         setTodayKpiCount(kpis ?? 0)
         setActiveMissions((missions ?? []) as MissionSummary[])
-        setTotalSellers(sellers ?? 0)
 
-        if (allXp) {
-          const rank = allXp.findIndex((r: { user_id: string }) => r.user_id === user.id)
+        if (perfRes.ok) {
+          const { members } = await perfRes.json()
+          const list: { user_id: string; total_xp: number }[] = members ?? []
+          setTotalSellers(list.length)
+          const rank = list.findIndex((r) => r.user_id === user.id)
           setMyRank(rank >= 0 ? rank + 1 : null)
         }
 

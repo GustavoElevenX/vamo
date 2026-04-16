@@ -75,13 +75,8 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
 
     const fetchData = async () => {
       try {
-        const results = await Promise.allSettled([
-          supabase
-            .from('user_xp')
-            .select('user_id, total_xp, current_level, current_streak, users!inner(name, role)')
-            .eq('organization_id', user.organization_id)
-            .order('total_xp', { ascending: false })
-            .limit(10),
+        const [perfRes, missionsRes, diagnosticsRes] = await Promise.allSettled([
+          fetch('/api/team/performance', { credentials: 'same-origin' }),
           supabase
             .from('ai_missions')
             .select('*', { count: 'exact', head: true })
@@ -91,58 +86,36 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             .from('diagnostic_sessions')
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', user.organization_id),
-          supabase
-            .from('users')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', user.organization_id)
-            .eq('role', 'seller')
-            .eq('active', true),
         ])
 
-        const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
-          r.status === 'fulfilled' ? r.value : fallback
+        const missions = missionsRes.status === 'fulfilled' ? missionsRes.value.count : 0
+        const diagnostics = diagnosticsRes.status === 'fulfilled' ? diagnosticsRes.value.count : 0
 
-        const membersResult = val(results[0], { data: null } as any)
-        const missionsResult = val(results[1], { count: 0 } as any)
-        const diagnosticsResult = val(results[2], { count: 0 } as any)
-        const totalResult = val(results[3], { count: 0 } as any)
-
-        const members = membersResult.data
-        const missions = missionsResult.count
-        const diagnostics = diagnosticsResult.count
-
-        setTeamSize(totalResult.count ?? 0)
         setActiveMissions(missions ?? 0)
         setDiagnosticCount(diagnostics ?? 0)
 
-        if (members) {
-          setTeamMembers(
-            (members as any[])
-              .filter((m) => m.users?.role === 'seller')
-              .map((m) => ({
-                user_id: m.user_id,
-                name: m.users?.name ?? 'Vendedor',
-                total_xp: m.total_xp,
-                current_level: m.current_level,
-                current_streak: m.current_streak,
-              }))
-          )
-        }
+        if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
+          const { members } = await perfRes.value.json()
+          const list: TeamMember[] = (members ?? []).map((m: any) => ({
+            user_id: m.user_id,
+            name: m.name,
+            total_xp: m.total_xp,
+            current_level: m.current_level,
+            current_streak: m.current_streak,
+          }))
+          setTeamMembers(list)
+          setTeamSize(list.length)
 
-        // Generate alerts based on data
-        const alerts: string[] = []
-        if (members) {
-          const lowStreak = (members as any[]).filter(
-            (m) => m.current_streak === 0 && m.users?.role === 'seller'
-          )
+          const alerts: string[] = []
+          const lowStreak = list.filter((m) => m.current_streak === 0)
           if (lowStreak.length > 0) {
             alerts.push(`${lowStreak.length} vendedor(es) sem atividade recente`)
           }
+          if ((missions ?? 0) > 10) {
+            alerts.push('Muitas missões pendentes — verifique a carga da equipe')
+          }
+          setRecentAlerts(alerts)
         }
-        if ((missions ?? 0) > 10) {
-          alerts.push('Muitas missões pendentes — verifique a carga da equipe')
-        }
-        setRecentAlerts(alerts)
       } catch (err) {
         console.error('[GestorDashboard] Erro ao carregar dados:', err)
       } finally {

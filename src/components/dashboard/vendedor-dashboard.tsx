@@ -118,18 +118,17 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
       try {
         const today = new Date().toISOString().split('T')[0]
 
-        const results = await Promise.allSettled([
-          supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
-          supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-          supabase.from('kpi_entries').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
-            .gte('recorded_at', `${today}T00:00:00`).lte('recorded_at', `${today}T23:59:59`),
-          supabase.from('ai_missions').select('id, title, status, xp_reward, difficulty')
-            .eq('user_id', user.id).in('status', ['pending', 'in_progress'])
-            .order('created_at', { ascending: false }).limit(4),
-          supabase.from('user_xp').select('user_id, total_xp').eq('organization_id', user.organization_id)
-            .order('total_xp', { ascending: false }),
-          supabase.from('users').select('*', { count: 'exact', head: true })
-            .eq('organization_id', user.organization_id).eq('role', 'seller').eq('active', true),
+        const [results, perfRes] = await Promise.all([
+          Promise.allSettled([
+            supabase.from('user_xp').select('*').eq('user_id', user.id).maybeSingle(),
+            supabase.from('user_badges').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+            supabase.from('kpi_entries').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+              .gte('recorded_at', `${today}T00:00:00`).lte('recorded_at', `${today}T23:59:59`),
+            supabase.from('ai_missions').select('id, title, status, xp_reward, difficulty')
+              .eq('user_id', user.id).in('status', ['pending', 'in_progress'])
+              .order('created_at', { ascending: false }).limit(4),
+          ]),
+          fetch('/api/team/performance', { credentials: 'same-origin' }),
         ])
 
         const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
@@ -139,18 +138,18 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
         const badgesResult = val(results[1], { count: 0 } as any)
         const kpisResult = val(results[2], { count: 0 } as any)
         const missionsResult = val(results[3], { data: [] } as any)
-        const allXpResult = val(results[4], { data: [] } as any)
-        const sellersResult = val(results[5], { count: 0 } as any)
 
         const xp = xpResult.data
         setUserXp(xp)
         setBadgeCount(badgesResult.count ?? 0)
         setTodayKpiCount(kpisResult.count ?? 0)
         setActiveMissions((missionsResult.data ?? []) as MissionSummary[])
-        setTotalSellers(sellersResult.count ?? 0)
 
-        if (allXpResult.data) {
-          const rank = allXpResult.data.findIndex((r: { user_id: string }) => r.user_id === user.id)
+        if (perfRes.ok) {
+          const { members } = await perfRes.json()
+          const list: { user_id: string; total_xp: number }[] = members ?? []
+          setTotalSellers(list.length)
+          const rank = list.findIndex((r) => r.user_id === user.id)
           setMyRank(rank >= 0 ? rank + 1 : null)
         }
 

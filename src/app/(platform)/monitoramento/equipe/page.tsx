@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,7 +32,6 @@ interface TeamMember {
 
 export default function MonitoramentoEquipePage() {
   const { user } = useRequiredAuth()
-  const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<TeamMember[]>([])
 
@@ -42,43 +40,10 @@ export default function MonitoramentoEquipePage() {
 
     const fetchData = async () => {
       try {
-        const { data: teamData } = await supabase
-          .from('user_xp')
-          .select('user_id, total_xp, current_level, current_streak, last_activity_date, users!inner(name, role)')
-          .eq('organization_id', user.organization_id)
-
-        if (teamData) {
-          const sellers = (teamData as any[]).filter((m) => m.users?.role === 'seller')
-          const results = await Promise.allSettled(
-            sellers.map(async (m) => {
-              const { count: missionsCompleted } = await supabase
-                .from('ai_missions')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', m.user_id)
-                .eq('status', 'completed')
-
-              const streak = m.current_streak ?? 0
-              let trend: 'up' | 'down' | 'stable' = 'stable'
-              if (streak > 5) trend = 'up'
-              else if (streak === 0) trend = 'down'
-
-              return {
-                user_id: m.user_id,
-                name: m.users?.name ?? 'Vendedor',
-                total_xp: m.total_xp ?? 0,
-                current_level: m.current_level ?? 1,
-                current_streak: streak,
-                missions_completed: missionsCompleted ?? 0,
-                trend,
-              }
-            })
-          )
-
-          const mapped: TeamMember[] = results
-            .filter((r): r is PromiseFulfilledResult<TeamMember> => r.status === 'fulfilled')
-            .map((r) => r.value)
-
-          setMembers(mapped.sort((a, b) => b.total_xp - a.total_xp))
+        const res = await fetch('/api/team/performance', { credentials: 'same-origin' })
+        if (res.ok) {
+          const data = await res.json()
+          setMembers(data.members ?? [])
         }
       } catch {
         // ignore

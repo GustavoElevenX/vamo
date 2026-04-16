@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,7 +37,6 @@ interface TeamMemberHealth {
 
 export default function MonitoramentoSaudeEquipePage() {
   const { user } = useRequiredAuth()
-  const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<TeamMemberHealth[]>([])
   const [npsScore, setNpsScore] = useState(7)
@@ -47,55 +45,50 @@ export default function MonitoramentoSaudeEquipePage() {
     if (!user) return
 
     const fetchData = async () => {
-      const { data: teamData } = await supabase
-        .from('user_xp')
-        .select('user_id, total_xp, current_level, current_streak, last_activity_date, users!inner(name, role)')
-        .eq('organization_id', user.organization_id)
+      const res = await fetch('/api/team/performance', { credentials: 'same-origin' })
+      if (!res.ok) { setLoading(false); return }
 
-      if (teamData) {
-        const mapped: TeamMemberHealth[] = (teamData as any[])
-          .filter((m) => m.users?.role === 'seller')
-          .map((m) => {
-            const streak = m.current_streak ?? 0
-            const daysSinceActivity = m.last_activity_date
-              ? Math.floor((Date.now() - new Date(m.last_activity_date).getTime()) / 86400000)
-              : 99
+      const { members: raw } = await res.json()
 
-            let risk_level: 'healthy' | 'attention' | 'burnout' = 'healthy'
-            let engagement = 85
-            let xp_trend: 'up' | 'down' | 'stable' = 'stable'
-            let ai_suggestion = 'Manter ritmo atual. Bom engajamento.'
+      const mapped: TeamMemberHealth[] = (raw ?? []).map((m: any) => {
+        const streak = m.current_streak ?? 0
+        const daysSinceActivity = m.last_activity_date
+          ? Math.floor((Date.now() - new Date(m.last_activity_date).getTime()) / 86400000)
+          : 99
 
-            if (daysSinceActivity > 5 || streak === 0) {
-              risk_level = 'burnout'
-              engagement = Math.max(10, 30 - daysSinceActivity * 3)
-              xp_trend = 'down'
-              ai_suggestion = '⚠️ Conversar antes de atribuir novas missões. Possível sobrecarga ou desmotivação.'
-            } else if (daysSinceActivity > 2 || streak < 3) {
-              risk_level = 'attention'
-              engagement = 55
-              xp_trend = 'down'
-              ai_suggestion = 'Verificar se precisa de suporte. Considerar missão mais leve.'
-            } else {
-              xp_trend = streak > 5 ? 'up' : 'stable'
-              engagement = Math.min(100, 70 + streak * 3)
-            }
+        let risk_level: 'healthy' | 'attention' | 'burnout' = 'healthy'
+        let engagement = 85
+        let xp_trend: 'up' | 'down' | 'stable' = 'stable'
+        let ai_suggestion = 'Manter ritmo atual. Bom engajamento.'
 
-            return {
-              user_id: m.user_id,
-              name: m.users?.name ?? 'Vendedor',
-              streak,
-              xp_trend,
-              engagement_score: engagement,
-              risk_level,
-              last_activity: m.last_activity_date ?? 'Nunca',
-              ai_suggestion,
-            }
-          })
-          .sort((a, b) => a.engagement_score - b.engagement_score)
+        if (daysSinceActivity > 5 || streak === 0) {
+          risk_level = 'burnout'
+          engagement = Math.max(10, 30 - daysSinceActivity * 3)
+          xp_trend = 'down'
+          ai_suggestion = '⚠️ Conversar antes de atribuir novas missões. Possível sobrecarga ou desmotivação.'
+        } else if (daysSinceActivity > 2 || streak < 3) {
+          risk_level = 'attention'
+          engagement = 55
+          xp_trend = 'down'
+          ai_suggestion = 'Verificar se precisa de suporte. Considerar missão mais leve.'
+        } else {
+          xp_trend = streak > 5 ? 'up' : 'stable'
+          engagement = Math.min(100, 70 + streak * 3)
+        }
 
-        setMembers(mapped)
-      }
+        return {
+          user_id: m.user_id,
+          name: m.name,
+          streak,
+          xp_trend,
+          engagement_score: engagement,
+          risk_level,
+          last_activity: m.last_activity_date ?? 'Nunca',
+          ai_suggestion,
+        }
+      }).sort((a: TeamMemberHealth, b: TeamMemberHealth) => a.engagement_score - b.engagement_score)
+
+      setMembers(mapped)
       setLoading(false)
     }
 

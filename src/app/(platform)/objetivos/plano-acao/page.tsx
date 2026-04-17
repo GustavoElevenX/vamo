@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 import {
   Sparkles,
   Plus,
@@ -16,186 +18,194 @@ import {
   Brain,
   Filter,
   Zap,
-  DollarSign,
-  Award,
   Calendar,
   User,
   Target,
-  Link2,
   X,
+  MessageSquare,
+  Loader2,
 } from 'lucide-react'
-import { toast } from 'sonner'
 
-type MissionType = 'atividade' | 'habilidade' | 'resultado' | 'habito' | 'coletiva' | 'colaboracao'
-type MissionStatus = 'nao_iniciada' | 'em_andamento' | 'concluida' | 'expirada'
+type MissionArea = 'lead_generation' | 'sales_process' | 'team_management' | 'tools_technology'
+type MissionStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+
+interface Seller {
+  id: string
+  name: string
+}
 
 interface Mission {
   id: string
-  name: string
-  type: MissionType
-  assignee: string
-  completionCriteria: string
-  criteriaMode: 'auto_crm' | 'manual'
-  deadline: string
-  xp: number
-  bonus: number
-  badge: string
-  linkRecurso: string
-  isAiSuggested: boolean
-  aiJustification?: string
+  title: string
+  description: string
+  area: MissionArea
+  difficulty: number
+  xp_reward: number
   status: MissionStatus
+  user_id: string
+  seller_name: string
+  created_at: string
 }
 
-const TYPE_CONFIG: Record<MissionType, { label: string; color: string }> = {
-  atividade: { label: 'Atividade', color: 'bg-blue-500/10 text-blue-500' },
-  habilidade: { label: 'Habilidade', color: 'bg-violet-500/10 text-violet-500' },
-  resultado: { label: 'Resultado', color: 'bg-emerald-500/10 text-emerald-500' },
-  habito: { label: 'Hábito', color: 'bg-amber-500/10 text-amber-500' },
-  coletiva: { label: 'Coletiva', color: 'bg-pink-500/10 text-pink-500' },
-  colaboracao: { label: 'Colaboração', color: 'bg-cyan-500/10 text-cyan-500' },
+const AREA_CONFIG: Record<MissionArea, { label: string; color: string }> = {
+  lead_generation: { label: 'Geração de Leads', color: 'bg-emerald-500/10 text-emerald-500' },
+  sales_process: { label: 'Processo de Vendas', color: 'bg-blue-500/10 text-blue-500' },
+  team_management: { label: 'Gestão de Equipe', color: 'bg-amber-500/10 text-amber-500' },
+  tools_technology: { label: 'Ferramentas', color: 'bg-violet-500/10 text-violet-500' },
 }
 
 const STATUS_CONFIG: Record<MissionStatus, { label: string; color: string }> = {
-  nao_iniciada: { label: 'Não Iniciada', color: 'text-muted-foreground' },
-  em_andamento: { label: 'Em Andamento', color: 'text-blue-500' },
-  concluida: { label: 'Concluída', color: 'text-emerald-500' },
-  expirada: { label: 'Expirada', color: 'text-red-500' },
+  pending: { label: 'Não Iniciada', color: 'text-muted-foreground' },
+  in_progress: { label: 'Em Andamento', color: 'text-blue-500' },
+  completed: { label: 'Concluída', color: 'text-emerald-500' },
+  skipped: { label: 'Ignorada', color: 'text-red-400' },
 }
 
-const MOCK_COLLABORATORS = ['Todos', 'Carlos Silva', 'Ana Souza', 'Pedro Santos', 'Mariana Lima']
-
-const INITIAL_MISSIONS: Mission[] = [
-  {
-    id: '1',
-    name: 'Follow-up em 24h',
-    type: 'atividade',
-    assignee: 'Todos',
-    completionCriteria: 'Retornar 100% das propostas abertas em até 24h',
-    criteriaMode: 'auto_crm',
-    deadline: '2026-04-18',
-    xp: 150,
-    bonus: 225,
-    badge: 'Velocista',
-    linkRecurso: '',
-    isAiSuggested: true,
-    aiJustification: 'Diagnóstico mostrou tempo médio de follow-up de 72h — reduzir para 24h aumenta conversão em 35%.',
-    status: 'nao_iniciada',
-  },
-  {
-    id: '2',
-    name: 'Prospecção Ativa',
-    type: 'resultado',
-    assignee: 'Todos',
-    completionCriteria: '5 novos contatos qualificados por dia',
-    criteriaMode: 'manual',
-    deadline: '2026-04-18',
-    xp: 200,
-    bonus: 300,
-    badge: 'Caçador',
-    linkRecurso: '',
-    isAiSuggested: true,
-    aiJustification: 'Pipeline está 40% abaixo do necessário. 5 contatos/dia repõe o funil em 15 dias.',
-    status: 'nao_iniciada',
-  },
-  {
-    id: '3',
-    name: 'CRM 100% Atualizado',
-    type: 'habito',
-    assignee: 'Todos',
-    completionCriteria: 'Atualizar todos os contatos no CRM diariamente',
-    criteriaMode: 'auto_crm',
-    deadline: '2026-04-18',
-    xp: 100,
-    bonus: 150,
-    badge: 'Organizado',
-    linkRecurso: '',
-    isAiSuggested: true,
-    aiJustification: 'Apenas 55% do time atualiza o CRM diariamente. Meta: 100% para visibilidade de pipeline.',
-    status: 'nao_iniciada',
-  },
-  {
-    id: '4',
-    name: 'Taxa de Conversão +10%',
-    type: 'resultado',
-    assignee: 'Todos',
-    completionCriteria: 'Aumentar conversão de propostas em 10% no mês',
-    criteriaMode: 'auto_crm',
-    deadline: '2026-04-18',
-    xp: 500,
-    bonus: 750,
-    badge: 'Closer',
-    linkRecurso: '',
-    isAiSuggested: true,
-    aiJustification: 'Conversão atual é 44%. Meta de 52% é realista e alinhada ao benchmark do setor (62%).',
-    status: 'nao_iniciada',
-  },
-]
-
-const EMPTY_MISSION: Omit<Mission, 'id'> = {
-  name: '',
-  type: 'atividade',
-  assignee: 'Todos',
-  completionCriteria: '',
-  criteriaMode: 'auto_crm',
-  deadline: '',
-  xp: 100,
-  bonus: 0,
-  badge: '',
-  linkRecurso: '',
-  isAiSuggested: false,
-  status: 'nao_iniciada',
-}
+const DIFFICULTY_LABEL: Record<number, string> = { 1: 'Fácil', 2: 'Médio', 3: 'Difícil' }
 
 export default function PlanoAcaoPage() {
   const { user } = useRequiredAuth()
   const router = useRouter()
+  const supabase = createClient()
 
-  const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS)
-  const [filterType, setFilterType] = useState<MissionType | 'all'>('all')
-  const [filterStatus, setFilterStatus] = useState<MissionStatus | 'all'>('all')
-  const [filterCollaborator, setFilterCollaborator] = useState('Todos')
+  const [missions, setMissions] = useState<Mission[]>([])
+  const [sellers, setSellers] = useState<Seller[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showNewForm, setShowNewForm] = useState(false)
-  const [newMission, setNewMission] = useState(EMPTY_MISSION)
+  const [filterStatus, setFilterStatus] = useState<MissionStatus | 'all'>('all')
+  const [filterSeller, setFilterSeller] = useState('all')
 
+  const [newMission, setNewMission] = useState({
+    title: '',
+    description: '',
+    area: 'sales_process' as MissionArea,
+    difficulty: 2,
+    xp_reward: 100,
+    user_id: '',
+  })
 
-  const filteredMissions = missions.filter((m) => {
-    if (filterType !== 'all' && m.type !== filterType) return false
+  const fetchData = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const [{ data: missionsData }, sellersRes] = await Promise.all([
+        supabase
+          .from('ai_missions')
+          .select('id, title, description, area, difficulty, xp_reward, status, user_id, created_at')
+          .eq('organization_id', user.organization_id)
+          .order('created_at', { ascending: false }),
+        fetch('/api/team/sellers', { credentials: 'same-origin' }).then((r) => r.json()),
+      ])
+
+      const sellerList: Seller[] = sellersRes.sellers ?? []
+      setSellers(sellerList)
+
+      const sellerMap = Object.fromEntries(sellerList.map((s) => [s.id, s.name]))
+      const mapped: Mission[] = (missionsData ?? []).map((m) => ({
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        area: m.area as MissionArea,
+        difficulty: m.difficulty,
+        xp_reward: m.xp_reward,
+        status: m.status as MissionStatus,
+        user_id: m.user_id,
+        seller_name: sellerMap[m.user_id] ?? 'Gestor',
+        created_at: m.created_at,
+      }))
+
+      setMissions(mapped)
+
+      if (sellerList.length > 0 && !newMission.user_id) {
+        setNewMission((p) => ({ ...p, user_id: sellerList[0].id }))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const handleCreate = async () => {
+    if (!newMission.title.trim() || !newMission.user_id) {
+      toast.error('Nome e vendedor são obrigatórios')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/ai/chat/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'create_mission',
+          params: {
+            title: newMission.title,
+            description: newMission.description || newMission.title,
+            area: newMission.area,
+            difficulty: newMission.difficulty,
+            xp_reward: newMission.xp_reward,
+            user_id: newMission.user_id,
+          },
+        }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+      toast.success('Missão criada com sucesso!')
+      setShowNewForm(false)
+      setNewMission((p) => ({ ...p, title: '', description: '' }))
+      await fetchData()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao criar missão')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/ai/chat/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'delete_mission',
+          params: { mission_id: id },
+        }),
+      })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.message)
+      setMissions((prev) => prev.filter((m) => m.id !== id))
+      toast.success('Missão removida')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao remover')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const filtered = missions.filter((m) => {
     if (filterStatus !== 'all' && m.status !== filterStatus) return false
-    if (filterCollaborator !== 'Todos' && m.assignee !== 'Todos' && m.assignee !== filterCollaborator) return false
+    if (filterSeller !== 'all' && m.user_id !== filterSeller) return false
     return true
   })
 
-  const totalXp = missions.reduce((sum, m) => sum + m.xp, 0)
-  const totalBonus = missions.reduce((sum, m) => sum + m.bonus, 0)
+  const totalXp = missions.reduce((s, m) => s + m.xp_reward, 0)
 
-  const handleAddMission = () => {
-    if (!newMission.name.trim()) {
-      toast.error('Nome da missão é obrigatório')
-      return
-    }
-    const mission: Mission = {
-      ...newMission,
-      id: Date.now().toString(),
-    }
-    setMissions((prev) => [...prev, mission])
-    setNewMission(EMPTY_MISSION)
-    setShowNewForm(false)
-    toast.success('Missão criada com sucesso!')
-  }
-
-  const handleRemoveMission = (id: string) => {
-    setMissions((prev) => prev.filter((m) => m.id !== id))
-  }
-
-  // Per-collaborator XP/bonus panel
-  const collaboratorStats = MOCK_COLLABORATORS.filter((c) => c !== 'Todos').map((name) => {
-    const assigned = missions.filter((m) => m.assignee === 'Todos' || m.assignee === name)
-    return {
-      name,
-      xp: assigned.reduce((s, m) => s + m.xp, 0),
-      bonus: assigned.reduce((s, m) => s + m.bonus, 0),
-    }
+  const sellerStats = sellers.map((seller) => {
+    const assigned = missions.filter((m) => m.user_id === seller.id)
+    return { ...seller, xp: assigned.reduce((s, m) => s + m.xp_reward, 0), count: assigned.length }
   })
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -208,55 +218,87 @@ export default function PlanoAcaoPage() {
             </Button>
             <h2 className="text-xl font-semibold tracking-tight">Plano de Ação</h2>
             <Badge variant="secondary" className="text-[10px] bg-violet-500/10 text-violet-500 border-0">
-              Etapa 2
+              {missions.length} missões
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1 ml-10">
-            Central de missões gamificadas para o time
+            Missões criadas pela VAMO IA e salvas no banco de dados
           </p>
         </div>
-        <Button size="sm" onClick={() => setShowNewForm(true)} className="bg-violet-500 hover:bg-violet-600 text-white">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Nova Missão
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/chat-ia')}
+            className="text-violet-500 border-violet-500/30 hover:bg-violet-500/10"
+          >
+            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+            Pedir à IA
+          </Button>
+          <Button size="sm" onClick={() => setShowNewForm(true)} className="bg-violet-500 hover:bg-violet-600 text-white">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Nova Missão
+          </Button>
+        </div>
       </div>
 
+      {/* Banner IA */}
+      {missions.length === 0 && (
+        <Card className="border-violet-500/20 bg-violet-500/5">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                <Sparkles className="h-4.5 w-4.5 text-violet-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Nenhuma missão criada ainda</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Peça à VAMO IA para montar o plano de ação. Exemplo: "Monte um plano de ação para minha equipe bater a meta deste mês".
+                  As missões aparecem aqui automaticamente assim que forem criadas.
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-3 h-7 text-xs bg-violet-500 hover:bg-violet-600 text-white"
+                  onClick={() => router.push('/chat-ia')}
+                >
+                  <MessageSquare className="h-3 w-3 mr-1.5" />
+                  Abrir Chat IA
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
-      <Card className="border-border/50">
-        <CardContent className="py-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as MissionType | 'all')}
-              className="h-8 rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="all">Todos os tipos</option>
-              {Object.entries(TYPE_CONFIG).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
-              ))}
-            </select>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as MissionStatus | 'all')}
-              className="h-8 rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="all">Todos os status</option>
-              {Object.entries(STATUS_CONFIG).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
-              ))}
-            </select>
-            <select
-              value={filterCollaborator}
-              onChange={(e) => setFilterCollaborator(e.target.value)}
-              className="h-8 rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {MOCK_COLLABORATORS.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </CardContent>
-      </Card>
+      {missions.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as MissionStatus | 'all')}
+                className="h-8 rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none"
+              >
+                <option value="all">Todos os status</option>
+                {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+              </select>
+              <select
+                value={filterSeller}
+                onChange={(e) => setFilterSeller(e.target.value)}
+                className="h-8 rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none"
+              >
+                <option value="all">Todos os vendedores</option>
+                {sellers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* New Mission Form */}
       {showNewForm && (
@@ -265,7 +307,7 @@ export default function PlanoAcaoPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Plus className="h-4 w-4 text-violet-500" />
-                Nova Missão
+                Nova Missão Manual
               </CardTitle>
               <Button variant="ghost" size="sm" onClick={() => setShowNewForm(false)} className="px-2">
                 <X className="h-4 w-4" />
@@ -274,122 +316,90 @@ export default function PlanoAcaoPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs">Nome da Missão</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Título da Missão *</Label>
                 <Input
-                  value={newMission.name}
-                  onChange={(e) => setNewMission((p) => ({ ...p, name: e.target.value }))}
+                  value={newMission.title}
+                  onChange={(e) => setNewMission((p) => ({ ...p, title: e.target.value }))}
                   placeholder="Ex: Follow-up em 24h"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Tipo</Label>
-                <select
-                  value={newMission.type}
-                  onChange={(e) => setNewMission((p) => ({ ...p, type: e.target.value as MissionType }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {Object.entries(TYPE_CONFIG).map(([key, val]) => (
-                    <option key={key} value={key}>{val.label}</option>
-                  ))}
-                </select>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vendedor *</Label>
+                {sellers.length === 0 ? (
+                  <div className="flex h-9 w-full items-center rounded-md border border-amber-500/40 bg-amber-500/5 px-3 text-xs text-amber-600">
+                    Nenhum vendedor cadastrado
+                  </div>
+                ) : (
+                  <select
+                    value={newMission.user_id}
+                    onChange={(e) => setNewMission((p) => ({ ...p, user_id: e.target.value }))}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none"
+                  >
+                    {sellers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs">Atribuição</Label>
-                <select
-                  value={newMission.assignee}
-                  onChange={(e) => setNewMission((p) => ({ ...p, assignee: e.target.value }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  {MOCK_COLLABORATORS.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Critério de Conclusão</Label>
-                <select
-                  value={newMission.criteriaMode}
-                  onChange={(e) => setNewMission((p) => ({ ...p, criteriaMode: e.target.value as 'auto_crm' | 'manual' }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="auto_crm">Automático (CRM)</option>
-                  <option value="manual">Manual</option>
-                </select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Descrição do Critério</Label>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Descrição / Critério de conclusão</Label>
               <Input
-                value={newMission.completionCriteria}
-                onChange={(e) => setNewMission((p) => ({ ...p, completionCriteria: e.target.value }))}
-                placeholder="Ex: Retornar 100% das propostas abertas em 24h"
-              />
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs">Prazo</Label>
-                <Input
-                  type="date"
-                  value={newMission.deadline}
-                  onChange={(e) => setNewMission((p) => ({ ...p, deadline: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">XP</Label>
-                <Input
-                  type="number"
-                  value={newMission.xp}
-                  onChange={(e) => setNewMission((p) => ({ ...p, xp: Number(e.target.value) }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Bônus R$</Label>
-                <Input
-                  type="number"
-                  value={newMission.bonus}
-                  onChange={(e) => setNewMission((p) => ({ ...p, bonus: Number(e.target.value) }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs">Badge</Label>
-                <Input
-                  value={newMission.badge}
-                  onChange={(e) => setNewMission((p) => ({ ...p, badge: e.target.value }))}
-                  placeholder="Ex: Closer"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Link Recurso (opcional)</Label>
-              <Input
-                value={newMission.linkRecurso}
-                onChange={(e) => setNewMission((p) => ({ ...p, linkRecurso: e.target.value }))}
-                placeholder="https://..."
+                value={newMission.description}
+                onChange={(e) => setNewMission((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Ex: Retornar 100% das propostas abertas em até 24h"
               />
             </div>
 
-            {/* Preview */}
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-emerald-500 mb-1">
-                O vendedor verá:
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Complete <strong className="text-foreground">{newMission.name || '...'}</strong> em{' '}
-                <strong className="text-foreground">{newMission.deadline ? new Date(newMission.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : '...'}</strong> e ganhe{' '}
-                <strong className="text-amber-500">+{newMission.xp} XP</strong>
-                {newMission.bonus > 0 && <> + <strong className="text-emerald-500">R$ {newMission.bonus}</strong></>}
-                {newMission.badge && <> + Badge <strong className="text-violet-500">{newMission.badge}</strong></>}
-              </p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Área</Label>
+                <select
+                  value={newMission.area}
+                  onChange={(e) => setNewMission((p) => ({ ...p, area: e.target.value as MissionArea }))}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none"
+                >
+                  {Object.entries(AREA_CONFIG).map(([k, v]) => (
+                    <option key={k} value={k}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Dificuldade</Label>
+                <select
+                  value={newMission.difficulty}
+                  onChange={(e) => setNewMission((p) => ({ ...p, difficulty: Number(e.target.value) }))}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none"
+                >
+                  <option value={1}>Fácil</option>
+                  <option value={2}>Médio</option>
+                  <option value={3}>Difícil</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Recompensa XP</Label>
+                <Input
+                  type="number"
+                  value={newMission.xp_reward}
+                  onChange={(e) => setNewMission((p) => ({ ...p, xp_reward: Number(e.target.value) }))}
+                  min={10} max={500}
+                />
+              </div>
             </div>
 
+            {sellers.length === 0 && (
+              <p className="text-xs text-amber-600">
+                Cadastre vendedores antes de criar missões manualmente, ou use a{' '}
+                <button onClick={() => router.push('/chat-ia')} className="underline font-medium">VAMO IA</button>{' '}
+                — ela cadastra o vendedor e cria a missão automaticamente.
+              </p>
+            )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowNewForm(false)}>
-                Cancelar
-              </Button>
-              <Button size="sm" onClick={handleAddMission} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+              <Button variant="outline" size="sm" onClick={() => setShowNewForm(false)}>Cancelar</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving || sellers.length === 0} className="bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-50">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
                 Criar Missão
               </Button>
             </div>
@@ -397,120 +407,106 @@ export default function PlanoAcaoPage() {
         </Card>
       )}
 
-      {/* Mission Cards Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {filteredMissions.map((mission) => {
-          const typeConf = TYPE_CONFIG[mission.type]
-          const statusConf = STATUS_CONFIG[mission.status]
-          return (
-            <Card
-              key={mission.id}
-              className={`border-border/50 transition-all ${
-                mission.isAiSuggested ? 'border-violet-500/30' : ''
-              }`}
-            >
-              <CardContent className="pt-4 pb-3 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="text-sm font-medium">{mission.name}</span>
-                      <Badge className={`text-[9px] border-0 ${typeConf.color}`}>
-                        {typeConf.label}
-                      </Badge>
-                      {mission.isAiSuggested && (
+      {/* Mission Cards */}
+      {missions.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {filtered.map((mission) => {
+            const areaConf = AREA_CONFIG[mission.area]
+            const statusConf = STATUS_CONFIG[mission.status]
+            return (
+              <Card
+                key={mission.id}
+                className="border-border/50 border-violet-500/20"
+              >
+                <CardContent className="pt-4 pb-3 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-sm font-medium">{mission.title}</span>
+                        <Badge className={`text-[9px] border-0 ${areaConf.color}`}>
+                          {areaConf.label}
+                        </Badge>
                         <Badge variant="secondary" className="text-[9px] bg-violet-500/10 text-violet-500 border-0">
                           <Brain className="h-2.5 w-2.5 mr-0.5" /> VAMO IA
                         </Badge>
-                      )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{mission.description}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{mission.completionCriteria}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="px-1.5 shrink-0"
+                      onClick={() => handleDelete(mission.id)}
+                      disabled={saving}
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="px-1.5 shrink-0" onClick={() => handleRemoveMission(mission.id)}>
-                    <X className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
-                </div>
 
-                <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" /> {mission.assignee}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> {mission.deadline ? new Date(mission.deadline + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
-                  </span>
-                  <span className={`flex items-center gap-1 ${statusConf.color}`}>
-                    {statusConf.label}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-amber-500 flex items-center gap-1">
-                    <Zap className="h-3 w-3" /> {mission.xp} XP
-                  </span>
-                  {mission.bonus > 0 && (
-                    <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
-                      <DollarSign className="h-3 w-3" /> R$ {mission.bonus}
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3" /> {mission.seller_name}
                     </span>
-                  )}
-                  {mission.badge && (
-                    <span className="text-xs text-violet-500 flex items-center gap-1">
-                      <Award className="h-3 w-3" /> {mission.badge}
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(mission.created_at).toLocaleDateString('pt-BR')}
                     </span>
-                  )}
-                </div>
-
-                {mission.isAiSuggested && mission.aiJustification && (
-                  <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-2">
-                    <p className="text-[10px] text-muted-foreground">
-                      <Sparkles className="inline h-2.5 w-2.5 text-violet-500 mr-0.5" />
-                      {mission.aiJustification}
-                    </p>
+                    <span className={`font-medium ${statusConf.color}`}>{statusConf.label}</span>
+                    <span className="text-muted-foreground/60">{DIFFICULTY_LABEL[mission.difficulty]}</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
 
-      {filteredMissions.length === 0 && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-amber-500 flex items-center gap-1">
+                      <Zap className="h-3 w-3" /> {mission.xp_reward} XP
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+
+          {filtered.length === 0 && (
+            <div className="col-span-2">
+              <Card className="border-border/50">
+                <CardContent className="py-8 text-center">
+                  <Target className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Nenhuma missão com esses filtros.</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* XP por vendedor */}
+      {sellerStats.length > 0 && missions.length > 0 && (
         <Card className="border-border/50">
-          <CardContent className="py-8 text-center">
-            <Target className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Nenhuma missão encontrada com esses filtros.</p>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-500" />
+              XP por Vendedor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {sellerStats.map((s) => (
+                <div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-border/40">
+                  <span className="text-sm font-medium">{s.name}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-muted-foreground">{s.count} missões</span>
+                    <span className="text-xs font-semibold text-amber-500">{s.xp} XP</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Separator className="my-3" />
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Total em jogo</span>
+              <span className="text-sm font-bold text-amber-500">{totalXp} XP</span>
+            </div>
           </CardContent>
         </Card>
       )}
-
-      {/* XP/Bonus per collaborator panel */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-500" />
-            XP e Bônus por Colaborador
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {collaboratorStats.map((collab) => (
-              <div key={collab.name} className="flex items-center justify-between p-2.5 rounded-lg border border-border/40">
-                <span className="text-sm font-medium">{collab.name}</span>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-semibold text-amber-500">{collab.xp} XP</span>
-                  <span className="text-xs font-semibold text-emerald-500">R$ {collab.bonus}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <Separator className="my-3" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Total em jogo</span>
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-bold text-amber-500">{totalXp} XP</span>
-              <span className="text-sm font-bold text-emerald-500">R$ {totalBonus}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

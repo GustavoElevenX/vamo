@@ -127,41 +127,68 @@ export default function LancamentoPage() {
         }
       }
 
-      // Check diagnostic sessions
-      const { count: diagCount } = await supabase
-        .from('diagnostic_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', user.organization_id)
-        .eq('status', 'completed')
+      // Verificações automáticas em paralelo
+      const [
+        { count: diagCount },
+        { count: missionCount },
+        { count: kpiCount },
+        { count: rewardsCount },
+      ] = await Promise.all([
+        supabase
+          .from('diagnostic_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', user.organization_id)
+          .eq('status', 'completed'),
+        supabase
+          .from('ai_missions')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', user.organization_id),
+        supabase
+          .from('kpi_definitions')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', user.organization_id)
+          .eq('active', true),
+        supabase
+          .from('rewards_catalog')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', user.organization_id)
+          .eq('active', true),
+      ])
 
-      // Check missions exist
-      const { count: missionCount } = await supabase
-        .from('ai_missions')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', user.organization_id)
+      // Fetch all active sellers in the org
+      const sellersRes = await fetch('/api/team/sellers', { credentials: 'same-origin' })
+      const sellersJson = sellersRes.ok ? await sellersRes.json() : { sellers: [] }
+      const sellerUsers: { id: string; name: string }[] = sellersJson.sellers ?? []
 
-      // Fetch team members with health data
-      const { data: teamData } = await supabase
-        .from('user_xp')
-        .select('user_id, current_streak, last_activity_date, users!inner(name, role)')
-        .eq('organization_id', user.organization_id)
+      // Fetch XP data for those sellers (left-join equivalent)
+      const sellerIds = sellerUsers.map((s) => s.id)
+      const { data: xpData } = sellerIds.length > 0
+        ? await supabase
+            .from('user_xp')
+            .select('user_id, current_streak, last_activity_date')
+            .in('user_id', sellerIds)
+        : { data: [] }
 
-      const sellers: TeamMember[] = (teamData as any[] ?? [])
-        .filter((m) => m.users?.role === 'seller')
-        .map((m) => {
-          const daysSinceActivity = m.last_activity_date
-            ? Math.floor((Date.now() - new Date(m.last_activity_date).getTime()) / 86400000)
-            : 99
-          let risk_level: 'healthy' | 'attention' | 'burnout' = 'healthy'
-          if (daysSinceActivity > 7 || (m.current_streak ?? 0) === 0) risk_level = 'attention'
-          if (daysSinceActivity > 14) risk_level = 'burnout'
-          return {
-            user_id: m.user_id,
-            name: m.users?.name ?? 'Vendedor',
-            included: risk_level !== 'burnout',
-            risk_level,
-          }
-        })
+      const xpByUser: Record<string, { current_streak: number; last_activity_date: string | null }> = {}
+      for (const xp of xpData ?? []) {
+        xpByUser[xp.user_id] = xp
+      }
+
+      const sellers: TeamMember[] = (sellerUsers ?? []).map((seller) => {
+        const xp = xpByUser[seller.id]
+        const daysSinceActivity = xp?.last_activity_date
+          ? Math.floor((Date.now() - new Date(xp.last_activity_date).getTime()) / 86400000)
+          : 99
+        let risk_level: 'healthy' | 'attention' | 'burnout' = 'healthy'
+        if (daysSinceActivity > 7 || (xp?.current_streak ?? 0) === 0) risk_level = 'attention'
+        if (daysSinceActivity > 14) risk_level = 'burnout'
+        return {
+          user_id: seller.id,
+          name: seller.name,
+          included: risk_level !== 'burnout',
+          risk_level,
+        }
+      })
 
       setTeamMembers(sellers)
 
@@ -174,10 +201,16 @@ export default function LancamentoPage() {
           if (item.id === 'diagnostico' && (diagCount ?? 0) > 0) {
             return { ...item, checked: true, autoChecked: true }
           }
+          if (item.id === 'metas' && (kpiCount ?? 0) > 0) {
+            return { ...item, checked: true, autoChecked: true }
+          }
           if (item.id === 'plano-acao' && (missionCount ?? 0) > 0) {
             return { ...item, checked: true, autoChecked: true }
           }
-          if (item.id === 'burnout' && burnoutMembers.length === 0) {
+          if (item.id === 'recompensas' && (rewardsCount ?? 0) > 0) {
+            return { ...item, checked: true, autoChecked: true }
+          }
+          if (item.id === 'burnout' && sellers.length > 0 && burnoutMembers.length === 0) {
             return { ...item, checked: true, autoChecked: true }
           }
           // Restaurar estado manual salvo
@@ -503,7 +536,7 @@ export default function LancamentoPage() {
             placeholder="Escreva uma mensagem personalizada para a equipe..."
           />
           <p className="text-xs text-muted-foreground mt-1.5">
-            Esta mensagem será enviada como notificação in-app para os{' '}
+            Esta mensagem será enviada via chat da plataforma para os{' '}
             <strong>{selectedMembers.length}</strong> vendedor(es) selecionados.
           </p>
         </CardContent>

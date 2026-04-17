@@ -16,6 +16,14 @@ import {
   Download,
 } from 'lucide-react'
 
+interface CommissionConfig {
+  bonus_missao: number
+  salario_base: number
+  aliquota_base: number
+  acelerador_threshold: number
+  acelerador_rate: number
+}
+
 interface TeamCommission {
   user_id: string
   name: string
@@ -27,28 +35,51 @@ interface TeamCommission {
   missions_completed: number
 }
 
+const DEFAULT_CONFIG: CommissionConfig = {
+  bonus_missao: 75,
+  salario_base: 2500,
+  aliquota_base: 4,
+  acelerador_threshold: 110,
+  acelerador_rate: 6,
+}
+
 export default function ComissionamentoPage() {
   const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [team, setTeam] = useState<TeamCommission[]>([])
-  const [period, setPeriod] = useState('Março 2026')
+  const [config, setConfig] = useState<CommissionConfig>(DEFAULT_CONFIG)
 
   useEffect(() => {
     if (!user) return
 
     const fetchData = async () => {
       try {
-        // Fetch team members
-        const { data: members } = await supabase
-          .from('users')
-          .select('id, name')
+        // Fetch commission config
+        const { data: configData } = await supabase
+          .from('commission_configs')
+          .select('bonus_missao, salario_base, aliquota_base, acelerador_threshold, acelerador_rate')
           .eq('organization_id', user.organization_id)
-          .eq('role', 'seller')
-          .eq('active', true)
+          .maybeSingle()
 
-        if (members) {
-          // For each member, fetch their completed missions this month
+        const activeConfig: CommissionConfig = configData
+          ? {
+              bonus_missao: Number(configData.bonus_missao),
+              salario_base: Number(configData.salario_base),
+              aliquota_base: Number(configData.aliquota_base),
+              acelerador_threshold: Number(configData.acelerador_threshold),
+              acelerador_rate: Number(configData.acelerador_rate),
+            }
+          : DEFAULT_CONFIG
+
+        setConfig(activeConfig)
+
+        // Fetch team members
+        const sellersRes = await fetch('/api/team/sellers', { credentials: 'same-origin' })
+        const sellersJson = sellersRes.ok ? await sellersRes.json() : { sellers: [] }
+        const members: { id: string; name: string }[] = sellersJson.sellers ?? []
+
+        if (members.length > 0) {
           const settled = await Promise.allSettled(
             members.map(async (member: { id: string; name: string }) => {
               const { count: missionsCompleted } = await supabase
@@ -57,14 +88,15 @@ export default function ComissionamentoPage() {
                 .eq('user_id', member.id)
                 .eq('status', 'completed')
 
-              const missionBonus = (missionsCompleted ?? 0) * 75 // R$75 per mission
+              const missionBonus = (missionsCompleted ?? 0) * activeConfig.bonus_missao
+              const baseSalary = activeConfig.salario_base
               return {
                 user_id: member.id,
                 name: member.name,
-                base_salary: 2500,
+                base_salary: baseSalary,
                 mission_bonus: missionBonus,
-                kpi_bonus: Math.floor(Math.random() * 800), // Placeholder until KPI bonus calc
-                total: 2500 + missionBonus + Math.floor(Math.random() * 800),
+                kpi_bonus: 0,
+                total: baseSalary + missionBonus,
                 status: 'pending' as const,
                 missions_completed: missionsCompleted ?? 0,
               }
@@ -73,7 +105,7 @@ export default function ComissionamentoPage() {
 
           const commissions: TeamCommission[] = settled
             .filter((r): r is PromiseFulfilledResult<TeamCommission> => r.status === 'fulfilled')
-            .map(r => r.value)
+            .map((r) => r.value)
 
           setTeam(commissions.sort((a, b) => b.total - a.total))
         }
@@ -86,7 +118,6 @@ export default function ComissionamentoPage() {
 
     fetchData()
   }, [user])
-
 
   if (loading) {
     return (
@@ -105,13 +136,16 @@ export default function ComissionamentoPage() {
     processing: { label: 'Processando', icon: AlertCircle, color: 'text-blue-500 bg-blue-500/10' },
   }
 
+  const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const monthLabel = currentMonth.charAt(0).toUpperCase() + currentMonth.slice(1)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Comissionamento</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Base + bônus por missão · {period}
+            Base R$ {config.salario_base.toLocaleString('pt-BR')} + R$ {config.bonus_missao.toLocaleString('pt-BR')}/missão · {monthLabel}
           </p>
         </div>
         <Button variant="outline" size="sm">
@@ -188,7 +222,6 @@ export default function ComissionamentoPage() {
                     <th className="text-left py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Vendedor</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Base</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Bônus Missão</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Bônus KPI</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Total</th>
                     <th className="text-center py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Missões</th>
                     <th className="text-center py-2.5 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
@@ -209,11 +242,6 @@ export default function ComissionamentoPage() {
                         <td className="py-3 px-3 text-right">
                           <span className="text-emerald-500 font-medium">
                             +R$ {member.mission_bonus.toLocaleString('pt-BR')}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <span className="text-blue-500 font-medium">
-                            +R$ {member.kpi_bonus.toLocaleString('pt-BR')}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-right font-bold">

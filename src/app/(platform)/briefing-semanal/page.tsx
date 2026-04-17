@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { getCached, setCache } from '@/lib/cache'
+import { getCached, setCache, clearCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { EnergyThermometer } from '@/components/dashboard/energy-thermometer'
@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Calendar,
   Sparkles,
+  XCircle,
 } from 'lucide-react'
 
 interface BriefingData {
@@ -45,6 +46,7 @@ export default function BriefingSemanalPage() {
   const [briefings, setBriefings] = useState<BriefingData[]>(cachedBriefings.current ?? [])
   const [loading, setLoading] = useState(!cachedBriefings.current)
   const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
 
@@ -79,6 +81,7 @@ export default function BriefingSemanalPage() {
 
   const handleGenerate = async () => {
     setGenerating(true)
+    setGenerateError(null)
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
@@ -87,10 +90,18 @@ export default function BriefingSemanalPage() {
         signal: controller.signal,
       })
       if (res.ok) {
+        clearCache('briefings')
         await fetchBriefings()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setGenerateError(data.error || 'Falha ao gerar briefing. Tente novamente.')
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        setGenerateError('Tempo limite excedido. Tente novamente.')
+      } else {
+        setGenerateError('Erro de conexão. Verifique sua internet.')
+      }
     } finally {
       clearTimeout(timeout)
       setGenerating(false)
@@ -138,6 +149,13 @@ export default function BriefingSemanalPage() {
           )}
         </Button>
       </div>
+
+      {generateError && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+          <XCircle className="h-4 w-4 shrink-0" />
+          {generateError}
+        </div>
+      )}
 
       {/* Termômetro de Energia */}
       <EnergyThermometer organizationId={user.organization_id} />

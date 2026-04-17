@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,6 +35,13 @@ import {
   ArrowRight,
 } from 'lucide-react'
 
+interface RuleParam {
+  label: string
+  key: string
+  value: number
+  suffix: string
+}
+
 interface Rule {
   id: string
   name: string
@@ -43,120 +52,222 @@ interface Rule {
   iconBg: string
   iconColor: string
   active: boolean
-  params: { label: string; key: string; value: number; suffix: string }[]
+  params: RuleParam[]
+  is_system: boolean
 }
 
-const INITIAL_RULES: Rule[] = [
+const ICON_MAP: Record<string, React.ElementType> = {
+  CheckCircle2,
+  Bell,
+  Calculator,
+  Flame,
+  MessageSquare,
+  Settings2,
+}
+
+const SEED_RULES = [
   {
-    id: '1',
     name: 'Conclusão automática',
     description: 'CRM registrar X atividades → missão concluída → XP creditado',
-    trigger: 'CRM registra atividades',
-    action: 'Missão concluída + XP creditado',
-    icon: CheckCircle2,
-    iconBg: 'bg-emerald-500/10',
-    iconColor: 'text-emerald-600',
+    trigger_event: 'CRM registra atividades',
+    action_type: 'Missão concluída + XP creditado',
+    icon_key: 'CheckCircle2',
+    icon_bg: 'bg-emerald-500/10',
+    icon_color: 'text-emerald-600',
     active: true,
-    params: [
-      { label: 'Atividades necessárias', key: 'activities', value: 10, suffix: 'atividades' },
-    ],
+    is_system: true,
+    sort_order: 0,
+    params: [{ label: 'Atividades necessárias', key: 'activities', value: 10, suffix: 'atividades' }],
   },
   {
-    id: '2',
     name: 'Alerta de engajamento',
     description: 'N dias sem atividade → notificação gestor + nudge vendedor',
-    trigger: 'Dias sem atividade',
-    action: 'Notificação gestor + nudge vendedor',
-    icon: Bell,
-    iconBg: 'bg-amber-500/10',
-    iconColor: 'text-amber-600',
+    trigger_event: 'Dias sem atividade',
+    action_type: 'Notificação gestor + nudge vendedor',
+    icon_key: 'Bell',
+    icon_bg: 'bg-amber-500/10',
+    icon_color: 'text-amber-600',
     active: true,
-    params: [
-      { label: 'Dias sem atividade', key: 'days', value: 3, suffix: 'dias' },
-    ],
+    is_system: true,
+    sort_order: 1,
+    params: [{ label: 'Dias sem atividade', key: 'days', value: 3, suffix: 'dias' }],
   },
   {
-    id: '3',
     name: 'Cálculo de comissão',
     description: 'Fim do período → receita importada → comissão calculada + bônus',
-    trigger: 'Fim do período de vendas',
-    action: 'Comissão calculada + bônus aplicado',
-    icon: Calculator,
-    iconBg: 'bg-blue-500/10',
-    iconColor: 'text-blue-600',
+    trigger_event: 'Fim do período de vendas',
+    action_type: 'Comissão calculada + bônus aplicado',
+    icon_key: 'Calculator',
+    icon_bg: 'bg-blue-500/10',
+    icon_color: 'text-blue-600',
     active: true,
+    is_system: true,
+    sort_order: 2,
     params: [],
   },
   {
-    id: '4',
     name: 'Streak',
     description: 'Atualização CRM por N dias consecutivos → streak + badge',
-    trigger: 'Dias consecutivos com atualização',
-    action: 'Streak registrado + badge concedida',
-    icon: Flame,
-    iconBg: 'bg-orange-500/10',
-    iconColor: 'text-orange-600',
+    trigger_event: 'Dias consecutivos com atualização',
+    action_type: 'Streak registrado + badge concedida',
+    icon_key: 'Flame',
+    icon_bg: 'bg-orange-500/10',
+    icon_color: 'text-orange-600',
     active: true,
-    params: [
-      { label: 'Dias consecutivos', key: 'streak_days', value: 5, suffix: 'dias' },
-    ],
+    is_system: true,
+    sort_order: 3,
+    params: [{ label: 'Dias consecutivos', key: 'streak_days', value: 5, suffix: 'dias' }],
   },
   {
-    id: '5',
     name: 'Nudge inteligente',
     description: 'Vendedor próximo de completar missão + sem atividade → mensagem personalizada',
-    trigger: 'Próximo de meta + inativo',
-    action: 'Mensagem personalizada enviada',
-    icon: MessageSquare,
-    iconBg: 'bg-violet-500/10',
-    iconColor: 'text-violet-600',
+    trigger_event: 'Próximo de meta + inativo',
+    action_type: 'Mensagem personalizada enviada',
+    icon_key: 'MessageSquare',
+    icon_bg: 'bg-violet-500/10',
+    icon_color: 'text-violet-600',
     active: false,
+    is_system: true,
+    sort_order: 4,
     params: [],
   },
 ]
 
+function mapDbRow(row: Record<string, unknown>): Rule {
+  const params = (row.params as RuleParam[]) ?? []
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    description: (row.description as string) ?? '',
+    trigger: row.trigger_event as string,
+    action: row.action_type as string,
+    icon: ICON_MAP[(row.icon_key as string) ?? 'Settings2'] ?? Settings2,
+    iconBg: (row.icon_bg as string) ?? 'bg-muted',
+    iconColor: (row.icon_color as string) ?? 'text-muted-foreground',
+    active: row.active as boolean,
+    params,
+    is_system: (row.is_system as boolean) ?? false,
+  }
+}
+
 export default function RegrasGatilhosPage() {
   const { user } = useRequiredAuth()
-  const [rules, setRules] = useState<Rule[]>(INITIAL_RULES)
+  const supabase = createClient()
+  const [rules, setRules] = useState<Rule[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [newRule, setNewRule] = useState({ event: '', action: '' })
 
+  const fetchRules = useCallback(async () => {
+    if (!user) return
+    try {
+      const { data } = await supabase
+        .from('automation_rules')
+        .select('*')
+        .eq('organization_id', user.organization_id)
+        .order('sort_order')
+
+      if (!data || data.length === 0) {
+        // Seed default rules for this org
+        const toInsert = SEED_RULES.map((r) => ({
+          ...r,
+          organization_id: user.organization_id,
+          params: r.params,
+        }))
+        const { data: inserted } = await supabase
+          .from('automation_rules')
+          .insert(toInsert)
+          .select()
+        setRules((inserted ?? []).map(mapDbRow))
+      } else {
+        setRules(data.map(mapDbRow))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    fetchRules()
+  }, [fetchRules])
 
   const toggleRule = (id: string) => {
-    setRules(rules.map((r) => (r.id === id ? { ...r, active: !r.active } : r)))
+    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)))
   }
 
   const updateParam = (ruleId: string, paramKey: string, value: string) => {
     const num = Math.max(1, Number(value) || 1)
-    setRules(
-      rules.map((r) =>
+    setRules((prev) =>
+      prev.map((r) =>
         r.id === ruleId
-          ? {
-              ...r,
-              params: r.params.map((p) => (p.key === paramKey ? { ...p, value: num } : p)),
-            }
+          ? { ...r, params: r.params.map((p) => (p.key === paramKey ? { ...p, value: num } : p)) }
           : r
       )
     )
   }
 
-  const handleAddRule = () => {
-    if (!newRule.event || !newRule.action) return
-    const rule: Rule = {
-      id: Date.now().toString(),
-      name: 'Regra personalizada',
-      description: `${newRule.event} → ${newRule.action}`,
-      trigger: newRule.event,
-      action: newRule.action,
-      icon: Settings2,
-      iconBg: 'bg-muted',
-      iconColor: 'text-muted-foreground',
-      active: true,
-      params: [],
+  const handleSave = async () => {
+    if (!user) return
+    setSaving(true)
+    try {
+      await Promise.all(
+        rules.map((rule) =>
+          supabase
+            .from('automation_rules')
+            .update({ active: rule.active, params: rule.params, updated_at: new Date().toISOString() })
+            .eq('id', rule.id)
+        )
+      )
+      toast.success('Regras salvas com sucesso')
+    } catch {
+      toast.error('Erro ao salvar regras')
+    } finally {
+      setSaving(false)
     }
-    setRules([...rules, rule])
-    setNewRule({ event: '', action: '' })
-    setDialogOpen(false)
+  }
+
+  const handleAddRule = async () => {
+    if (!user || !newRule.event || !newRule.action) return
+    setSaving(true)
+    try {
+      const { data, error } = await supabase
+        .from('automation_rules')
+        .insert({
+          organization_id: user.organization_id,
+          name: 'Regra personalizada',
+          description: `${newRule.event} → ${newRule.action}`,
+          trigger_event: newRule.event,
+          action_type: newRule.action,
+          icon_key: 'Settings2',
+          icon_bg: 'bg-muted',
+          icon_color: 'text-muted-foreground',
+          active: true,
+          is_system: false,
+          sort_order: rules.length,
+          params: [],
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      setRules((prev) => [...prev, mapDbRow(data)])
+      setNewRule({ event: '', action: '' })
+      setDialogOpen(false)
+      toast.success('Regra criada')
+    } catch {
+      toast.error('Erro ao criar regra')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   return (
@@ -222,8 +333,8 @@ export default function RegrasGatilhosPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddRule} className="w-full">
-                Criar Regra
+              <Button onClick={handleAddRule} className="w-full" disabled={saving}>
+                {saving ? 'Criando...' : 'Criar Regra'}
               </Button>
             </div>
           </DialogContent>
@@ -237,13 +348,10 @@ export default function RegrasGatilhosPage() {
           return (
             <Card
               key={rule.id}
-              className={`border-border/50 transition-all duration-200 ${
-                !rule.active ? 'opacity-60' : ''
-              }`}
+              className={`border-border/50 transition-all duration-200 ${!rule.active ? 'opacity-60' : ''}`}
             >
               <CardContent className="pt-4 pb-4">
                 <div className="flex flex-col gap-3">
-                  {/* Top: icon, name, toggle */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`h-9 w-9 rounded-lg ${rule.iconBg} flex items-center justify-center shrink-0`}>
@@ -262,13 +370,10 @@ export default function RegrasGatilhosPage() {
                             {rule.active ? 'Ativo' : 'Inativo'}
                           </Badge>
                         </div>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {rule.description}
-                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{rule.description}</p>
                       </div>
                     </div>
 
-                    {/* Toggle as checkbox styled as switch */}
                     <label className="relative inline-flex items-center cursor-pointer shrink-0">
                       <input
                         type="checkbox"
@@ -280,7 +385,6 @@ export default function RegrasGatilhosPage() {
                     </label>
                   </div>
 
-                  {/* Trigger → Action flow */}
                   <div className="flex items-center gap-2 pl-12">
                     <Badge variant="outline" className="text-[10px] h-5 px-2 font-normal">
                       {rule.trigger}
@@ -291,7 +395,6 @@ export default function RegrasGatilhosPage() {
                     </Badge>
                   </div>
 
-                  {/* Editable params */}
                   {rule.params.length > 0 && (
                     <div className="flex flex-wrap items-center gap-3 pl-12">
                       {rule.params.map((param) => (
@@ -317,6 +420,10 @@ export default function RegrasGatilhosPage() {
           )
         })}
       </div>
+
+      <Button onClick={handleSave} className="w-full" disabled={saving}>
+        {saving ? 'Salvando...' : 'Salvar Regras'}
+      </Button>
     </div>
   )
 }

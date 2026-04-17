@@ -40,16 +40,6 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   delivered: { label: 'Entregue', className: 'bg-primary/10 text-primary border-0' },
 }
 
-// Fallback rewards shown when org has no reward_catalog entries
-const FALLBACK_REWARDS: Omit<RewardCatalog, 'organization_id'>[] = [
-  { id: 'fb-1', name: 'Reconhecimento Publico', description: 'Destaque no feed da equipe com mensagem personalizada do gestor e badge especial.', cost_xp: 1000, image_url: null, quantity: null, active: true, created_at: '' },
-  { id: 'fb-2', name: 'Almoco com a Lideranca', description: 'Almoco exclusivo com o CEO ou gestor para conversar sobre carreira e estrategia.', cost_xp: 2000, image_url: null, quantity: null, active: true, created_at: '' },
-  { id: 'fb-3', name: 'Vale-Presente R$ 100', description: 'Credito de R$ 100 em cartao presente para usar como preferir.', cost_xp: 3000, image_url: null, quantity: null, active: true, created_at: '' },
-  { id: 'fb-4', name: 'Capacitacao Externa', description: 'Inscricao em curso, workshop ou evento da sua escolha.', cost_xp: 4000, image_url: null, quantity: null, active: true, created_at: '' },
-  { id: 'fb-5', name: 'Folga Extra', description: 'Um dia de folga adicional para recarregar as energias. Agendar com o gestor.', cost_xp: 5000, image_url: null, quantity: null, active: true, created_at: '' },
-  { id: 'fb-6', name: 'Upgrade de Equipamento', description: 'Melhoria no setup de trabalho: headset, cadeira, monitor ou acessorio a escolha.', cost_xp: 8000, image_url: null, quantity: null, active: true, created_at: '' },
-]
-
 function guessCategory(name: string): string {
   const lower = name.toLowerCase()
   if (lower.includes('folga') || lower.includes('day off') || lower.includes('tempo')) return 'tempo'
@@ -81,7 +71,7 @@ export default function LojaPage() {
             .eq('organization_id', user.organization_id)
             .maybeSingle(),
           supabase
-            .from('reward_catalog')
+            .from('rewards_catalog')
             .select('*')
             .eq('organization_id', user.organization_id)
             .eq('active', true)
@@ -100,9 +90,7 @@ export default function LojaPage() {
 
         setUserXp(xp)
 
-        const catalogItems = (catalogData && catalogData.length > 0)
-          ? (catalogData as RewardCatalog[])
-          : (FALLBACK_REWARDS as RewardCatalog[])
+        const catalogItems = (catalogData as RewardCatalog[]) ?? []
         setRewards(catalogItems)
 
         const redeems = (redemptionData ?? []) as RewardRedemption[]
@@ -192,6 +180,24 @@ export default function LojaPage() {
             Continue completando missoes para desbloquear mais recompensas.
           </p>
         </div>
+      )}
+
+      {/* Empty state */}
+      {rewards.length === 0 && (
+        <Card className="border-border/50">
+          <CardContent className="py-12 flex flex-col items-center gap-3 text-center">
+            <div className="h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center">
+              <ShoppingBag className="h-6 w-6 text-muted-foreground/50" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Nenhuma recompensa cadastrada</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Peça ao seu gestor para configurar o catálogo de recompensas em{' '}
+                <span className="font-medium">Configurações → Gamificação</span>.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Rewards grid */}

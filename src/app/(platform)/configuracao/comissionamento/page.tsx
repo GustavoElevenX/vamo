@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,26 +16,97 @@ interface CommissionConfig {
   acelerador_threshold: string
   acelerador_rate: string
   bonus_missao: string
+  salario_base: string
   periodo: 'mensal' | 'quinzenal' | 'semanal'
   elegibilidade: string
 }
 
+const DEFAULTS: CommissionConfig = {
+  aliquota_base: '4',
+  acelerador_threshold: '110',
+  acelerador_rate: '6',
+  bonus_missao: '75',
+  salario_base: '2500',
+  periodo: 'mensal',
+  elegibilidade: '80',
+}
+
 export default function ComissionamentoConfigPage() {
   const { user } = useRequiredAuth()
-  const [commission, setCommission] = useState<CommissionConfig>({
-    aliquota_base: '4',
-    acelerador_threshold: '110',
-    acelerador_rate: '6',
-    bonus_missao: '100',
-    periodo: 'mensal',
-    elegibilidade: '80',
-  })
+  const supabase = createClient()
+  const [commission, setCommission] = useState<CommissionConfig>(DEFAULTS)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    if (!user) return
+    const fetchConfig = async () => {
+      try {
+        const { data } = await supabase
+          .from('commission_configs')
+          .select('*')
+          .eq('organization_id', user.organization_id)
+          .maybeSingle()
+
+        if (data) {
+          setCommission({
+            aliquota_base: String(data.aliquota_base),
+            acelerador_threshold: String(data.acelerador_threshold),
+            acelerador_rate: String(data.acelerador_rate),
+            bonus_missao: String(data.bonus_missao),
+            salario_base: String(data.salario_base),
+            periodo: data.periodo as CommissionConfig['periodo'],
+            elegibilidade: String(data.elegibilidade),
+          })
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchConfig()
+  }, [user])
+
+  const handleSave = async () => {
+    if (!user) return
+    setSaving(true)
+    try {
+      const payload = {
+        organization_id: user.organization_id,
+        aliquota_base: parseFloat(commission.aliquota_base) || 4,
+        acelerador_threshold: parseFloat(commission.acelerador_threshold) || 110,
+        acelerador_rate: parseFloat(commission.acelerador_rate) || 6,
+        bonus_missao: parseFloat(commission.bonus_missao) || 75,
+        salario_base: parseFloat(commission.salario_base) || 2500,
+        periodo: commission.periodo,
+        elegibilidade: parseFloat(commission.elegibilidade) || 80,
+        updated_at: new Date().toISOString(),
+      }
+
+      const { error } = await supabase
+        .from('commission_configs')
+        .upsert(payload, { onConflict: 'organization_id' })
+
+      if (error) throw error
+      toast.success('Comissionamento salvo com sucesso!')
+    } catch {
+      toast.error('Erro ao salvar configuração')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const exampleRevenue = 25000
   const baseComm = Math.round(exampleRevenue * (parseFloat(commission.aliquota_base) / 100))
   const missionBonus = (parseFloat(commission.bonus_missao) || 0) * 3
   const totalCommExample = baseComm + missionBonus
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -56,15 +128,25 @@ export default function ComissionamentoConfigPage() {
         </div>
       </div>
 
-      {/* Alíquota e Bônus */}
+      {/* Salário Base */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <DollarSign className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Alíquota e Bônus</h3>
+          <h3 className="text-sm font-semibold">Salário e Comissão</h3>
         </div>
         <Card className="border-border/50">
           <CardContent className="pt-4 pb-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Salário Base (R$)</Label>
+                <Input
+                  type="number"
+                  value={commission.salario_base}
+                  onChange={(e) => setCommission((prev) => ({ ...prev, salario_base: e.target.value }))}
+                  placeholder="Ex: 2500"
+                  className="h-8 text-sm"
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Alíquota Base (%)</Label>
                 <Input
@@ -81,7 +163,7 @@ export default function ComissionamentoConfigPage() {
                   type="number"
                   value={commission.bonus_missao}
                   onChange={(e) => setCommission((prev) => ({ ...prev, bonus_missao: e.target.value }))}
-                  placeholder="Ex: 100"
+                  placeholder="Ex: 75"
                   className="h-8 text-sm"
                 />
               </div>
@@ -179,7 +261,7 @@ export default function ComissionamentoConfigPage() {
               <span className="font-medium">R$ {baseComm.toLocaleString('pt-BR')}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Bônus de missões (3 missões)</span>
+              <span className="text-muted-foreground">Bônus de missões (3 missões × R$ {commission.bonus_missao})</span>
               <span className="font-medium">R$ {missionBonus.toLocaleString('pt-BR')}</span>
             </div>
             <div className="flex justify-between border-t border-border/30 pt-1.5 mt-1.5">
@@ -201,8 +283,8 @@ export default function ComissionamentoConfigPage() {
         </div>
       </div>
 
-      <Button className="w-full" onClick={() => toast.success('Comissionamento salvo com sucesso!')}>
-        Salvar Configuração
+      <Button className="w-full" onClick={handleSave} disabled={saving}>
+        {saving ? 'Salvando...' : 'Salvar Configuração'}
       </Button>
     </div>
   )

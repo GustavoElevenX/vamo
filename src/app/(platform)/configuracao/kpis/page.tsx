@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,40 +50,8 @@ interface KPI {
 
 const MAX_KPIS = 5
 
-const INITIAL_KPIS: KPI[] = [
-  {
-    id: '1',
-    name: 'Taxa de conversão',
-    source: 'CRM',
-    target: 30,
-    current: 27,
-    unit: '%',
-    alertTolerance: 10,
-    active: true,
-  },
-  {
-    id: '2',
-    name: 'Ligações por semana',
-    source: 'CRM',
-    target: 50,
-    current: 42,
-    unit: 'ligações',
-    alertTolerance: 15,
-    active: true,
-  },
-  {
-    id: '3',
-    name: 'Receita mensal',
-    source: 'CRM',
-    target: 100000,
-    current: 115000,
-    unit: 'R$',
-    alertTolerance: 10,
-    active: true,
-  },
-]
-
 function getKpiStatus(kpi: KPI): 'verde' | 'amarelo' | 'vermelho' {
+  if (kpi.target === 0) return 'amarelo'
   const ratio = kpi.current / kpi.target
   if (ratio >= 1) return 'verde'
   if (ratio >= 1 - kpi.alertTolerance / 100) return 'amarelo'
@@ -113,43 +83,161 @@ function StatusBadge({ status }: { status: 'verde' | 'amarelo' | 'vermelho' }) {
 
 export default function KpisPage() {
   const { user } = useRequiredAuth()
-  const [kpis, setKpis] = useState<KPI[]>(INITIAL_KPIS)
+  const supabase = createClient()
+  const [kpis, setKpis] = useState<KPI[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [aiAccepted, setAiAccepted] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [newKpi, setNewKpi] = useState({
     name: '',
-    source: 'CRM' as 'CRM' | 'manual',
+    source: 'manual' as 'CRM' | 'manual',
     target: '',
     unit: '',
   })
 
-
   const activeCount = kpis.filter((k) => k.active).length
 
-  const handleAddKpi = () => {
-    if (!newKpi.name || !newKpi.target || activeCount >= MAX_KPIS) return
-    const kpi: KPI = {
-      id: Date.now().toString(),
-      name: newKpi.name,
-      source: newKpi.source,
-      target: Number(newKpi.target),
-      current: 0,
-      unit: newKpi.unit || 'unid.',
-      alertTolerance: 10,
-      active: true,
+  const fetchKpis = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const { data: defs } = await supabase
+        .from('kpi_definitions')
+        .select('*')
+        .eq('organization_id', user.organization_id)
+        .eq('active', true)
+        .order('created_at')
+
+      if (!defs || defs.length === 0) {
+        setKpis([])
+        return
+      }
+
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      const startStr = startOfMonth.toISOString().split('T')[0]
+
+      const { data: entries } = await supabase
+        .from('kpi_entries')
+        .select('kpi_id, value')
+        .eq('organization_id', user.organization_id)
+        .gte('recorded_at', startStr)
+
+      const currentByKpi: Record<string, number> = {}
+      for (const entry of entries ?? []) {
+        currentByKpi[entry.kpi_id] = (currentByKpi[entry.kpi_id] ?? 0) + Number(entry.value)
+      }
+
+      setKpis(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (defs as any[]).map((row) => ({
+          id: row.id,
+          name: row.name,
+          source: (row.targets?.source ?? 'manual') as 'CRM' | 'manual',
+          target: row.targets?.monthly ?? 0,
+          current: currentByKpi[row.id] ?? 0,
+          unit: row.unit,
+          alertTolerance: row.targets?.alert_tolerance ?? 10,
+          active: row.active,
+        }))
+      )
+    } finally {
+      setLoading(false)
     }
-    setKpis([...kpis, kpi])
-    setNewKpi({ name: '', source: 'CRM', target: '', unit: '' })
-    setDialogOpen(false)
+  }, [user])
+
+  useEffect(() => {
+    fetchKpis()
+  }, [fetchKpis])
+
+  const handleAddKpi = async () => {
+    if (!user || !newKpi.name || !newKpi.target || activeCount >= MAX_KPIS) return
+    setSaving(true)
+    try {
+      const slug =
+        newKpi.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') +
+        '_' +
+        Date.now()
+      const { error } = await supabase.from('kpi_definitions').insert({
+        organization_id: user.organization_id,
+        name: newKpi.name,
+        slug,
+        unit: newKpi.unit || 'unid.',
+        points_per_unit: 10,
+        targets: {
+          monthly: Number(newKpi.target),
+          alert_tolerance: 10,
+          source: newKpi.source,
+        },
+        active: true,
+      })
+      if (error) throw error
+      setNewKpi({ name: '', source: 'manual', target: '', unit: '' })
+      setDialogOpen(false)
+      toast.success('KPI adicionado com sucesso')
+      await fetchKpis()
+    } catch {
+      toast.error('Erro ao adicionar KPI')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleRemoveKpi = (id: string) => {
-    setKpis(kpis.filter((k) => k.id !== id))
+  const handleRemoveKpi = async (id: string) => {
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('kpi_definitions')
+        .update({ active: false })
+        .eq('id', id)
+      if (error) throw error
+      setKpis((prev) => prev.filter((k) => k.id !== id))
+      toast.success('KPI removido')
+    } catch {
+      toast.error('Erro ao remover KPI')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleToleranceChange = (id: string, value: string) => {
     const num = Math.max(0, Math.min(100, Number(value) || 0))
-    setKpis(kpis.map((k) => (k.id === id ? { ...k, alertTolerance: num } : k)))
+    setKpis((prev) => prev.map((k) => (k.id === id ? { ...k, alertTolerance: num } : k)))
+  }
+
+  const handleSaveTolerances = async () => {
+    if (!user) return
+    setSaving(true)
+    try {
+      await Promise.all(
+        kpis.map((kpi) =>
+          supabase
+            .from('kpi_definitions')
+            .update({
+              targets: {
+                monthly: kpi.target,
+                alert_tolerance: kpi.alertTolerance,
+                source: kpi.source,
+              },
+            })
+            .eq('id', kpi.id)
+        )
+      )
+      toast.success('Configurações salvas')
+    } catch {
+      toast.error('Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   return (
@@ -173,7 +261,6 @@ export default function KpisPage() {
           </div>
         </div>
 
-        {/* Counter */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/50 px-3 py-1.5">
             <Target className="h-3.5 w-3.5 text-muted-foreground" />
@@ -220,7 +307,7 @@ export default function KpisPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="kpi-target">Meta</Label>
+                    <Label htmlFor="kpi-target">Meta mensal</Label>
                     <Input
                       id="kpi-target"
                       type="number"
@@ -239,8 +326,8 @@ export default function KpisPage() {
                     />
                   </div>
                 </div>
-                <Button onClick={handleAddKpi} className="w-full">
-                  Adicionar KPI
+                <Button onClick={handleAddKpi} className="w-full" disabled={saving}>
+                  {saving ? 'Adicionando...' : 'Adicionar KPI'}
                 </Button>
               </div>
             </DialogContent>
@@ -285,13 +372,12 @@ export default function KpisPage() {
       <div className="space-y-3">
         {kpis.map((kpi) => {
           const status = getKpiStatus(kpi)
-          const ratio = Math.min(100, Math.round((kpi.current / kpi.target) * 100))
+          const ratio = kpi.target > 0 ? Math.min(100, Math.round((kpi.current / kpi.target) * 100)) : 0
 
           return (
             <Card key={kpi.id} className="border-border/50">
               <CardContent className="pt-4 pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  {/* Left: name, source, status */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <StatusDot status={status} />
                     <div className="min-w-0">
@@ -305,7 +391,6 @@ export default function KpisPage() {
                     </div>
                   </div>
 
-                  {/* Center: current value + progress */}
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-lg font-bold">
@@ -323,7 +408,6 @@ export default function KpisPage() {
                     </div>
                   </div>
 
-                  {/* Right: alert tolerance + remove */}
                   <div className="flex items-center gap-3">
                     <Separator orientation="vertical" className="h-8 hidden sm:block" />
                     <div className="flex items-center gap-2">
@@ -347,6 +431,7 @@ export default function KpisPage() {
                       size="sm"
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-red-500"
                       onClick={() => handleRemoveKpi(kpi.id)}
+                      disabled={saving}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -366,6 +451,13 @@ export default function KpisPage() {
             Nenhum KPI configurado. Adicione indicadores para acompanhar o desempenho.
           </p>
         </div>
+      )}
+
+      {/* Save button */}
+      {kpis.length > 0 && (
+        <Button onClick={handleSaveTolerances} className="w-full" disabled={saving}>
+          {saving ? 'Salvando...' : 'Salvar Configurações'}
+        </Button>
       )}
     </div>
   )

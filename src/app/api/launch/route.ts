@@ -34,7 +34,7 @@ export async function GET() {
   }
 }
 
-// POST - registra o lançamento e envia notificações in-app para os vendedores
+// POST - registra o lançamento e envia mensagem via chat nativo da plataforma
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
@@ -81,30 +81,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: launchError.message }, { status: 500 })
     }
 
-    // Enviar notificação in-app para cada vendedor selecionado
-    const notifications = team_member_ids.map((userId) => ({
-      organization_id: appUser.organization_id,
-      user_id: userId,
-      sender_id: appUser.id,
-      message: launch_message.trim(),
-      read: false,
-    }))
+    // Criar conversa de grupo no chat nativo
+    const { data: conversation, error: convError } = await adminClient
+      .from('chat_conversations')
+      .insert({
+        organization_id: appUser.organization_id,
+        is_group: true,
+        name: 'Lançamento do Programa',
+        created_by: appUser.id,
+        last_message_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
 
-    const { error: notifError } = await adminClient
-      .from('notifications')
-      .insert(notifications)
-
-    if (notifError) {
-      // Lançamento foi registrado, mas notificações falharam — retornar aviso
+    if (convError || !conversation) {
       return NextResponse.json({
         launch,
-        warning: 'Programa lançado, mas algumas notificações não foram enviadas.',
+        warning: 'Programa lançado, mas não foi possível criar o chat de lançamento.',
+      })
+    }
+
+    // Adicionar todos os participantes: gestor + vendedores selecionados
+    const allParticipantIds = Array.from(new Set([appUser.id, ...team_member_ids]))
+    const participants = allParticipantIds.map((userId) => ({
+      conversation_id: conversation.id,
+      user_id: userId,
+    }))
+
+    await adminClient.from('chat_participants').insert(participants)
+
+    // Enviar a mensagem de lançamento no chat
+    const { error: msgError } = await adminClient.from('chat_messages').insert({
+      conversation_id: conversation.id,
+      organization_id: appUser.organization_id,
+      sender_id: appUser.id,
+      content: launch_message.trim(),
+    })
+
+    if (msgError) {
+      return NextResponse.json({
+        launch,
+        warning: 'Programa lançado, mas a mensagem no chat não foi enviada.',
       })
     }
 
     return NextResponse.json({
       launch,
-      notifications_sent: notifications.length,
+      chat_conversation_id: conversation.id,
+      participants_count: team_member_ids.length,
     })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro interno' }, { status: 500 })

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { clearCache } from '@/lib/cache'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ActionCard } from '@/components/ai/action-card'
@@ -178,16 +179,80 @@ export default function ChatIAPage() {
         const [textContent, actionJson] = fullText.split(ACTION_DELIMITER)
         try {
           const actionPayload: ActionPayload = JSON.parse(actionJson.trim())
-          const actionCard: ActionCardType = {
-            id: `action-${++actionIdCounter}`,
-            action: actionPayload,
-            status: 'pending',
-          }
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === aiMsgId ? { ...m, content: textContent.trim(), actionCard } : m
+
+          // Ações executadas autonomamente (sem aprovação)
+          const AUTO_EXECUTE_ACTIONS = ['create_mission', 'create_challenge', 'generate_briefing']
+
+          if (AUTO_EXECUTE_ACTIONS.includes(actionPayload.action)) {
+            // Mostrar card executando imediatamente
+            const actionCard: ActionCardType = {
+              id: `action-${++actionIdCounter}`,
+              action: actionPayload,
+              status: 'executing',
+            }
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId ? { ...m, content: textContent.trim(), actionCard } : m
+              )
             )
-          )
+
+            // Executar sem aprovação
+            try {
+              const execRes = await fetch('/api/ai/chat/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  actionType: actionPayload.action,
+                  params: actionPayload.params,
+                }),
+              })
+              const execResult = await execRes.json()
+              if (execResult.success && actionPayload.action === 'generate_briefing') {
+                clearCache('briefings')
+              }
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiMsgId && m.actionCard
+                    ? {
+                        ...m,
+                        actionCard: {
+                          ...m.actionCard,
+                          status: execResult.success ? 'completed' : 'failed',
+                          result: execResult,
+                        },
+                      }
+                    : m
+                )
+              )
+            } catch {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === aiMsgId && m.actionCard
+                    ? {
+                        ...m,
+                        actionCard: {
+                          ...m.actionCard,
+                          status: 'failed',
+                          result: { success: false, message: 'Erro ao executar ação' },
+                        },
+                      }
+                    : m
+                )
+              )
+            }
+          } else {
+            // Demais ações mantêm fluxo de aprovação normal
+            const actionCard: ActionCardType = {
+              id: `action-${++actionIdCounter}`,
+              action: actionPayload,
+              status: 'pending',
+            }
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMsgId ? { ...m, content: textContent.trim(), actionCard } : m
+              )
+            )
+          }
         } catch {
           setMessages((prev) =>
             prev.map((m) =>

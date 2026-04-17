@@ -71,14 +71,11 @@ export default function DiagnosticoIndividualPage() {
     const load = async () => {
       try {
         // Fetch all sellers in the same organization
-        const { data: sellers } = await supabase
-          .from('users')
-          .select('id, name, email, role, active, organization_id, auth_id')
-          .eq('organization_id', user.organization_id)
-          .eq('role', 'seller')
-          .eq('active', true)
-          .order('name')
-          .limit(100)
+        const membersRes = await fetch('/api/team/members', { credentials: 'same-origin' })
+        const membersJson = membersRes.ok ? await membersRes.json() : { members: [] }
+        const sellers = (membersJson.members ?? []).filter(
+          (m: { role: string }) => m.role === 'seller'
+        )
 
         if (cancelled) return
 

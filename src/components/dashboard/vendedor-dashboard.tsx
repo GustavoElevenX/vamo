@@ -38,64 +38,13 @@ interface MissionSummary {
   difficulty: number
 }
 
-// Módulo 2 — KPI card data
-const MY_KPIS = [
-  { name: 'Taxa de Fechamento', current: 22, target: 35, unit: '%', trend: 'up' as const },
-  { name: 'Ligações / Semana', current: 27, target: 40, unit: '', trend: 'up' as const },
-  { name: 'Ticket Médio', current: 7200, target: 9500, unit: 'R$', trend: 'stable' as const },
-  { name: '% CRM Atualizado', current: 68, target: 95, unit: '%', trend: 'down' as const },
-]
-
-// Módulo 6 — DISC feedback by profile
-const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string[]; insight: string }> = {
-  D: {
-    strengths: [
-      'Sua taxa de fechamento em primeira reunião é 20% acima da média da equipe',
-      'Alta capacidade de superar objeções com firmeza e argumentos diretos',
-      'Você é referência em velocidade de resposta e follow-up rápido',
-    ],
-    opportunities: [
-      'Ticket médio abaixo do potencial — perfil D tende a ir direto ao preço sem construir valor suficiente',
-      'Aprender a fazer perguntas consultivas antes de apresentar a solução pode aumentar seu ticket em 15–20%',
-    ],
-    insight: 'A VAMO IA detectou que seu engajamento aumenta o resultado coletivo quando você lidera desafios de time. Experimente as missões coletivas.',
-  },
-  I: {
-    strengths: [
-      'Sua taxa de conversão em Primeira Reunião é 20% acima da média da equipe',
-      'Perfil Influenciador cria rapport rapidamente — você conquista confiança do cliente em poucos minutos',
-      'Você tem o maior índice de indicações da equipe',
-    ],
-    opportunities: [
-      'Ticket médio abaixo do potencial — perfil I tem alta capacidade para vendas consultivas de maior valor',
-      'Identificar oportunidades de upsell pode aumentar seu ticket em 15–20%',
-    ],
-    insight: 'A VAMO IA detectou que seu engajamento sobe o engajamento médio coletivo quando você está ativo em missões colaborativas.',
-  },
-  S: {
-    strengths: [
-      'Você tem a maior taxa de retenção de clientes da equipe',
-      'Sua consistência no CRM é a mais alta — dados sempre organizados e atualizados',
-      'Clientes antigos confiam em você para expansão — maior LTV médio',
-    ],
-    opportunities: [
-      'Metas de volume alto podem gerar estresse — prefira metas de qualidade que se alinham ao seu estilo',
-      'Prospecção ativa (frio) é o ponto de desenvolvimento — seu ponto forte é relacionamento com clientes existentes',
-    ],
-    insight: 'A VAMO IA sugere missões de upsell em clientes existentes — área onde seu perfil S tem 3x mais chances de sucesso.',
-  },
-  C: {
-    strengths: [
-      'Sua taxa de conversão em propostas técnicas é a mais alta da equipe',
-      'Você prepara as apresentações mais completas e bem fundamentadas',
-      'Sua análise de dados antes de cada reunião é um diferencial percebido pelos clientes',
-    ],
-    opportunities: [
-      'Ciclo de vendas acima da média — perfil C tende a analisar demais antes de avançar',
-      'Estabelecer critérios claros de quando avançar no funil pode reduzir seu ciclo em 25–30%',
-    ],
-    insight: 'A VAMO IA detectou que você fecha mais quando tem acesso a dados e comparativos. Peça estudos de caso antes de cada proposta.',
-  },
+interface KpiItem {
+  kpi_id: string
+  name: string
+  unit: string
+  current: number
+  target: number
+  trend: 'up' | 'down' | 'stable'
 }
 
 export function VendedorDashboard({ user }: VendedorDashboardProps) {
@@ -110,6 +59,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
   const [myRank, setMyRank] = useState<number | null>(null)
   const [totalSellers, setTotalSellers] = useState(0)
   const [discProfile, setDiscProfile] = useState<BehavioralProfile | null>(null)
+  const [myKpis, setMyKpis] = useState<KpiItem[]>([])
 
   useEffect(() => {
     if (!user) return
@@ -168,6 +118,43 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
           if (res.ok) {
             const data = await res.json()
             if (data.profile) setDiscProfile(data.profile)
+          }
+        } catch { /* ignore */ }
+
+        // Load KPIs: definitions + latest entry per KPI for this month
+        try {
+          const monthStart = new Date()
+          monthStart.setDate(1)
+          const monthStartStr = monthStart.toISOString().split('T')[0]
+
+          const { data: kpiDefs } = await supabase
+            .from('kpi_definitions')
+            .select('id, name, unit, targets')
+            .eq('organization_id', user.organization_id)
+            .eq('active', true)
+            .order('name')
+
+          if (kpiDefs && kpiDefs.length > 0) {
+            const { data: entries } = await supabase
+              .from('kpi_entries')
+              .select('kpi_id, value, recorded_at')
+              .eq('user_id', user.id)
+              .gte('recorded_at', monthStartStr)
+              .order('recorded_at', { ascending: false })
+
+            const kpiItems: KpiItem[] = kpiDefs.map((def: { id: string; name: string; unit: string; targets: unknown }) => {
+              const defEntries = (entries ?? []).filter((e: { kpi_id: string; value: number; recorded_at: string }) => e.kpi_id === def.id)
+              const latest = defEntries[0]?.value ?? 0
+              const prev = defEntries[1]?.value ?? null
+              const target = (def.targets as { monthly_target?: number })?.monthly_target ?? 0
+              let trend: 'up' | 'down' | 'stable' = 'stable'
+              if (prev !== null) {
+                if (latest > prev) trend = 'up'
+                else if (latest < prev) trend = 'down'
+              }
+              return { kpi_id: def.id, name: def.name, unit: def.unit, current: latest, target, trend }
+            })
+            setMyKpis(kpiItems)
           }
         } catch { /* ignore */ }
       } catch (err) {
@@ -232,10 +219,6 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
       border: 'border-emerald-500/20 bg-emerald-500/5',
     },
   ]
-
-  const discFeedback = discProfile
-    ? DISC_FEEDBACK[discProfile.dominant_profile] ?? DISC_FEEDBACK['I']
-    : null
 
   return (
     <div className="space-y-6">
@@ -366,7 +349,13 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {MY_KPIS.map((kpi) => {
+          {myKpis.length === 0 ? (
+            <div className="py-6 text-center">
+              <Target className="h-6 w-6 mx-auto mb-2 opacity-20" />
+              <p className="text-sm text-muted-foreground">Nenhum KPI registrado ainda.</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Registre seus indicadores para acompanhar o progresso.</p>
+            </div>
+          ) : myKpis.map((kpi) => {
             const pct = Math.min(100, Math.round((kpi.current / kpi.target) * 100))
             const isOnTrack = pct >= 70
             const isAtRisk = pct >= 40 && pct < 70
@@ -386,9 +375,9 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted-foreground">
-                      {kpi.unit === 'R$' ? `R$ ${kpi.current.toLocaleString('pt-BR')}` : `${kpi.current}${kpi.unit}`}
+                      {kpi.unit === 'R$' ? `R$ ${kpi.current.toLocaleString('pt-BR')}` : `${kpi.current} ${kpi.unit}`}
                       {' / '}
-                      {kpi.unit === 'R$' ? `R$ ${kpi.target.toLocaleString('pt-BR')}` : `${kpi.target}${kpi.unit}`}
+                      {kpi.unit === 'R$' ? `R$ ${kpi.target.toLocaleString('pt-BR')}` : `${kpi.target} ${kpi.unit}`}
                     </span>
                     <span className={`text-[10px] font-medium ${statusColor}`}>{pct}%</span>
                   </div>
@@ -520,7 +509,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
       </Card>
 
       {/* ── Módulo 6: Feedback da VAMO IA ── */}
-      {discProfile && discFeedback ? (
+      {discProfile ? (
         <Card className="border-blue-500/20 bg-blue-500/5">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
@@ -532,40 +521,46 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 mb-2">
-                Pontos Fortes Confirmados pelos Dados
-              </p>
-              <ul className="space-y-1.5">
-                {discFeedback.strengths.map((s, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {discProfile.selling_strengths?.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 mb-2">
+                  Pontos Fortes Confirmados pelos Dados
+                </p>
+                <ul className="space-y-1.5">
+                  {discProfile.selling_strengths.map((s, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 mb-2">
-                Oportunidades de Desenvolvimento
-              </p>
-              <ul className="space-y-1.5">
-                {discFeedback.opportunities.map((o, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                    {o}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {discProfile.development_areas?.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 mb-2">
+                  Oportunidades de Desenvolvimento
+                </p>
+                <ul className="space-y-1.5">
+                  {discProfile.development_areas.map((o, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                      {o}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-            <div className="rounded-lg border border-blue-500/20 bg-background/50 p-2.5">
-              <p className="text-xs text-muted-foreground">
-                <Brain className="inline h-3 w-3 text-blue-500 mr-1" />
-                <strong>Insight coletivo:</strong> {discFeedback.insight}
-              </p>
-            </div>
+            {(discProfile.performance_insight ?? discProfile.wellbeing_insight) && (
+              <div className="rounded-lg border border-blue-500/20 bg-background/50 p-2.5">
+                <p className="text-xs text-muted-foreground">
+                  <Brain className="inline h-3 w-3 text-blue-500 mr-1" />
+                  <strong>Insight:</strong> {discProfile.performance_insight ?? discProfile.wellbeing_insight}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (

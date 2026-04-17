@@ -55,14 +55,11 @@ export default function MonitoramentoComissionamentoPage() {
 
     const fetchData = async () => {
       try {
-        const { data: members } = await supabase
-          .from('users')
-          .select('id, name')
-          .eq('organization_id', user.organization_id)
-          .eq('role', 'seller')
-          .eq('active', true)
+        const sellersRes = await fetch('/api/team/sellers', { credentials: 'same-origin' })
+        const sellersJson = sellersRes.ok ? await sellersRes.json() : { sellers: [] }
+        const members: { id: string; name: string }[] = sellersJson.sellers ?? []
 
-        if (members) {
+        if (members.length > 0) {
           const settled = await Promise.allSettled(
             members.map(async (member: { id: string; name: string }) => {
               const { count: missionsCompleted } = await supabase

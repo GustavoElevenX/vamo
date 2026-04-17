@@ -60,13 +60,11 @@ export default function EmpresaPage() {
     if (!user) return
 
     const fetchData = async () => {
-      const { data: users } = await supabase
-        .from('users')
-        .select('id, name, email, role, active')
-        .eq('organization_id', user.organization_id)
-        .order('role', { ascending: true })
-
-      if (users) setOrgUsers(users as OrgUser[])
+      const res = await fetch('/api/team/members', { credentials: 'same-origin' })
+      if (res.ok) {
+        const json = await res.json()
+        setOrgUsers(json.members ?? [])
+      }
       setLoading(false)
     }
 

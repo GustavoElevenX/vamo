@@ -134,8 +134,8 @@ Responda em JSON com exatamente estes 5 campos (strings em português, com markd
     monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
     const weekStart = monday.toISOString().split('T')[0]
 
-    // Save to DB
-    const { data: saved, error } = await supabase
+    // Save to DB (adminClient bypasses RLS for reliable write)
+    const { data: saved, error } = await adminClient
       .from('weekly_briefings')
       .upsert(
         {
@@ -151,8 +151,7 @@ Responda em JSON com exatamente estes 5 campos (strings em português, com markd
       .single()
 
     if (error) {
-      // If upsert fails (no unique constraint), just insert
-      const { data: inserted } = await supabase
+      const { data: inserted, error: insertError } = await adminClient
         .from('weekly_briefings')
         .insert({
           organization_id: appUser.organization_id,
@@ -164,6 +163,9 @@ Responda em JSON com exatamente estes 5 campos (strings em português, com markd
         .select()
         .single()
 
+      if (insertError || !inserted) {
+        return NextResponse.json({ error: 'Briefing gerado mas falhou ao salvar. Tente novamente.' }, { status: 503 })
+      }
       return NextResponse.json({ briefing: inserted })
     }
 
@@ -196,7 +198,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
   }
 
-  const { data: briefings } = await supabase
+  const { data: briefings } = await adminClient
     .from('weekly_briefings')
     .select('*')
     .eq('organization_id', appUser.organization_id)

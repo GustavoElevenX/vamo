@@ -1,27 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { toast } from 'sonner'
 import {
   Building2,
   Users,
   User,
   Target,
   ArrowLeft,
-  ArrowRight,
   Sparkles,
   CheckCircle,
   TrendingUp,
   Save,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
-import { toast } from 'sonner'
 
 interface CompanyGoal {
   kpiFinanceiro: string
@@ -40,70 +42,213 @@ interface TeamGoal {
 }
 
 interface IndividualGoal {
-  id: string
+  user_id: string
   name: string
   discProfile: string
   goal: string
 }
 
+interface AiSuggestion {
+  text: string
+  kpi: string
+  valorAtual: string
+  valorMeta: string
+  days: number
+}
+
+const DISC_LABELS: Record<string, string> = {
+  D: 'D - Dominante',
+  I: 'I - Influente',
+  S: 'S - Estável',
+  C: 'C - Consciencioso',
+}
+
 export default function MetasPage() {
   const { user } = useRequiredAuth()
   const router = useRouter()
+  const supabase = createClient()
 
   const [companyGoal, setCompanyGoal] = useState<CompanyGoal>({
-    kpiFinanceiro: '',
-    valorAtual: '',
-    valorMeta: '',
-    prazo: '',
-    metrica: '',
+    kpiFinanceiro: '', valorAtual: '', valorMeta: '', prazo: '', metrica: '',
   })
-
   const [teamGoal, setTeamGoal] = useState<TeamGoal>({
-    kpiComportamental: '',
-    valorAtual: '',
-    valorMeta: '',
-    prazo: '',
-    medicao: 'auto_crm',
+    kpiComportamental: '', valorAtual: '', valorMeta: '', prazo: '', medicao: 'auto_crm',
   })
-
-  // Mock collaborators - in real app, fetched from Supabase
-  const [individualGoals, setIndividualGoals] = useState<IndividualGoal[]>([
-    { id: '1', name: 'Carlos Silva', discProfile: 'D - Dominante', goal: '' },
-    { id: '2', name: 'Ana Souza', discProfile: 'I - Influente', goal: '' },
-    { id: '3', name: 'Pedro Santos', discProfile: 'S - Estável', goal: '' },
-    { id: '4', name: 'Mariana Lima', discProfile: 'C - Consciencioso', goal: '' },
-  ])
-
-  const [aiSuggestionAccepted, setAiSuggestionAccepted] = useState(false)
+  const [individualGoals, setIndividualGoals] = useState<IndividualGoal[]>([])
+  const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
+  const [aiAccepted, setAiAccepted] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [noSellers, setNoSellers] = useState(false)
 
+  const fetchData = useCallback(async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const [
+        sellersRes,
+        { data: profiles },
+        { data: savedGoals },
+        { data: diagAnalysis },
+      ] = await Promise.all([
+        fetch('/api/team/sellers', { credentials: 'same-origin' }).then((r) => r.json()),
+        supabase
+          .from('behavioral_profiles')
+          .select('user_id, disc_type')
+          .eq('organization_id', user.organization_id),
+        supabase
+          .from('program_goals')
+          .select('*')
+          .eq('organization_id', user.organization_id)
+          .maybeSingle(),
+        supabase
+          .from('ai_analyses')
+          .select('health_pct, quadrant, area_scores')
+          .eq('organization_id', user.organization_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
 
-  const handleIndividualGoalChange = (id: string, value: string) => {
-    setIndividualGoals((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, goal: value } : g))
-    )
+      const sellers: { id: string; name: string }[] = sellersRes.sellers ?? []
+
+      if (!sellers || sellers.length === 0) {
+        setNoSellers(true)
+      }
+
+      // Build individual goals list from real sellers
+      const discMap: Record<string, string> = {}
+      for (const p of profiles ?? []) {
+        if (p.disc_type) discMap[p.user_id] = p.disc_type
+      }
+
+      // Load saved individual goals if available
+      const savedIndividual: Record<string, string> = {}
+      if (savedGoals?.individual_goals) {
+        for (const g of savedGoals.individual_goals as { user_id: string; goal: string }[]) {
+          savedIndividual[g.user_id] = g.goal
+        }
+      }
+
+      setIndividualGoals(
+        (sellers ?? []).map((s) => ({
+          user_id: s.id,
+          name: s.name,
+          discProfile: DISC_LABELS[discMap[s.id] ?? ''] ?? 'Sem perfil DISC',
+          goal: savedIndividual[s.id] ?? '',
+        }))
+      )
+
+      // Load saved company + team goals
+      if (savedGoals?.company_goal) {
+        const cg = savedGoals.company_goal as Record<string, string>
+        setCompanyGoal({
+          kpiFinanceiro: cg.kpiFinanceiro ?? '',
+          valorAtual: cg.valorAtual ?? '',
+          valorMeta: cg.valorMeta ?? '',
+          prazo: cg.prazo ?? '',
+          metrica: cg.metrica ?? '',
+        })
+      }
+      if (savedGoals?.team_goal) {
+        const tg = savedGoals.team_goal as Record<string, string>
+        setTeamGoal({
+          kpiComportamental: tg.kpiComportamental ?? '',
+          valorAtual: tg.valorAtual ?? '',
+          valorMeta: tg.valorMeta ?? '',
+          prazo: tg.prazo ?? '',
+          medicao: (tg.medicao as 'auto_crm' | 'manual') ?? 'auto_crm',
+        })
+      }
+
+      // Build AI suggestion from real diagnostic data
+      if (diagAnalysis && !savedGoals?.team_goal?.kpiComportamental) {
+        const scores = diagAnalysis.area_scores as Record<string, number> | null
+        if (scores) {
+          const weakestArea = Object.entries(scores).sort((a, b) => a[1] - b[1])[0]
+          const healthPct = diagAnalysis.health_pct ?? 0
+          const areaLabels: Record<string, string> = {
+            lead_generation: 'Geração de Leads',
+            sales_process: 'Taxa de Conversão',
+            team_management: 'Engajamento do Time',
+            tools_technology: 'Uso do CRM',
+          }
+          const areaLabel = weakestArea ? areaLabels[weakestArea[0]] ?? weakestArea[0] : 'Taxa de Conversão'
+          const currentPct = weakestArea ? Math.round(weakestArea[1]) : healthPct
+          const targetPct = Math.min(100, Math.round(currentPct * 1.2))
+          const quadrantLabel = diagAnalysis.quadrant === 'critical' ? 'crítico'
+            : diagAnalysis.quadrant === 'at_risk' ? 'em risco'
+            : diagAnalysis.quadrant === 'developing' ? 'em desenvolvimento' : 'otimizado'
+
+          setAiSuggestion({
+            text: `Diagnóstico indica saúde ${healthPct}% (${quadrantLabel}). A área mais fraca é ${areaLabel} com ${currentPct}%. Meta realista de ${targetPct}% em 30 dias mantém o time motivado com crescimento de ${targetPct - currentPct} pontos percentuais.`,
+            kpi: areaLabel,
+            valorAtual: `${currentPct}%`,
+            valorMeta: `${targetPct}%`,
+            days: 30,
+          })
+        }
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const handleIndividualGoalChange = (userId: string, value: string) => {
+    setIndividualGoals((prev) => prev.map((g) => (g.user_id === userId ? { ...g, goal: value } : g)))
   }
 
   const handleAcceptAiSuggestion = () => {
+    if (!aiSuggestion) return
+    const deadline = new Date(Date.now() + aiSuggestion.days * 24 * 60 * 60 * 1000)
+      .toISOString().split('T')[0]
     setTeamGoal((prev) => ({
       ...prev,
-      kpiComportamental: 'Taxa de Conversão',
-      valorAtual: '44%',
-      valorMeta: '52%',
-      prazo: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      kpiComportamental: aiSuggestion.kpi,
+      valorAtual: aiSuggestion.valorAtual,
+      valorMeta: aiSuggestion.valorMeta,
+      prazo: deadline,
       medicao: 'auto_crm',
     }))
-    setAiSuggestionAccepted(true)
-    toast.success('Sugestão da VAMO IA aplicada com sucesso!')
+    setAiAccepted(true)
+    toast.success('Sugestão da VAMO IA aplicada!')
   }
 
   const handleSave = async () => {
+    if (!user) return
     setSaving(true)
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 1200))
-    toast.success('Metas salvas com sucesso!')
-    setSaving(false)
-    router.push('/objetivos')
+    try {
+      const res = await fetch('/api/goals/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          company_goal: companyGoal,
+          team_goal: teamGoal,
+          individual_goals: individualGoals.map((g) => ({ user_id: g.user_id, goal: g.goal })),
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error)
+      toast.success('Metas salvas! Vendedores notificados via chat e sino.')
+      router.push('/objetivos')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao salvar metas')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   return (
@@ -126,7 +271,24 @@ export default function MetasPage() {
         </div>
       </div>
 
-      {/* Block 1 - Meta da Empresa */}
+      {/* Aviso sem vendedores */}
+      {noSellers && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-600">Nenhum vendedor cadastrado</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  As metas individuais ficam disponíveis após cadastrar vendedores. Use o Chat IA: "Cadastre o vendedor João, email joao@empresa.com".
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Meta da Empresa */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
@@ -144,7 +306,7 @@ export default function MetasPage() {
             <Label className="text-xs">KPI Financeiro</Label>
             <Input
               value={companyGoal.kpiFinanceiro}
-              onChange={(e) => setCompanyGoal((prev) => ({ ...prev, kpiFinanceiro: e.target.value }))}
+              onChange={(e) => setCompanyGoal((p) => ({ ...p, kpiFinanceiro: e.target.value }))}
               placeholder="Ex: Receita mensal, MRR, Ticket Médio"
             />
           </div>
@@ -153,7 +315,7 @@ export default function MetasPage() {
               <Label className="text-xs">Valor Atual</Label>
               <Input
                 value={companyGoal.valorAtual}
-                onChange={(e) => setCompanyGoal((prev) => ({ ...prev, valorAtual: e.target.value }))}
+                onChange={(e) => setCompanyGoal((p) => ({ ...p, valorAtual: e.target.value }))}
                 placeholder="Ex: R$ 150.000"
               />
             </div>
@@ -161,7 +323,7 @@ export default function MetasPage() {
               <Label className="text-xs">Valor Meta</Label>
               <Input
                 value={companyGoal.valorMeta}
-                onChange={(e) => setCompanyGoal((prev) => ({ ...prev, valorMeta: e.target.value }))}
+                onChange={(e) => setCompanyGoal((p) => ({ ...p, valorMeta: e.target.value }))}
                 placeholder="Ex: R$ 200.000"
               />
             </div>
@@ -169,17 +331,13 @@ export default function MetasPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-xs">Prazo</Label>
-              <Input
-                type="date"
-                value={companyGoal.prazo}
-                onChange={(e) => setCompanyGoal((prev) => ({ ...prev, prazo: e.target.value }))}
-              />
+              <Input type="date" value={companyGoal.prazo} onChange={(e) => setCompanyGoal((p) => ({ ...p, prazo: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Métrica de Acompanhamento</Label>
               <Input
                 value={companyGoal.metrica}
-                onChange={(e) => setCompanyGoal((prev) => ({ ...prev, metrica: e.target.value }))}
+                onChange={(e) => setCompanyGoal((p) => ({ ...p, metrica: e.target.value }))}
                 placeholder="Ex: R$/mês"
               />
             </div>
@@ -187,7 +345,7 @@ export default function MetasPage() {
         </CardContent>
       </Card>
 
-      {/* Block 2 - Meta do Time */}
+      {/* Meta do Time */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
@@ -205,43 +363,31 @@ export default function MetasPage() {
             <Label className="text-xs">KPI Comportamental</Label>
             <Input
               value={teamGoal.kpiComportamental}
-              onChange={(e) => setTeamGoal((prev) => ({ ...prev, kpiComportamental: e.target.value }))}
+              onChange={(e) => setTeamGoal((p) => ({ ...p, kpiComportamental: e.target.value }))}
               placeholder="Ex: Taxa de conversão, Follow-up em 24h"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-xs">Valor Atual</Label>
-              <Input
-                value={teamGoal.valorAtual}
-                onChange={(e) => setTeamGoal((prev) => ({ ...prev, valorAtual: e.target.value }))}
-                placeholder="Ex: 44%"
-              />
+              <Input value={teamGoal.valorAtual} onChange={(e) => setTeamGoal((p) => ({ ...p, valorAtual: e.target.value }))} placeholder="Ex: 44%" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Valor Meta</Label>
-              <Input
-                value={teamGoal.valorMeta}
-                onChange={(e) => setTeamGoal((prev) => ({ ...prev, valorMeta: e.target.value }))}
-                placeholder="Ex: 62%"
-              />
+              <Input value={teamGoal.valorMeta} onChange={(e) => setTeamGoal((p) => ({ ...p, valorMeta: e.target.value }))} placeholder="Ex: 62%" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-xs">Prazo</Label>
-              <Input
-                type="date"
-                value={teamGoal.prazo}
-                onChange={(e) => setTeamGoal((prev) => ({ ...prev, prazo: e.target.value }))}
-              />
+              <Input type="date" value={teamGoal.prazo} onChange={(e) => setTeamGoal((p) => ({ ...p, prazo: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Medição</Label>
               <select
                 value={teamGoal.medicao}
-                onChange={(e) => setTeamGoal((prev) => ({ ...prev, medicao: e.target.value as 'auto_crm' | 'manual' }))}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                onChange={(e) => setTeamGoal((p) => ({ ...p, medicao: e.target.value as 'auto_crm' | 'manual' }))}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none"
               >
                 <option value="auto_crm">Automático (CRM)</option>
                 <option value="manual">Manual</option>
@@ -249,45 +395,37 @@ export default function MetasPage() {
             </div>
           </div>
 
-          {/* AI Suggestion */}
-          <div className={`rounded-lg border p-4 transition-all ${
-            aiSuggestionAccepted
-              ? 'border-emerald-500/30 bg-emerald-500/5'
-              : 'border-violet-500/30 bg-violet-500/5'
-          }`}>
-            <div className="flex items-start gap-2">
-              <Sparkles className={`h-4 w-4 mt-0.5 shrink-0 ${aiSuggestionAccepted ? 'text-emerald-500' : 'text-violet-500'}`} />
-              <div className="flex-1">
-                <p className="text-xs font-medium mb-1">
-                  {aiSuggestionAccepted ? (
-                    <span className="flex items-center gap-1 text-emerald-500">
-                      <CheckCircle className="h-3 w-3" /> Sugestão aplicada
-                    </span>
-                  ) : (
-                    <span className="text-violet-500">A VAMO IA sugere:</span>
+          {/* AI Suggestion com dados reais */}
+          {aiSuggestion && (
+            <div className={`rounded-lg border p-4 transition-all ${aiAccepted ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-violet-500/30 bg-violet-500/5'}`}>
+              <div className="flex items-start gap-2">
+                <Sparkles className={`h-4 w-4 mt-0.5 shrink-0 ${aiAccepted ? 'text-emerald-500' : 'text-violet-500'}`} />
+                <div className="flex-1">
+                  <p className="text-xs font-medium mb-1">
+                    {aiAccepted ? (
+                      <span className="flex items-center gap-1 text-emerald-500">
+                        <CheckCircle className="h-3 w-3" /> Sugestão aplicada
+                      </span>
+                    ) : (
+                      <span className="text-violet-500">A VAMO IA sugere (com base no seu diagnóstico):</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{aiSuggestion.text}</p>
+                  {!aiAccepted && (
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" className="text-xs bg-violet-500 hover:bg-violet-600 text-white" onClick={handleAcceptAiSuggestion}>
+                        <CheckCircle className="h-3 w-3 mr-1" /> Aceitar
+                      </Button>
+                    </div>
                   )}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Sua conversão é 44%, benchmark do setor é 62%. Sugiro meta de 52% em 30 dias —
-                  crescimento realista de 18% que mantém o time motivado sem gerar sobrecarga. Confirma?
-                </p>
-                {!aiSuggestionAccepted && (
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" className="text-xs bg-violet-500 hover:bg-violet-600 text-white" onClick={handleAcceptAiSuggestion}>
-                      <CheckCircle className="h-3 w-3 mr-1" /> Aceitar
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-xs">
-                      Ajustar
-                    </Button>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Block 3 - Metas Individuais */}
+      {/* Metas Individuais */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
@@ -301,62 +439,57 @@ export default function MetasPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {individualGoals.map((collab) => (
-            <div key={collab.id} className="flex items-center gap-3 p-3 rounded-lg border border-border/40">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-medium">{collab.name}</p>
-                  <Badge variant="outline" className="text-[9px]">
-                    {collab.discProfile}
-                  </Badge>
+          {individualGoals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhum vendedor cadastrado. Adicione vendedores via Chat IA para definir metas individuais.
+            </p>
+          ) : (
+            <>
+              {individualGoals.map((collab) => (
+                <div key={collab.user_id} className="flex items-center gap-3 p-3 rounded-lg border border-border/40">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-medium">{collab.name}</p>
+                      <Badge variant="outline" className="text-[9px]">{collab.discProfile}</Badge>
+                    </div>
+                    <Input
+                      value={collab.goal}
+                      onChange={(e) => handleIndividualGoalChange(collab.user_id, e.target.value)}
+                      placeholder="Ex: 8 contratos fechados no mês"
+                      className="text-xs"
+                    />
+                  </div>
+                  <div className="shrink-0">
+                    <Target className="h-4 w-4 text-muted-foreground/40" />
+                  </div>
                 </div>
-                <Input
-                  value={collab.goal}
-                  onChange={(e) => handleIndividualGoalChange(collab.id, e.target.value)}
-                  placeholder="Ex: 8 contratos fechados no mês"
-                  className="text-xs"
-                />
+              ))}
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-muted-foreground">
+                    Metas individuais são calibradas pelo perfil DISC. Perfis <strong>D</strong> recebem metas de resultado mais agressivas,
+                    enquanto perfis <strong>S</strong> e <strong>C</strong> focam em consistência e qualidade.
+                    {individualGoals.some((g) => g.discProfile === 'Sem perfil DISC') && (
+                      <span className="block mt-1 text-amber-600"> Alguns vendedores ainda não completaram o diagnóstico DISC.</span>
+                    )}
+                  </p>
+                </div>
               </div>
-              <div className="shrink-0">
-                <Target className="h-4 w-4 text-muted-foreground/40" />
-              </div>
-            </div>
-          ))}
-
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-            <div className="flex items-start gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-              <p className="text-[11px] text-muted-foreground">
-                Metas individuais são calibradas pelo perfil DISC. Perfis <strong>D</strong> recebem metas de resultado mais agressivas,
-                enquanto perfis <strong>S</strong> e <strong>C</strong> focam em consistência e qualidade.
-              </p>
-            </div>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       <Separator />
 
-      {/* Save */}
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={() => router.push('/objetivos')}>
           <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Voltar
         </Button>
-        <Button
-          className="bg-emerald-500 hover:bg-emerald-600 text-white"
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <span className="flex items-center gap-2">
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              Salvando...
-            </span>
-          ) : (
-            <>
-              <Save className="h-3.5 w-3.5 mr-1" /> Salvar Metas
-            </>
-          )}
+        <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+          {saving ? 'Salvando...' : 'Salvar Metas'}
         </Button>
       </div>
     </div>

@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   TrendingUp,
@@ -20,7 +19,6 @@ import {
   Sparkles,
   Activity,
   BarChart3,
-  Rocket,
   MessageCircle,
   Star,
   HeartPulse,
@@ -41,6 +39,8 @@ interface TeamMember {
   total_xp: number
   current_level: number
   current_streak: number
+  last_activity_date: string | null
+  missions_completed: number
 }
 
 interface FunnelStage {
@@ -52,6 +52,30 @@ interface FunnelStage {
   bottleneck: boolean
 }
 
+interface RoiData {
+  receitaRecuperada: number
+  economiaAdmin: number
+  reducaoTurnover: number
+  investimentoTotal: number
+}
+
+interface KpiOverview {
+  receita_mes: number
+  receita_variacao: number
+  conversao_geral: number
+  conversao_variacao: number
+}
+
+interface Nudge {
+  type: 'burnout' | 'recognize' | 'followup'
+  title: string
+  label: string
+  labelColor: string
+  message: string
+  borderColor: string
+  bgColor: string
+}
+
 export function GestorDashboard({ user }: GestorDashboardProps) {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
@@ -60,22 +84,17 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
   const [activeMissions, setActiveMissions] = useState(0)
   const [diagnosticCount, setDiagnosticCount] = useState(0)
   const [recentAlerts, setRecentAlerts] = useState<string[]>([])
-
-  // Funnel stages: before (diagnóstico) vs current
-  const funnelStages = [
-    { name: 'Leads',        before: 280, current: 347, benchmarkConv: 100, currentConv: 100, bottleneck: false },
-    { name: 'Qualificados', before: 140, current: 198, benchmarkConv: 65,  currentConv: 57,  bottleneck: false },
-    { name: 'Propostas',    before: 63,  current: 89,  benchmarkConv: 60,  currentConv: 45,  bottleneck: true  },
-    { name: 'Negociação',   before: 38,  current: 52,  benchmarkConv: 65,  currentConv: 58,  bottleneck: false },
-    { name: 'Fechamento',   before: 21,  current: 31,  benchmarkConv: 70,  currentConv: 60,  bottleneck: false },
-  ]
+  const [funnelStages, setFunnelStages] = useState<FunnelStage[]>([])
+  const [roi, setRoi] = useState<RoiData | null>(null)
+  const [kpiOverview, setKpiOverview] = useState<KpiOverview | null>(null)
+  const [nudges, setNudges] = useState<Nudge[]>([])
 
   useEffect(() => {
     if (!user) return
 
     const fetchData = async () => {
       try {
-        const [perfRes, missionsRes, diagnosticsRes] = await Promise.allSettled([
+        const [perfRes, missionsRes, diagnosticsRes, orgRes] = await Promise.allSettled([
           fetch('/api/team/performance', { credentials: 'same-origin' }),
           supabase
             .from('ai_missions')
@@ -86,6 +105,11 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             .from('diagnostic_sessions')
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', user.organization_id),
+          supabase
+            .from('organizations')
+            .select('settings')
+            .eq('id', user.organization_id)
+            .single(),
         ])
 
         const missions = missionsRes.status === 'fulfilled' ? missionsRes.value.count : 0
@@ -93,6 +117,13 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
 
         setActiveMissions(missions ?? 0)
         setDiagnosticCount(diagnostics ?? 0)
+
+        if (orgRes.status === 'fulfilled' && orgRes.value.data) {
+          const settings = orgRes.value.data.settings as Record<string, unknown>
+          if (settings.funnel) setFunnelStages((settings.funnel as { stages: FunnelStage[] }).stages ?? [])
+          if (settings.roi) setRoi(settings.roi as RoiData)
+          if (settings.kpi_overview) setKpiOverview(settings.kpi_overview as KpiOverview)
+        }
 
         if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
           const { members } = await perfRes.value.json()
@@ -102,6 +133,8 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             total_xp: m.total_xp,
             current_level: m.current_level,
             current_streak: m.current_streak,
+            last_activity_date: m.last_activity_date ?? null,
+            missions_completed: m.missions_completed ?? 0,
           }))
           setTeamMembers(list)
           setTeamSize(list.length)
@@ -115,6 +148,62 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             alerts.push('Muitas missões pendentes — verifique a carga da equipe')
           }
           setRecentAlerts(alerts)
+
+          // Compute dynamic nudges from real team data
+          const computedNudges: Nudge[] = []
+
+          // Burnout risk: streak 0 + last activity > 5 days ago
+          const today = new Date()
+          const burnoutRisk = list.find((m) => {
+            if (m.current_streak !== 0) return false
+            if (!m.last_activity_date) return true
+            const lastActive = new Date(m.last_activity_date)
+            return (today.getTime() - lastActive.getTime()) / 86400000 > 5
+          })
+          if (burnoutRisk) {
+            const daysInactive = burnoutRisk.last_activity_date
+              ? Math.floor((today.getTime() - new Date(burnoutRisk.last_activity_date).getTime()) / 86400000)
+              : null
+            computedNudges.push({
+              type: 'burnout',
+              title: `Agende 1:1 com ${burnoutRisk.name.split(' ')[0]}`,
+              label: 'burnout',
+              labelColor: 'text-red-500 border-red-500/30',
+              message: `${burnoutRisk.name.split(' ')[0]} está sem atividade${daysInactive ? ` há ${daysInactive} dias` : ''}. Não lance novas missões antes de conversar — gamificação sobre burnout piora o problema.`,
+              borderColor: 'border-red-500/20',
+              bgColor: 'bg-red-500/5',
+            })
+          }
+
+          // Top performer: most missions completed
+          const topPerformer = [...list].sort((a, b) => b.missions_completed - a.missions_completed)[0]
+          if (topPerformer && topPerformer.missions_completed > 0) {
+            computedNudges.push({
+              type: 'recognize',
+              title: `Reconheça ${topPerformer.name.split(' ')[0]} publicamente`,
+              label: 'alto impacto',
+              labelColor: 'text-emerald-500 border-emerald-500/30',
+              message: `${topPerformer.name.split(' ')[0]} completou ${topPerformer.missions_completed} missão(ões) e está em Nível ${topPerformer.current_level}. Reconhecimento público agora aumenta a motivação de toda a equipe.`,
+              borderColor: 'border-emerald-500/20',
+              bgColor: 'bg-emerald-500/5',
+            })
+          }
+
+          // Engagement alert: sellers with low streak but not burnout
+          const lowEngagement = list.filter((m) => m.current_streak > 0 && m.current_streak < 3)
+          if (lowEngagement.length > 0) {
+            computedNudges.push({
+              type: 'followup',
+              title: `Engajamento baixo — ${lowEngagement.length} vendedor(es)`,
+              label: 'atenção',
+              labelColor: 'text-amber-500 border-amber-500/30',
+              message: `${lowEngagement.map(m => m.name.split(' ')[0]).join(', ')} com streak abaixo de 3 dias. Uma mensagem de incentivo pode ajudar a manter o ritmo.`,
+              borderColor: 'border-amber-500/20',
+              bgColor: 'bg-amber-500/5',
+            })
+          }
+
+          setNudges(computedNudges)
         }
       } catch (err) {
         console.error('[GestorDashboard] Erro ao carregar dados:', err)
@@ -134,17 +223,10 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
     )
   }
 
-  const maxFunnel = Math.max(...funnelStages.map(s => s.current))
+  const maxFunnel = funnelStages.length > 0 ? Math.max(...funnelStages.map(s => s.current)) : 1
 
-  // ROI formula values (simulated — will come from real data after CRM sync)
-  const roi = {
-    receitaRecuperada: 12400,
-    economiaAdmin: 3200,
-    reducaoTurnover: 4800,
-    investimentoTotal: 4880,
-  }
-  const roiTotal = roi.receitaRecuperada + roi.economiaAdmin + roi.reducaoTurnover
-  const roiMultiplier = (roiTotal / roi.investimentoTotal).toFixed(2)
+  const roiTotal = roi ? roi.receitaRecuperada + roi.economiaAdmin + roi.reducaoTurnover : 0
+  const roiMultiplier = roi ? (roiTotal / roi.investimentoTotal).toFixed(2) : '0'
 
   return (
     <div className="space-y-6">
@@ -163,11 +245,19 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Receita Mês</p>
-                <p className="text-2xl font-bold mt-1">R$ 84.200</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="h-3 w-3 text-emerald-500" />
-                  <span className="text-xs text-emerald-500 font-medium">+12.5%</span>
-                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {kpiOverview ? `R$ ${kpiOverview.receita_mes.toLocaleString('pt-BR')}` : '—'}
+                </p>
+                {kpiOverview && (
+                  <div className="flex items-center gap-1 mt-1">
+                    {kpiOverview.receita_variacao >= 0
+                      ? <TrendingUp className="h-3 w-3 text-emerald-500" />
+                      : <TrendingDown className="h-3 w-3 text-red-500" />}
+                    <span className={`text-xs font-medium ${kpiOverview.receita_variacao >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {kpiOverview.receita_variacao > 0 ? '+' : ''}{kpiOverview.receita_variacao}%
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                 <DollarSign className="h-5 w-5 text-emerald-500" />
@@ -181,11 +271,19 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Conversão Geral</p>
-                <p className="text-2xl font-bold mt-1">8.9%</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <TrendingDown className="h-3 w-3 text-red-500" />
-                  <span className="text-xs text-red-500 font-medium">-2.1%</span>
-                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {kpiOverview ? `${kpiOverview.conversao_geral}%` : '—'}
+                </p>
+                {kpiOverview && (
+                  <div className="flex items-center gap-1 mt-1">
+                    {kpiOverview.conversao_variacao >= 0
+                      ? <TrendingUp className="h-3 w-3 text-emerald-500" />
+                      : <TrendingDown className="h-3 w-3 text-red-500" />}
+                    <span className={`text-xs font-medium ${kpiOverview.conversao_variacao >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {kpiOverview.conversao_variacao > 0 ? '+' : ''}{kpiOverview.conversao_variacao}%
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
                 <Target className="h-5 w-5 text-blue-500" />
@@ -244,6 +342,14 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             </div>
           </CardHeader>
           <CardContent>
+            {funnelStages.length === 0 ? (
+              <div className="py-8 text-center">
+                <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p className="text-sm text-muted-foreground">Dados do funil ainda não configurados.</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Configure via Configurações → Organização.</p>
+              </div>
+            ) : (
+            <>
             <div className="space-y-4">
               {funnelStages.map((stage, i) => {
                 const growthPct = Math.round(((stage.current - stage.before) / stage.before) * 100)
@@ -294,18 +400,31 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
               })}
             </div>
 
-            <div className="mt-4 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-medium text-red-500">Gargalo: Qualificados → Propostas (45% vs benchmark 60%)</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Conversão 15pp abaixo do benchmark. Perda estimada: R$ 23.400/mês.
-                    Missão ativa: &quot;Revisar script de proposta&quot; pode recuperar R$ 8.200/mês.
-                  </p>
+            {(() => {
+              const bottleneck = funnelStages.find(s => s.bottleneck)
+              if (!bottleneck) return null
+              const prevStage = funnelStages[funnelStages.indexOf(bottleneck) - 1]
+              const gap = prevStage ? bottleneck.benchmarkConv - bottleneck.currentConv : 0
+              return (
+                <div className="mt-4 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-red-500">
+                        Gargalo: {prevStage?.name} → {bottleneck.name} ({bottleneck.currentConv}% vs benchmark {bottleneck.benchmarkConv}%)
+                      </p>
+                      {gap > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Conversão {gap}pp abaixo do benchmark. Missões ativas nesta área podem ajudar a recuperar essa perda.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )
+            })()}
+            </>
+            )}
           </CardContent>
         </Card>
 
@@ -332,18 +451,19 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
               </div>
             )}
 
-            <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10">
-              <div className="flex items-start gap-2">
-                <Brain className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-medium text-blue-500">Recomendação</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    3 vendedores com perfil &quot;I&quot; (Influência) têm taxa de fechamento 23% maior.
-                    Considere treinar a equipe em técnicas de rapport.
-                  </p>
+            {teamSize > 0 && (
+              <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                <div className="flex items-start gap-2">
+                  <Brain className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-blue-500">Recomendação</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {teamSize} vendedores ativos. Acesse os perfis comportamentais para ver recomendações personalizadas por tipo DISC.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="pt-2 space-y-2">
               <Button variant="outline" size="sm" className="w-full justify-between text-xs" render={<Link href="/auditoria" />}>
@@ -460,7 +580,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
                   </div>
                 </div>
                 <span className="text-sm font-bold text-emerald-600">
-                  + R$ {roi.receitaRecuperada.toLocaleString('pt-BR')}
+                  + R$ {(roi?.receitaRecuperada ?? 0).toLocaleString('pt-BR')}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-border/40">
@@ -474,7 +594,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
                   </div>
                 </div>
                 <span className="text-sm font-bold text-blue-600">
-                  + R$ {roi.economiaAdmin.toLocaleString('pt-BR')}
+                  + R$ {(roi?.economiaAdmin ?? 0).toLocaleString('pt-BR')}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-border/40">
@@ -488,7 +608,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
                   </div>
                 </div>
                 <span className="text-sm font-bold text-violet-600">
-                  + R$ {roi.reducaoTurnover.toLocaleString('pt-BR')}
+                  + R$ {(roi?.reducaoTurnover ?? 0).toLocaleString('pt-BR')}
                 </span>
               </div>
               {/* Denominator */}
@@ -503,7 +623,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
                   </div>
                 </div>
                 <span className="text-sm font-bold text-muted-foreground">
-                  ÷ R$ {roi.investimentoTotal.toLocaleString('pt-BR')}
+                  ÷ R$ {(roi?.investimentoTotal ?? 0).toLocaleString('pt-BR')}
                 </span>
               </div>
               {/* Result */}
@@ -566,57 +686,38 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
               <Brain className="h-4 w-4 text-blue-500" />
               <CardTitle className="text-sm font-medium">Alertas Proativos da VAMO IA</CardTitle>
             </div>
-            <Badge variant="secondary" className="text-[10px]">3 ações sugeridas</Badge>
+            {nudges.length > 0 && (
+              <Badge variant="secondary" className="text-[10px]">{nudges.length} ação(ões) sugerida(s)</Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* Nudge */}
-          <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
-            <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-              <MessageCircle className="h-4 w-4 text-amber-500" />
+          {nudges.length === 0 ? (
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+              <Activity className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-muted-foreground">Equipe com boa atividade. Sem alertas proativos no momento.</p>
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold">Nudge sugerido</p>
-                <Badge variant="outline" className="text-[9px] text-amber-500 border-amber-500/30">urgente</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Diego tem 3 propostas abertas há mais de 5 dias sem follow-up. Envie um lembrete rápido antes de perder essas oportunidades.
-              </p>
-            </div>
-          </div>
-
-          {/* Reconhecimento */}
-          <div className="flex items-start gap-3 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
-            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-              <Star className="h-4 w-4 text-emerald-500" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold">Reconheça Ana publicamente</p>
-                <Badge variant="outline" className="text-[9px] text-emerald-500 border-emerald-500/30">alto impacto</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Ana completou 4 missões esta semana e subiu de nível. Reconhecimento público agora aumenta a motivação de toda a equipe.
-              </p>
-            </div>
-          </div>
-
-          {/* 1:1 */}
-          <div className="flex items-start gap-3 p-3 rounded-lg border border-red-500/20 bg-red-500/5">
-            <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-              <HeartPulse className="h-4 w-4 text-red-500" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold">Agende 1:1 com Bruna</p>
-                <Badge variant="outline" className="text-[9px] text-red-500 border-red-500/30">burnout</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Bruna está sem atividade há 6 dias. Não lance novas missões antes de conversar — gamificação sobre burnout piora o problema.
-              </p>
-            </div>
-          </div>
+          ) : (
+            nudges.map((nudge, i) => {
+              const Icon = nudge.type === 'burnout' ? HeartPulse : nudge.type === 'recognize' ? Star : MessageCircle
+              const iconColor = nudge.type === 'burnout' ? 'text-red-500' : nudge.type === 'recognize' ? 'text-emerald-500' : 'text-amber-500'
+              const iconBg = nudge.type === 'burnout' ? 'bg-red-500/10' : nudge.type === 'recognize' ? 'bg-emerald-500/10' : 'bg-amber-500/10'
+              return (
+                <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${nudge.borderColor} ${nudge.bgColor}`}>
+                  <div className={`h-8 w-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`h-4 w-4 ${iconColor}`} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold">{nudge.title}</p>
+                      <Badge variant="outline" className={`text-[9px] ${nudge.labelColor}`}>{nudge.label}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{nudge.message}</p>
+                  </div>
+                </div>
+              )
+            })
+          )}
 
           <Button variant="outline" size="sm" className="w-full justify-between text-xs" render={<Link href="/saude-equipe" />}>
             Ver saúde completa da equipe

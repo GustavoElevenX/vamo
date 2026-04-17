@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,14 +25,17 @@ import {
   Heart,
   Sparkles,
   Info,
+  Save,
+  Loader2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Level {
   position: number
   name: string
 }
 
-const INITIAL_LEVELS: Level[] = [
+const DEFAULT_LEVELS: Level[] = [
   { position: 1, name: 'Recruta' },
   { position: 2, name: 'Prospector' },
   { position: 3, name: 'Negociador' },
@@ -43,21 +46,10 @@ const INITIAL_LEVELS: Level[] = [
   { position: 8, name: 'Lenda' },
 ]
 
-function ToggleSwitch({
-  checked,
-  onChange,
-}: {
-  checked: boolean
-  onChange: (checked: boolean) => void
-}) {
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="relative inline-flex items-center cursor-pointer shrink-0">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+      <input type="checkbox" className="sr-only peer" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <div className="w-9 h-5 bg-muted rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
     </label>
   )
@@ -65,36 +57,93 @@ function ToggleSwitch({
 
 export default function GamificacaoPage() {
   const { user } = useRequiredAuth()
-  const [levels, setLevels] = useState<Level[]>(INITIAL_LEVELS)
+  const [levels, setLevels] = useState<Level[]>(DEFAULT_LEVELS)
   const [rankingPublic, setRankingPublic] = useState(true)
   const [badgesPublic, setBadgesPublic] = useState(true)
   const [feedEnabled, setFeedEnabled] = useState(true)
   const [surveyFrequency, setSurveyFrequency] = useState('semanal')
   const [wellbeingThreshold, setWellbeingThreshold] = useState(40)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
+  const fetchConfig = useCallback(async () => {
+    if (!user) return
+    try {
+      const res = await fetch('/api/gamification/config', { credentials: 'same-origin' })
+      const { config } = await res.json()
+      if (config) {
+        if (config.levels) setLevels(config.levels)
+        if (config.ranking_public !== undefined) setRankingPublic(config.ranking_public)
+        if (config.badges_public !== undefined) setBadgesPublic(config.badges_public)
+        if (config.feed_enabled !== undefined) setFeedEnabled(config.feed_enabled)
+        if (config.survey_frequency) setSurveyFrequency(config.survey_frequency)
+        if (config.wellbeing_threshold !== undefined) setWellbeingThreshold(config.wellbeing_threshold)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => { fetchConfig() }, [fetchConfig])
 
   const updateLevelName = (position: number, name: string) => {
-    setLevels(levels.map((l) => (l.position === position ? { ...l, name } : l)))
+    setLevels((prev) => prev.map((l) => (l.position === position ? { ...l, name } : l)))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/gamification/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          levels,
+          ranking_public: rankingPublic,
+          badges_public: badgesPublic,
+          feed_enabled: feedEnabled,
+          survey_frequency: surveyFrequency,
+          wellbeing_threshold: wellbeingThreshold,
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error)
+      toast.success('Configurações de gamificação salvas!')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Gamepad2 className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold tracking-tight">Configuração de Gamificação</h2>
-            <Badge variant="outline" className="text-[10px] h-5 px-2">
-              Etapa 3
-            </Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Gamepad2 className="h-5 w-5 text-primary" />
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Personalize níveis, rankings e regras de engajamento
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold tracking-tight">Configuração de Gamificação</h2>
+              <Badge variant="outline" className="text-[10px] h-5 px-2">Etapa 3</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">Personalize níveis, rankings e regras de engajamento</p>
+          </div>
         </div>
+        <Button onClick={handleSave} disabled={saving} size="sm" className="gap-1.5">
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          Salvar
+        </Button>
       </div>
 
       {/* Level Names */}
@@ -108,9 +157,7 @@ export default function GamificacaoPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {levels.map((level) => (
                 <div key={level.position} className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">
-                    Nível {level.position}
-                  </Label>
+                  <Label className="text-[11px] text-muted-foreground">Nível {level.position}</Label>
                   <Input
                     className="h-8 text-xs"
                     value={level.name}
@@ -131,7 +178,6 @@ export default function GamificacaoPage() {
         </div>
         <Card className="border-border/50">
           <CardContent className="pt-4 pb-4 space-y-4">
-            {/* Ranking */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
@@ -140,18 +186,13 @@ export default function GamificacaoPage() {
                 <div>
                   <p className="text-sm font-medium">Ranking</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {rankingPublic
-                      ? 'Ranking público — todos veem a posição'
-                      : 'Ranking privado — cada um vê só o próprio'}
+                    {rankingPublic ? 'Ranking público — todos veem a posição' : 'Ranking privado — cada um vê só o próprio'}
                   </p>
                 </div>
               </div>
               <ToggleSwitch checked={rankingPublic} onChange={setRankingPublic} />
             </div>
-
             <Separator />
-
-            {/* Badges */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
@@ -160,18 +201,13 @@ export default function GamificacaoPage() {
                 <div>
                   <p className="text-sm font-medium">Badges</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {badgesPublic
-                      ? 'Exibir badges no feed público'
-                      : 'Apenas no perfil individual'}
+                    {badgesPublic ? 'Exibir badges no feed público' : 'Apenas no perfil individual'}
                   </p>
                 </div>
               </div>
               <ToggleSwitch checked={badgesPublic} onChange={setBadgesPublic} />
             </div>
-
             <Separator />
-
-            {/* Feed */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -180,9 +216,7 @@ export default function GamificacaoPage() {
                 <div>
                   <p className="text-sm font-medium">Feed de Reconhecimento</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {feedEnabled
-                      ? 'Feed de reconhecimento público ativado'
-                      : 'Feed de reconhecimento desativado'}
+                    {feedEnabled ? 'Feed de reconhecimento público ativado' : 'Feed de reconhecimento desativado'}
                   </p>
                 </div>
               </div>
@@ -201,9 +235,7 @@ export default function GamificacaoPage() {
         <Card className="border-border/50">
           <CardContent className="pt-4 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <Label className="text-xs text-muted-foreground shrink-0">
-                Frequência da pesquisa de clima:
-              </Label>
+              <Label className="text-xs text-muted-foreground shrink-0">Frequência da pesquisa de clima:</Label>
               <Select value={surveyFrequency} onValueChange={(v) => v && setSurveyFrequency(v)}>
                 <SelectTrigger className="w-full sm:w-44 h-8 text-xs">
                   <SelectValue />
@@ -227,25 +259,18 @@ export default function GamificacaoPage() {
         <Card className="border-border/50">
           <CardContent className="pt-4 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <p className="text-xs text-muted-foreground">
-                Se índice de bem-estar cair abaixo de
-              </p>
+              <p className="text-xs text-muted-foreground">Se índice de bem-estar cair abaixo de</p>
               <div className="flex items-center gap-1.5">
                 <Input
                   type="number"
                   className="h-7 w-16 text-xs text-center"
                   value={wellbeingThreshold}
-                  onChange={(e) =>
-                    setWellbeingThreshold(Math.max(0, Math.min(100, Number(e.target.value) || 0)))
-                  }
-                  min={0}
-                  max={100}
+                  onChange={(e) => setWellbeingThreshold(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                  min={0} max={100}
                 />
                 <span className="text-xs text-muted-foreground">%</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                → VAMO IA pausa missões de volume + notifica gestor
-              </p>
+              <p className="text-xs text-muted-foreground">→ VAMO IA pausa missões de volume + notifica gestor</p>
             </div>
           </CardContent>
         </Card>

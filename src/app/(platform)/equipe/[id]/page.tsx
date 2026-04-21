@@ -93,7 +93,7 @@ export default function MemberDetailPage() {
             <TrendingUp className="h-8 w-8 text-primary" />
             <div>
               <p className="text-2xl font-bold">{xp?.total_xp?.toLocaleString() ?? 0}</p>
-              <p className="text-xs text-muted-foreground">XP Total (Nível {xp?.current_level ?? 1})</p>
+              <p className="text-xs text-muted-foreground">Pontos (Nível {xp?.current_level ?? 1})</p>
             </div>
           </CardContent>
         </Card>

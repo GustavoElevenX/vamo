@@ -23,6 +23,8 @@ import {
   Save,
   Loader2,
   AlertCircle,
+  Zap,
+  DollarSign,
 } from 'lucide-react'
 
 interface CompanyGoal {
@@ -46,6 +48,8 @@ interface IndividualGoal {
   name: string
   discProfile: string
   goal: string
+  xp_reward: number
+  commission_bonus: number
 }
 
 interface AiSuggestion {
@@ -122,12 +126,9 @@ export default function MetasPage() {
         if (p.disc_type) discMap[p.user_id] = p.disc_type
       }
 
-      // Load saved individual goals if available
-      const savedIndividual: Record<string, string> = {}
-      if (savedGoals?.individual_goals) {
-        for (const g of savedGoals.individual_goals as { user_id: string; goal: string }[]) {
-          savedIndividual[g.user_id] = g.goal
-        }
+      const savedGoalsMap: Record<string, { goal: string; xp_reward?: number; commission_bonus?: number }> = {}
+      for (const g of (savedGoals?.individual_goals as { user_id: string; goal: string; xp_reward?: number; commission_bonus?: number }[] ?? [])) {
+        savedGoalsMap[g.user_id] = g
       }
 
       setIndividualGoals(
@@ -135,7 +136,9 @@ export default function MetasPage() {
           user_id: s.id,
           name: s.name,
           discProfile: DISC_LABELS[discMap[s.id] ?? ''] ?? 'Sem perfil DISC',
-          goal: savedIndividual[s.id] ?? '',
+          goal: savedGoalsMap[s.id]?.goal ?? '',
+          xp_reward: savedGoalsMap[s.id]?.xp_reward ?? 50,
+          commission_bonus: savedGoalsMap[s.id]?.commission_bonus ?? 0,
         }))
       )
 
@@ -202,6 +205,10 @@ export default function MetasPage() {
     setIndividualGoals((prev) => prev.map((g) => (g.user_id === userId ? { ...g, goal: value } : g)))
   }
 
+  const handleIndividualFieldChange = (userId: string, field: 'xp_reward' | 'commission_bonus', value: number) => {
+    setIndividualGoals((prev) => prev.map((g) => (g.user_id === userId ? { ...g, [field]: value } : g)))
+  }
+
   const handleAcceptAiSuggestion = () => {
     if (!aiSuggestion) return
     const deadline = new Date(Date.now() + aiSuggestion.days * 24 * 60 * 60 * 1000)
@@ -229,7 +236,12 @@ export default function MetasPage() {
         body: JSON.stringify({
           company_goal: companyGoal,
           team_goal: teamGoal,
-          individual_goals: individualGoals.map((g) => ({ user_id: g.user_id, goal: g.goal })),
+          individual_goals: individualGoals.map((g) => ({
+            user_id: g.user_id,
+            goal: g.goal,
+            xp_reward: g.xp_reward,
+            commission_bonus: g.commission_bonus,
+          })),
         }),
       })
       const result = await res.json()
@@ -446,21 +458,42 @@ export default function MetasPage() {
           ) : (
             <>
               {individualGoals.map((collab) => (
-                <div key={collab.user_id} className="flex items-center gap-3 p-3 rounded-lg border border-border/40">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium">{collab.name}</p>
-                      <Badge variant="outline" className="text-[9px]">{collab.discProfile}</Badge>
-                    </div>
-                    <Input
-                      value={collab.goal}
-                      onChange={(e) => handleIndividualGoalChange(collab.user_id, e.target.value)}
-                      placeholder="Ex: 8 contratos fechados no mês"
-                      className="text-xs"
-                    />
+                <div key={collab.user_id} className="p-3 rounded-lg border border-border/40 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{collab.name}</p>
+                    <Badge variant="outline" className="text-[9px]">{collab.discProfile}</Badge>
                   </div>
-                  <div className="shrink-0">
-                    <Target className="h-4 w-4 text-muted-foreground/40" />
+                  <Input
+                    value={collab.goal}
+                    onChange={(e) => handleIndividualGoalChange(collab.user_id, e.target.value)}
+                    placeholder="Ex: 8 contratos fechados no mês"
+                    className="text-xs"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-1.5 rounded-md border border-border/40 px-2 py-1">
+                      <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+                      <Input
+                        type="number"
+                        min={0}
+                        value={collab.xp_reward}
+                        onChange={(e) => handleIndividualFieldChange(collab.user_id, 'xp_reward', Number(e.target.value))}
+                        placeholder="XP"
+                        className="h-5 border-0 p-0 text-xs focus-visible:ring-0"
+                      />
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">XP</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-md border border-border/40 px-2 py-1">
+                      <DollarSign className="h-3 w-3 text-emerald-500 shrink-0" />
+                      <Input
+                        type="number"
+                        min={0}
+                        value={collab.commission_bonus}
+                        onChange={(e) => handleIndividualFieldChange(collab.user_id, 'commission_bonus', Number(e.target.value))}
+                        placeholder="0"
+                        className="h-5 border-0 p-0 text-xs focus-visible:ring-0"
+                      />
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">R$ bônus</span>
+                    </div>
                   </div>
                 </div>
               ))}

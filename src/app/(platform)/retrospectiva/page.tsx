@@ -46,6 +46,7 @@ export default function RetrospectivaPage() {
   const [retros, setRetros] = useState<RetroData[]>(cachedRetros.current ?? [])
   const [loading, setLoading] = useState(!cachedRetros.current)
   const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
 
@@ -80,6 +81,7 @@ export default function RetrospectivaPage() {
 
   const handleGenerate = async () => {
     setGenerating(true)
+    setError(null)
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
@@ -89,9 +91,14 @@ export default function RetrospectivaPage() {
       })
       if (res.ok) {
         await fetchRetros()
+      } else {
+        const body = await res.json().catch(() => ({}))
+        setError(body.error || 'Erro ao gerar retrospectiva.')
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError('Erro de conexão. Tente novamente.')
+      }
     } finally {
       clearTimeout(timeout)
       setGenerating(false)
@@ -139,6 +146,12 @@ export default function RetrospectivaPage() {
           )}
         </Button>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       {latest ? (
         <>

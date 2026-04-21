@@ -34,6 +34,7 @@ const MANAGER_TOOLS = [
           area: { type: 'string', enum: ['lead_generation', 'sales_process', 'team_management', 'tools_technology'], description: 'Área da missão' },
           difficulty: { type: 'number', enum: [1, 2, 3], description: '1=fácil, 2=média, 3=difícil' },
           xp_reward: { type: 'number', description: 'XP de recompensa (10-200)' },
+          commission_bonus: { type: 'number', description: 'Bônus em R$ pago ao vendedor ao concluir a missão (opcional, ex: 50)' },
           user_id: { type: 'string', description: 'ID do vendedor (se for missão individual). Omitir para missão do gestor.' },
         },
         required: ['title', 'description'],
@@ -255,6 +256,37 @@ const MANAGER_TOOLS = [
           message: { type: 'string', description: 'Texto da notificação (máx 500 chars)' },
         },
         required: ['message'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'set_goal_rewards',
+      description: 'Configurar XP e/ou bônus em R$ para a meta individual de um vendedor. Use quando o gestor pedir para definir, alterar ou ajustar as recompensas de uma meta.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', description: 'ID do vendedor' },
+          xp_reward: { type: 'number', description: 'Pontos XP pela conclusão da meta (ex: 100)' },
+          commission_bonus: { type: 'number', description: 'Bônus em R$ pela conclusão da meta (ex: 150)' },
+        },
+        required: ['user_id'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'update_goal_status',
+      description: 'Atualizar o status da meta individual de um vendedor. Use quando o gestor pedir para marcar como concluída, iniciar, ou resetar a meta de um vendedor.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', description: 'ID do vendedor' },
+          status: { type: 'string', enum: ['pending', 'in_progress', 'completed'], description: 'Novo status da meta' },
+        },
+        required: ['user_id', 'status'],
       },
     },
   },

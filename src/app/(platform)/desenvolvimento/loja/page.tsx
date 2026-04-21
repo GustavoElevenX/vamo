@@ -154,10 +154,10 @@ export default function LojaPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Loja de Recompensas</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Troque seu XP conquistado por recompensas reais</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Troque seu pts conquistado por recompensas reais</p>
         </div>
 
-        {/* XP Balance */}
+        {/* pts Balance */}
         <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 w-fit">
           <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
             <Zap className="h-3.5 w-3.5 text-primary" />
@@ -165,7 +165,7 @@ export default function LojaPage() {
           <div>
             <p className="text-[10px] text-muted-foreground leading-none">Seu saldo</p>
             <p className="text-base font-bold text-primary leading-tight">
-              {availableXp.toLocaleString('pt-BR')} XP
+              {availableXp.toLocaleString('pt-BR')} pts
             </p>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function LojaPage() {
         <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-accent/20 px-4 py-3">
           <Trophy className="h-4 w-4 text-amber-500 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Voce esta no <strong>Nivel {userXp.current_level}</strong> com {availableXp.toLocaleString('pt-BR')} XP acumulados.
+            Voce esta no <strong>Nivel {userXp.current_level}</strong> com {availableXp.toLocaleString('pt-BR')} pts acumulados.
             Continue completando missoes para desbloquear mais recompensas.
           </p>
         </div>
@@ -245,7 +245,7 @@ export default function LojaPage() {
                   <div className="flex items-center gap-1.5">
                     <Zap className="h-3.5 w-3.5 text-primary" />
                     <span className={`text-sm font-bold ${canAfford ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {reward.cost_xp.toLocaleString('pt-BR')} XP
+                      {reward.cost_xp.toLocaleString('pt-BR')} pts
                     </span>
                   </div>
 
@@ -268,12 +268,12 @@ export default function LojaPage() {
                         </span>
                       ) : isAlmostThere ? (
                         <span className="flex items-center gap-1 text-amber-600">
-                          Faltam {deficit.toLocaleString('pt-BR')} XP
+                          Faltam {deficit.toLocaleString('pt-BR')} pts
                         </span>
                       ) : !canAfford ? (
                         <span className="flex items-center gap-1">
                           <Lock className="h-3 w-3" />
-                          {deficit.toLocaleString('pt-BR')} XP
+                          {deficit.toLocaleString('pt-BR')} pts
                         </span>
                       ) : (
                         'Resgatar'
@@ -314,7 +314,7 @@ export default function LojaPage() {
                         <Clock className="h-2.5 w-2.5" />
                         {new Date(r.created_at).toLocaleDateString('pt-BR')}
                         <span className="mx-1">·</span>
-                        {r.xp_spent.toLocaleString('pt-BR')} XP
+                        {r.xp_spent.toLocaleString('pt-BR')} pts
                       </p>
                     </div>
                   </div>
@@ -333,7 +333,7 @@ export default function LojaPage() {
         <div className="flex items-start gap-3">
           <ShoppingBag className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Os resgates sao solicitacoes enviadas ao seu gestor para aprovacao. O XP
+            Os resgates sao solicitacoes enviadas ao seu gestor para aprovacao. O pts
             e descontado somente apos a confirmacao. Novas recompensas sao adicionadas
             periodicamente conforme politicas da empresa.
           </p>

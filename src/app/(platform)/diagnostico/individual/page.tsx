@@ -390,7 +390,7 @@ export default function DiagnosticoIndividualPage() {
                     {/* Performance data placeholder */}
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-lg border border-border/50 p-3 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">XP Total</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pontos Total</p>
                         <p className="text-lg font-bold mt-0.5">
                           <TrendingUp className="h-3 w-3 inline mr-1 text-emerald-500" />
                           --

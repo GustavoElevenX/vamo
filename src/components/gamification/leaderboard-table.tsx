@@ -51,7 +51,7 @@ export function LeaderboardTable({ rows, currentUserId }: LeaderboardTableProps)
               <p className="text-xs text-muted-foreground">Nível {row.current_level}</p>
             </div>
             <Badge variant="secondary" className="font-mono">
-              {row.total_xp.toLocaleString()} XP
+              {row.total_xp.toLocaleString()} pts
             </Badge>
           </div>
         )

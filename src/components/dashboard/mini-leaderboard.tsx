@@ -34,7 +34,7 @@ export function MiniLeaderboard({ items }: MiniLeaderboardProps) {
                   <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                 </Avatar>
                 <span className="flex-1 text-sm">{item.name}</span>
-                <span className="text-sm font-medium text-primary">{item.xp} XP</span>
+                <span className="text-sm font-medium text-primary">{item.xp} pts</span>
               </div>
             )
           })

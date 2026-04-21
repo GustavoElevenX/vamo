@@ -52,7 +52,7 @@ export function MissionCard({ mission, onAction, loading }: MissionCardProps) {
             <span className="ml-1">{difficultyLabels[mission.difficulty]}</span>
           </Badge>
           <Badge variant="secondary" className="text-xs font-mono">
-            +{mission.xp_reward} XP
+            +{mission.xp_reward} pts
           </Badge>
         </div>
       </CardHeader>

@@ -27,13 +27,22 @@ interface TeamMember {
   current_level: number
   current_streak: number
   missions_completed: number
+  individual_goal: string | null
   trend: 'up' | 'down' | 'stable'
+}
+
+interface TeamGoal {
+  kpiComportamental?: string
+  valorAtual?: number
+  valorMeta?: number
+  prazo?: string
 }
 
 export default function MonitoramentoEquipePage() {
   const { user } = useRequiredAuth()
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<TeamMember[]>([])
+  const [teamGoal, setTeamGoal] = useState<TeamGoal | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -44,6 +53,7 @@ export default function MonitoramentoEquipePage() {
         if (res.ok) {
           const data = await res.json()
           setMembers(data.members ?? [])
+          setTeamGoal(data.team_goal ?? null)
         }
       } catch {
         // ignore
@@ -86,6 +96,27 @@ export default function MonitoramentoEquipePage() {
         </p>
       </div>
 
+      {/* Meta da Equipe */}
+      {teamGoal && (teamGoal.kpiComportamental || teamGoal.valorMeta) && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Target className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-primary">Meta da Equipe</p>
+                <p className="text-sm font-medium mt-0.5">
+                  {teamGoal.kpiComportamental ?? 'KPI comportamental'}
+                  {teamGoal.valorMeta ? ` — alvo: ${teamGoal.valorMeta}` : ''}
+                  {teamGoal.prazo ? ` · prazo ${new Date(teamGoal.prazo).toLocaleDateString('pt-BR')}` : ''}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/50">
@@ -110,7 +141,7 @@ export default function MonitoramentoEquipePage() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{avgXp.toLocaleString('pt-BR')}</p>
-                <p className="text-[10px] text-muted-foreground">Média XP Equipe</p>
+                <p className="text-[10px] text-muted-foreground">Média de Pontos</p>
               </div>
             </div>
           </CardContent>
@@ -136,7 +167,7 @@ export default function MonitoramentoEquipePage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Trophy className="h-4 w-4 text-amber-500" />
-            Ranking por XP
+            Ranking por Pontos e Missões
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -193,19 +224,24 @@ export default function MonitoramentoEquipePage() {
                           />
                         </div>
                         <span className="text-xs font-medium text-emerald-500 shrink-0 w-16 text-right">
-                          {member.total_xp.toLocaleString('pt-BR')} XP
+                          {member.total_xp.toLocaleString('pt-BR')} pts
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-0.5">
                           <Target className="h-2.5 w-2.5" />
-                          {member.missions_completed} missões
+                          {member.missions_completed} missões concluídas
                         </span>
                         <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                           <Flame className="h-2.5 w-2.5 text-orange-500" />
                           {member.current_streak}d streak
                         </span>
+                        {member.individual_goal && (
+                          <span className="text-[10px] text-primary font-medium">
+                            Meta: {member.individual_goal}
+                          </span>
+                        )}
                       </div>
                     </div>
 

@@ -102,7 +102,7 @@ export default function PlanoAcaoPage() {
       setSellers(sellerList)
 
       const sellerMap = Object.fromEntries(sellerList.map((s) => [s.id, s.name]))
-      const mapped: Mission[] = (missionsData ?? []).map((m) => ({
+      const mapped: Mission[] = (missionsData ?? []).map((m: any) => ({
         id: m.id,
         title: m.title,
         description: m.description,

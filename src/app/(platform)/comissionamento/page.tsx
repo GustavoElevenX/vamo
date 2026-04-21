@@ -80,32 +80,33 @@ export default function ComissionamentoPage() {
         const members: { id: string; name: string }[] = sellersJson.sellers ?? []
 
         if (members.length > 0) {
-          const settled = await Promise.allSettled(
-            members.map(async (member: { id: string; name: string }) => {
-              const { count: missionsCompleted } = await supabase
-                .from('ai_missions')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', member.id)
-                .eq('status', 'completed')
+          const memberIds = members.map((m) => m.id)
+          const { data: missionRows } = await supabase
+            .from('ai_missions')
+            .select('user_id')
+            .in('user_id', memberIds)
+            .eq('status', 'completed')
 
-              const missionBonus = (missionsCompleted ?? 0) * activeConfig.bonus_missao
-              const baseSalary = activeConfig.salario_base
-              return {
-                user_id: member.id,
-                name: member.name,
-                base_salary: baseSalary,
-                mission_bonus: missionBonus,
-                kpi_bonus: 0,
-                total: baseSalary + missionBonus,
-                status: 'pending' as const,
-                missions_completed: missionsCompleted ?? 0,
-              }
-            })
-          )
+          const countByUser = new Map<string, number>()
+          for (const row of missionRows ?? []) {
+            countByUser.set(row.user_id, (countByUser.get(row.user_id) ?? 0) + 1)
+          }
 
-          const commissions: TeamCommission[] = settled
-            .filter((r): r is PromiseFulfilledResult<TeamCommission> => r.status === 'fulfilled')
-            .map((r) => r.value)
+          const baseSalary = activeConfig.salario_base
+          const commissions: TeamCommission[] = members.map((member) => {
+            const missionsCompleted = countByUser.get(member.id) ?? 0
+            const missionBonus = missionsCompleted * activeConfig.bonus_missao
+            return {
+              user_id: member.id,
+              name: member.name,
+              base_salary: baseSalary,
+              mission_bonus: missionBonus,
+              kpi_bonus: 0,
+              total: baseSalary + missionBonus,
+              status: 'pending' as const,
+              missions_completed: missionsCompleted,
+            }
+          })
 
           setTeam(commissions.sort((a, b) => b.total - a.total))
         }

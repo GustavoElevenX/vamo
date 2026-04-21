@@ -16,6 +16,8 @@ export type ActionType =
   | 'register_kpi_value'
   | 'notify_seller'
   | 'send_chat_message'
+  | 'set_goal_rewards'
+  | 'update_goal_status'
 
 export type ActionStatus = 'pending' | 'approved' | 'rejected' | 'executing' | 'completed' | 'failed'
 

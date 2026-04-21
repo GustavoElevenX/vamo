@@ -52,7 +52,7 @@ export function ChallengeCard({
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-primary">+{xpReward} XP</span>
+          <span className="font-medium text-primary">+{xpReward} pts</span>
           <span className="text-muted-foreground">{participantCount} participantes</span>
         </div>
         {isParticipant && progress !== undefined && (

@@ -28,7 +28,7 @@ export function RewardCard({ name, description, costXp, quantity, availableXp, o
         <p className="text-sm text-muted-foreground">{description}</p>
         <div className="flex items-center justify-between">
           <Badge variant="outline" className="font-mono">
-            <Coins className="mr-1 h-3 w-3" />{costXp} XP
+            <Coins className="mr-1 h-3 w-3" />{costXp} pts
           </Badge>
           {quantity !== null && quantity !== undefined && (
             <span className="text-xs text-muted-foreground">{quantity} disponível(is)</span>

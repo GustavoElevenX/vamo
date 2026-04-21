@@ -51,6 +51,10 @@ export async function executeAction(
       return notifySeller(adminClient, params, orgId, executorUserId)
     case 'send_chat_message':
       return sendChatMessageAction(adminClient, params, orgId, executorUserId)
+    case 'set_goal_rewards':
+      return setGoalRewards(adminClient, params, orgId)
+    case 'update_goal_status':
+      return updateGoalStatus(adminClient, params, orgId)
     default:
       return { success: false, message: `Ação desconhecida: ${actionType}` }
   }
@@ -160,6 +164,7 @@ async function createMission(
   const area = (params.area as string) || 'sales_process'
   const difficulty = (params.difficulty as number) || 2
   const xpReward = (params.xp_reward as number) || 50
+  const commissionBonus = (params.commission_bonus as number) || 0
 
   const { data, error } = await adminClient
     .from('ai_missions')
@@ -171,13 +176,16 @@ async function createMission(
       area,
       difficulty: Math.min(3, Math.max(1, difficulty)),
       xp_reward: xpReward,
+      commission_bonus: commissionBonus,
       status: 'pending',
     })
-    .select('id, title, xp_reward')
+    .select('id, title, xp_reward, commission_bonus')
     .single()
 
   if (error) return { success: false, message: `Erro ao criar missão: ${error.message}` }
-  return { success: true, message: `Missão "${data.title}" criada com ${data.xp_reward} XP de recompensa`, data }
+  const rewardParts = [`${data.xp_reward} XP`]
+  if (data.commission_bonus > 0) rewardParts.push(`R$ ${data.commission_bonus} de bônus`)
+  return { success: true, message: `Missão "${data.title}" criada com ${rewardParts.join(' + ')} de recompensa`, data }
 }
 
 // ── Define KPI ──
@@ -835,5 +843,102 @@ async function sendChatMessageAction(
       success: false,
       message: `Erro ao enviar mensagem: ${err instanceof Error ? err.message : 'Erro desconhecido'}`,
     }
+  }
+}
+
+// ── Set Goal Rewards ──
+async function setGoalRewards(
+  adminClient: SupabaseClient,
+  params: Record<string, unknown>,
+  orgId: string
+): Promise<ActionResult> {
+  const userId = params.user_id as string
+  if (!userId) return { success: false, message: 'ID do vendedor é obrigatório' }
+
+  const xpReward = params.xp_reward as number | undefined
+  const commissionBonus = params.commission_bonus as number | undefined
+
+  if (xpReward == null && commissionBonus == null) {
+    return { success: false, message: 'Informe xp_reward e/ou commission_bonus' }
+  }
+
+  const { data: pgRow } = await adminClient
+    .from('program_goals')
+    .select('individual_goals')
+    .eq('organization_id', orgId)
+    .maybeSingle()
+
+  if (!pgRow) return { success: false, message: 'Metas do programa não encontradas para esta organização' }
+
+  const goals = (pgRow.individual_goals as Record<string, unknown>[]) ?? []
+  const idx = goals.findIndex((g) => g.user_id === userId)
+  if (idx === -1) return { success: false, message: 'Meta individual não encontrada para este vendedor' }
+
+  const updated = [...goals]
+  if (xpReward != null) updated[idx] = { ...updated[idx], xp_reward: xpReward }
+  if (commissionBonus != null) updated[idx] = { ...updated[idx], commission_bonus: commissionBonus }
+
+  const { error } = await adminClient
+    .from('program_goals')
+    .update({ individual_goals: updated, updated_at: new Date().toISOString() })
+    .eq('organization_id', orgId)
+
+  if (error) return { success: false, message: `Erro ao atualizar recompensas: ${error.message}` }
+
+  const rewards: string[] = []
+  if (xpReward != null) rewards.push(`${xpReward} XP`)
+  if (commissionBonus != null) rewards.push(`R$ ${commissionBonus} de bônus`)
+
+  const { data: seller } = await adminClient.from('users').select('name').eq('id', userId).single()
+  return {
+    success: true,
+    message: `Recompensas da meta de ${seller?.name ?? userId} atualizadas: ${rewards.join(' + ')}`,
+  }
+}
+
+// ── Update Goal Status (manager override) ──
+async function updateGoalStatus(
+  adminClient: SupabaseClient,
+  params: Record<string, unknown>,
+  orgId: string
+): Promise<ActionResult> {
+  const userId = params.user_id as string
+  const status = params.status as string
+  if (!userId) return { success: false, message: 'ID do vendedor é obrigatório' }
+  if (!status || !['pending', 'in_progress', 'completed'].includes(status)) {
+    return { success: false, message: 'Status inválido. Use: pending, in_progress ou completed' }
+  }
+
+  const { data: pgRow } = await adminClient
+    .from('program_goals')
+    .select('individual_goals')
+    .eq('organization_id', orgId)
+    .maybeSingle()
+
+  if (!pgRow) return { success: false, message: 'Metas do programa não encontradas' }
+
+  const goals = (pgRow.individual_goals as Record<string, unknown>[]) ?? []
+  const idx = goals.findIndex((g) => g.user_id === userId)
+  if (idx === -1) return { success: false, message: 'Meta individual não encontrada para este vendedor' }
+
+  const updated = [...goals]
+  updated[idx] = {
+    ...updated[idx],
+    status,
+    ...(status === 'completed' ? { completed_at: new Date().toISOString() } : {}),
+  }
+
+  const { error } = await adminClient
+    .from('program_goals')
+    .update({ individual_goals: updated, updated_at: new Date().toISOString() })
+    .eq('organization_id', orgId)
+
+  if (error) return { success: false, message: `Erro ao atualizar status: ${error.message}` }
+
+  const statusLabels: Record<string, string> = { pending: 'Pendente', in_progress: 'Em andamento', completed: 'Concluída' }
+  const { data: seller } = await adminClient.from('users').select('name').eq('id', userId).single()
+  return {
+    success: true,
+    message: `Meta de ${seller?.name ?? userId} marcada como "${statusLabels[status]}"`,
   }
 }

@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import {
   TrendingUp,
   Flame,
@@ -16,14 +14,15 @@ import {
   Target,
   DollarSign,
   Zap,
-  Star,
   ChevronRight,
   Brain,
   CheckCircle2,
   AlertTriangle,
   TrendingDown,
+  Trophy,
 } from 'lucide-react'
 import { CoachWidget } from '@/components/ai/coach-widget'
+import { cn } from '@/lib/utils'
 import type { User, UserXp, XpLevel, BehavioralProfile } from '@/types'
 
 interface VendedorDashboardProps {
@@ -45,6 +44,12 @@ interface KpiItem {
   current: number
   target: number
   trend: 'up' | 'down' | 'stable'
+}
+
+const difficultyLabel = (d: number) => {
+  if (d === 1) return { text: 'Fácil',   color: 'text-emerald-500', icon: 'stat-icon-green' }
+  if (d === 2) return { text: 'Médio',   color: 'text-amber-500',   icon: 'stat-icon-amber' }
+  return             { text: 'Difícil',  color: 'text-destructive', icon: 'stat-icon-rose'  }
 }
 
 export function VendedorDashboard({ user }: VendedorDashboardProps) {
@@ -84,9 +89,9 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
         const val = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
           r.status === 'fulfilled' ? r.value : fallback
 
-        const xpResult = val(results[0], { data: null, error: null } as any)
+        const xpResult     = val(results[0], { data: null, error: null } as any)
         const badgesResult = val(results[1], { count: 0 } as any)
-        const kpisResult = val(results[2], { count: 0 } as any)
+        const kpisResult   = val(results[2], { count: 0 } as any)
         const missionsResult = val(results[3], { data: [] } as any)
 
         const xp = xpResult.data
@@ -112,7 +117,6 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
           }
         }
 
-        // Load DISC profile (non-critical, don't let it block)
         try {
           const res = await fetch('/api/ai/behavioral-profile')
           if (res.ok) {
@@ -121,7 +125,6 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
           }
         } catch { /* ignore */ }
 
-        // Load KPIs: definitions + latest entry per KPI for this month
         try {
           const monthStart = new Date()
           monthStart.setDate(1)
@@ -157,6 +160,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             setMyKpis(kpiItems)
           }
         } catch { /* ignore */ }
+
       } catch (err) {
         console.error('[VendedorDashboard] Erro ao carregar dados:', err)
       } finally {
@@ -170,12 +174,11 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+        <div className="h-7 w-7 animate-spin rounded-full border-[2.5px] border-primary border-t-transparent" />
       </div>
     )
   }
 
-  const xpToNext = nextLevel ? nextLevel.xp_required - (userXp?.total_xp ?? 0) : 0
   const xpProgress =
     currentLevel && nextLevel
       ? Math.round(
@@ -183,417 +186,419 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             (nextLevel.xp_required - currentLevel.xp_required)) * 100
         )
       : 100
+  const xpToNext = nextLevel ? nextLevel.xp_required - (userXp?.total_xp ?? 0) : 0
 
-  const difficultyLabel = (d: number) => {
-    if (d === 1) return { text: 'Fácil', color: 'text-emerald-500' }
-    if (d === 2) return { text: 'Médio', color: 'text-amber-500' }
-    return { text: 'Difícil', color: 'text-red-500' }
-  }
-
-  // Earnings projection — 3 scenarios
   const baseSalary = 2500
-  const completedMissionBonus = 0 // would come from DB in production
   const pendingMissionBonus = activeMissions.reduce((s, m) => s + m.xp_reward * 1.5, 0)
-  const maxMissionBonus = pendingMissionBonus * 1.4 // if also accepts suggested missions
-
-  const scenarios = [
-    {
-      label: 'Cenário Atual',
-      desc: 'Sem completar novas missões',
-      total: baseSalary + completedMissionBonus,
-      color: 'text-muted-foreground',
-      border: 'border-border/40',
-    },
-    {
-      label: 'Com Missões Ativas',
-      desc: `Se completar ${activeMissions.length} missões em andamento`,
-      total: baseSalary + completedMissionBonus + pendingMissionBonus,
-      color: 'text-amber-500',
-      border: 'border-amber-500/20 bg-amber-500/5',
-    },
-    {
-      label: 'Cenário Máximo',
-      desc: 'Todas as missões + KPIs no topo',
-      total: baseSalary + completedMissionBonus + maxMissionBonus,
-      color: 'text-emerald-500',
-      border: 'border-emerald-500/20 bg-emerald-500/5',
-    },
-  ]
+  const maxMissionBonus = pendingMissionBonus * 1.4
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">
-          Olá, {user.name.split(' ')[0]}!
-        </h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Minha Performance — resumo completo
-        </p>
+
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between gap-4 animate-fade-in-up">
+        <div>
+          <div className="bento-label mb-2">
+            <span className="h-1 w-1 rounded-full bg-current animate-pulse" />
+            Minha performance
+          </div>
+          <h2 className="text-3xl font-black tracking-tight">
+            Olá, <span className="text-gradient-primary">{user.name.split(' ')[0]}</span>
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Resumo completo do seu progresso em tempo real
+          </p>
+        </div>
+        <div className="hidden md:flex items-center gap-2">
+          <span className="pill-glow">
+            <Zap className="h-3 w-3" />
+            Streak {userXp?.current_streak ?? 0} dias
+          </span>
+        </div>
       </div>
 
-      {/* ── Módulo 1: XP & Level Hero ── */}
-      <Card className="border-border/50">
-        <CardContent className="pt-5">
-          <div className="flex items-center gap-4">
-            <div className="relative h-20 w-20 shrink-0">
-              <svg viewBox="0 0 100 100" className="h-20 w-20 -rotate-90">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
-                <circle
-                  cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="6"
-                  strokeDasharray={`${(xpProgress / 100) * 264} 264`}
-                  strokeLinecap="round" className="text-emerald-500"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-lg font-bold">{userXp?.current_level ?? 1}</span>
-                <span className="text-[9px] text-muted-foreground uppercase tracking-wider">nível</span>
-              </div>
-            </div>
+      {/* ── BENTO GRID ── */}
+      <div className="bento animate-fade-in-up stagger-1">
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-lg font-bold">{(userXp?.total_xp ?? 0).toLocaleString()} XP</p>
-                {currentLevel && (
-                  <Badge variant="secondary" className="text-[10px]">{currentLevel.name}</Badge>
-                )}
-                {myRank && (
-                  <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
-                    #{myRank} Ranking
-                  </Badge>
-                )}
+        {/* HERO: XP giant */}
+        <div className="span-4 glass-card-primary glass-corner p-7 md:p-8 relative overflow-hidden">
+          <div className="glow-orb glow-orb-green -top-20 -right-20 w-64 h-64" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bento-label">
+                <Zap className="h-3 w-3" />
+                Experiência total
               </div>
-              {nextLevel && (
-                <>
-                  <Progress value={xpProgress} className="h-2 mt-2 [&>div]:bg-emerald-500" />
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {xpToNext.toLocaleString()} XP para Nível {nextLevel.level} ({nextLevel.name})
-                  </p>
-                </>
+              {currentLevel && (
+                <Badge variant="secondary" className="text-[10px] font-bold">
+                  {currentLevel.name}
+                </Badge>
               )}
             </div>
+
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="hero-number">
+                {(userXp?.total_xp ?? 0).toLocaleString()}
+              </span>
+              <span className="text-xl font-black text-muted-foreground">pontos</span>
+            </div>
+
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">
+                  Nível <span className="font-bold text-foreground tabular-nums">{userXp?.current_level ?? 1}</span>
+                </span>
+                {nextLevel && (
+                  <span className="text-muted-foreground tabular-nums">
+                    <span className="font-bold text-primary">{xpToNext.toLocaleString()}</span> pontos para Nv {nextLevel.level}
+                  </span>
+                )}
+              </div>
+              <div className="xp-track h-2 w-full">
+                <div className="xp-fill h-full" style={{ width: `${xpProgress}%` }} />
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground/70 uppercase tracking-wider font-bold">
+                <span>{xpProgress}% do nível</span>
+                {nextLevel && <span>{nextLevel.name}</span>}
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Stat Cards */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                <Flame className="h-4 w-4 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">{userXp?.current_streak ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground">Streak (dias)</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <Medal className="h-4 w-4 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">{badgeCount}</p>
-                <p className="text-[10px] text-muted-foreground">Conquistas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Target className="h-4 w-4 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">{todayKpiCount}</p>
-                <p className="text-[10px] text-muted-foreground">KPIs hoje</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Star className="h-4 w-4 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">{myRank ? `#${myRank}` : '—'}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Ranking{totalSellers > 0 ? ` / ${totalSellers}` : ''}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Módulo 2: Meus Indicadores vs Metas ── */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-blue-500" />
-              <CardTitle className="text-sm font-medium">Meus Indicadores vs Metas</CardTitle>
-            </div>
-            <Badge variant="secondary" className="text-[10px]">Março 2026</Badge>
+        {/* Ranking BIG */}
+        <div className="span-2 glass-card glass-hover glass-corner p-6 relative overflow-hidden">
+          <div className="bento-label mb-2" style={{ color: 'oklch(0.65 0.18 70)' }}>
+            <Trophy className="h-3 w-3" />
+            Ranking
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <div className="hero-number-md font-black tabular-nums" style={{ color: 'oklch(0.65 0.18 70)' }}>
+            {myRank ? `#${myRank}` : '—'}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            {totalSellers > 0 ? `de ${totalSellers} vendedores` : 'posição na equipe'}
+          </p>
+          <div className="absolute -bottom-6 -right-6 h-24 w-24 rounded-full opacity-10" style={{ background: 'oklch(0.65 0.18 70)', filter: 'blur(30px)' }} />
+        </div>
+
+        {/* Streak */}
+        <div className="span-2 glass-card glass-hover p-5 relative">
+          <div className="flex items-center justify-between mb-3">
+            <div className="stat-icon stat-icon-orange h-10 w-10">
+              <Flame className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Streak</span>
+          </div>
+          <p className="text-4xl font-black tabular-nums">{userXp?.current_streak ?? 0}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">dias consecutivos</p>
+        </div>
+
+        {/* Badges */}
+        <div className="span-2 glass-card glass-hover p-5 relative">
+          <div className="flex items-center justify-between mb-3">
+            <div className="stat-icon stat-icon-violet h-10 w-10">
+              <Medal className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Conquistas</span>
+          </div>
+          <p className="text-4xl font-black tabular-nums">{badgeCount}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">badges desbloqueadas</p>
+        </div>
+
+        {/* KPI hoje */}
+        <div className="span-2 glass-card glass-hover p-5 relative">
+          <div className="flex items-center justify-between mb-3">
+            <div className="stat-icon stat-icon-blue h-10 w-10">
+              <Target className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">KPIs hoje</span>
+          </div>
+          <p className="text-4xl font-black tabular-nums">{todayKpiCount}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">registros hoje</p>
+        </div>
+
+        {/* KPIs vs Metas — wide card */}
+        <div className="span-6 glass-card glass-corner p-6 md:p-7">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <div className="bento-label mb-1.5">
+                <Target className="h-3 w-3" />
+                Indicadores vs metas
+              </div>
+              <h3 className="text-lg font-bold tracking-tight">Meu progresso mensal</h3>
+            </div>
+            <Badge variant="secondary" className="text-[10px]">
+              {new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}
+            </Badge>
+          </div>
+
           {myKpis.length === 0 ? (
-            <div className="py-6 text-center">
-              <Target className="h-6 w-6 mx-auto mb-2 opacity-20" />
-              <p className="text-sm text-muted-foreground">Nenhum KPI registrado ainda.</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Registre seus indicadores para acompanhar o progresso.</p>
-            </div>
-          ) : myKpis.map((kpi) => {
-            const pct = Math.min(100, Math.round((kpi.current / kpi.target) * 100))
-            const isOnTrack = pct >= 70
-            const isAtRisk = pct >= 40 && pct < 70
-            const color = isOnTrack ? 'text-emerald-500 [&>div]:bg-emerald-500' :
-              isAtRisk ? 'text-amber-500 [&>div]:bg-amber-500' :
-              'text-red-500 [&>div]:bg-red-500'
-            const status = isOnTrack ? 'Meta em andamento' : isAtRisk ? 'Atenção' : 'Abaixo da meta'
-            const statusColor = isOnTrack ? 'text-emerald-500' : isAtRisk ? 'text-amber-500' : 'text-red-500'
-
-            return (
-              <div key={kpi.name}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{kpi.name}</span>
-                    {kpi.trend === 'up' && <TrendingUp className="h-3 w-3 text-emerald-500" />}
-                    {kpi.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-500" />}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
-                      {kpi.unit === 'R$' ? `R$ ${kpi.current.toLocaleString('pt-BR')}` : `${kpi.current} ${kpi.unit}`}
-                      {' / '}
-                      {kpi.unit === 'R$' ? `R$ ${kpi.target.toLocaleString('pt-BR')}` : `${kpi.target} ${kpi.unit}`}
-                    </span>
-                    <span className={`text-[10px] font-medium ${statusColor}`}>{pct}%</span>
-                  </div>
-                </div>
-                <Progress value={pct} className={`h-1.5 ${color}`} />
-                <div className="flex items-center justify-between mt-1">
-                  <span className={`text-[10px] ${statusColor}`}>{status}</span>
-                  {kpi.name === 'Ticket Médio' && pct < 80 && (
-                    <span className="text-[10px] text-muted-foreground">
-                      Atingir meta → +R$ 600 de bônus
-                    </span>
-                  )}
-                </div>
+            <div className="py-10 text-center">
+              <div className="stat-icon stat-icon-blue h-12 w-12 mx-auto mb-3">
+                <Target className="h-6 w-6" />
               </div>
-            )
-          })}
-        </CardContent>
-      </Card>
-
-      {/* ── Módulo 3: Missões Ativas ── */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <CardTitle className="text-sm font-medium">Missões Ativas</CardTitle>
+              <p className="text-sm font-medium text-muted-foreground">Nenhum KPI registrado ainda</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Registre seus indicadores para acompanhar o progresso</p>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs h-7" render={<Link href="/missoes" />}>
-              Ver todas <ArrowRight className="ml-1 h-3 w-3" />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {myKpis.map((kpi, i) => {
+                const pct = Math.min(100, Math.round((kpi.current / kpi.target) * 100))
+                const isOnTrack = pct >= 70
+                const isAtRisk  = pct >= 40 && pct < 70
+                const statusColor = isOnTrack ? 'text-emerald-500' : isAtRisk ? 'text-amber-500' : 'text-destructive'
+                const barGradient = isOnTrack
+                  ? 'linear-gradient(90deg, oklch(0.55 0.18 145), oklch(0.70 0.20 155))'
+                  : isAtRisk
+                  ? 'linear-gradient(90deg, oklch(0.70 0.18 70), oklch(0.80 0.19 60))'
+                  : 'linear-gradient(90deg, oklch(0.60 0.22 16), oklch(0.70 0.24 20))'
+
+                return (
+                  <div
+                    key={kpi.name}
+                    className={cn(
+                      'relative p-4 rounded-2xl border border-border/40 bg-background/40 backdrop-blur-sm',
+                      'animate-fade-in-up',
+                      `stagger-${i + 1}`
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{kpi.name}</span>
+                        {kpi.trend === 'up'   && <TrendingUp   className="h-3 w-3 text-emerald-500" />}
+                        {kpi.trend === 'down' && <TrendingDown className="h-3 w-3 text-destructive" />}
+                      </div>
+                      <span className={cn('text-2xl font-black tabular-nums', statusColor)}>{pct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted/60 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: barGradient }} />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-2 tabular-nums">
+                      {kpi.unit === 'R$'
+                        ? `R$ ${kpi.current.toLocaleString('pt-BR')} / R$ ${kpi.target.toLocaleString('pt-BR')}`
+                        : `${kpi.current} / ${kpi.target} ${kpi.unit}`}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Missões ativas */}
+        <div className="span-3 glass-card glass-corner p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="bento-label mb-1.5" style={{ color: 'oklch(0.65 0.18 70)' }}>
+                <Sparkles className="h-3 w-3" />
+                Missões ativas
+              </div>
+              <h3 className="text-lg font-bold tracking-tight">Em andamento</h3>
+            </div>
+            <Button variant="ghost" size="sm" className="text-xs h-7 gap-1" render={<Link href="/missoes" />}>
+              Ver todas <ArrowRight className="h-3 w-3" />
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
+
           {activeMissions.length === 0 ? (
             <div className="flex flex-col items-center py-6 text-center">
-              <Zap className="mb-2 h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Nenhuma missão ativa.</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
-                Missões são geradas pela VAMO IA com base no seu perfil.
-              </p>
+              <div className="stat-icon stat-icon-amber h-12 w-12 mx-auto mb-3">
+                <Zap className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Nenhuma missão ativa</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Aguarde novas missões da VAMO IA</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {activeMissions.map((mission) => {
+              {activeMissions.slice(0, 4).map((mission, i) => {
                 const diff = difficultyLabel(mission.difficulty)
                 const bonus = Math.round(mission.xp_reward * 1.5)
                 return (
                   <div
                     key={mission.id}
-                    className="flex items-center gap-3 p-2.5 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors"
+                    className={cn(
+                      'flex items-center gap-3 p-3 rounded-xl border border-border/30 bg-background/40',
+                      'hover:border-primary/30 hover:bg-primary/5 transition-all duration-200',
+                      'animate-fade-in-up',
+                      `stagger-${i + 1}`
+                    )}
                   >
-                    <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                      <Sparkles className="h-4 w-4 text-amber-500" />
+                    <div className={cn('stat-icon h-9 w-9 shrink-0', diff.icon)}>
+                      <Sparkles className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{mission.title}</p>
-                      <p className={`text-[10px] ${diff.color}`}>{diff.text}</p>
+                      <p className="text-[13px] font-semibold truncate">{mission.title}</p>
+                      <p className={cn('text-[10px] font-medium mt-0.5', diff.color)}>{diff.text}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <Badge variant="secondary" className="text-[10px]">+{mission.xp_reward} XP</Badge>
-                      <p className="text-[10px] text-emerald-500 font-medium mt-0.5">R$ {bonus}</p>
+                      <Badge variant="secondary" className="text-[10px] font-bold">+{mission.xp_reward} pts</Badge>
+                      <p className="text-[10px] text-emerald-500 font-semibold mt-0.5 tabular-nums">R$ {bonus}</p>
                     </div>
                   </div>
                 )
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* ── Módulo 5: Projeção de Ganhos — 3 Cenários ── */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-emerald-500" />
-            <CardTitle className="text-sm font-medium">Projeção de Ganhos</CardTitle>
-            <Badge variant="secondary" className="text-[9px] bg-emerald-500/10 text-emerald-500 border-0">
-              <Brain className="h-2.5 w-2.5 mr-0.5" />VAMO IA
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {scenarios.map((scenario, i) => (
-            <div
-              key={scenario.label}
-              className={`flex items-center gap-3 p-3 rounded-lg border ${scenario.border}`}
-            >
-              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                i === 0 ? 'bg-muted text-muted-foreground' :
-                i === 1 ? 'bg-amber-500/15 text-amber-500' :
-                'bg-emerald-500/15 text-emerald-500'
-              }`}>
-                {i + 1}
+        {/* Projeção de ganhos — HUGE */}
+        <div className="span-3 glass-card-primary glass-corner p-6 relative overflow-hidden">
+          <div className="glow-orb glow-orb-green -bottom-16 -left-16 w-48 h-48" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bento-label">
+                <DollarSign className="h-3 w-3" />
+                Projeção de ganhos
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold">{scenario.label}</p>
-                <p className="text-[10px] text-muted-foreground">{scenario.desc}</p>
-              </div>
-              <span className={`text-base font-bold shrink-0 ${scenario.color}`}>
-                R$ {scenario.total.toLocaleString('pt-BR')}
+              <span className="pill-glow">
+                <Brain className="h-2.5 w-2.5" />
+                VAMO IA
               </span>
             </div>
-          ))}
 
-          {activeMissions.length > 0 && (
-            <div className="pt-1 space-y-1">
-              <p className="text-[10px] text-muted-foreground font-medium">Ações × Ganho adicional:</p>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Completar missão de upsell</span>
-                <span className="text-emerald-500 font-medium">+R$ 600 potencial</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Manter streak do CRM até dia 30</span>
-                <span className="text-emerald-500 font-medium">+R$ 150 garantido + badge</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Fechar 2 negócios esta semana</span>
-                <span className="text-emerald-500 font-medium">+R$ 280 comissão base</span>
-              </div>
+            <p className="text-[11px] text-muted-foreground mb-1">Cenário máximo este mês</p>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="hero-number-md text-gradient-primary">
+                R$ {(baseSalary + maxMissionBonus).toLocaleString('pt-BR')}
+              </span>
             </div>
-          )}
+            <p className="text-[11px] text-emerald-500 font-semibold mt-1">
+              +R$ {maxMissionBonus.toLocaleString('pt-BR')} de bônus potencial
+            </p>
 
-          <Link href="/meus-ganhos">
-            <Button variant="outline" size="sm" className="w-full text-xs mt-1">
-              Ver comissão detalhada <ArrowRight className="h-3 w-3 ml-1" />
+            <div className="mt-4 space-y-2">
+              {[
+                { label: 'Atual', value: baseSalary, dim: true },
+                { label: 'Com missões ativas', value: baseSalary + pendingMissionBonus, mid: true },
+                { label: 'Máximo (todas metas)', value: baseSalary + maxMissionBonus, top: true },
+              ].map((s) => (
+                <div key={s.label} className="flex items-center justify-between text-xs py-2 border-b border-border/30 last:border-0">
+                  <span className="text-muted-foreground">{s.label}</span>
+                  <span className={cn(
+                    'font-black tabular-nums',
+                    s.top && 'text-emerald-500',
+                    s.mid && 'text-amber-500',
+                    s.dim && 'text-muted-foreground',
+                  )}>
+                    R$ {s.value.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <Button variant="outline" size="sm" className="w-full text-xs mt-4 gap-1 bg-background/60 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/40" render={<Link href="/meus-ganhos" />}>
+              Ver comissão detalhada <ArrowRight className="h-3 w-3" />
             </Button>
-          </Link>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
 
-      {/* ── Módulo 6: Feedback da VAMO IA ── */}
-      {discProfile ? (
-        <Card className="border-blue-500/20 bg-blue-500/5">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Brain className="h-4 w-4 text-blue-500" />
-              <CardTitle className="text-sm font-medium">Feedback da VAMO IA</CardTitle>
-              <Badge variant="secondary" className="text-[9px]">
-                Perfil {discProfile.dominant_profile} · {discProfile.profile_name}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {discProfile.selling_strengths?.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 mb-2">
-                  Pontos Fortes Confirmados pelos Dados
-                </p>
-                <ul className="space-y-1.5">
-                  {discProfile.selling_strengths.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+        {/* Feedback IA */}
+        <div className="span-6 glass-card glass-corner p-6 md:p-7 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 blur-3xl" style={{ background: 'oklch(0.70 0.17 215)' }} />
+          <div className="relative z-10">
+            {discProfile ? (
+              <>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="stat-icon stat-icon-blue h-10 w-10">
+                    <Brain className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="bento-label mb-0.5" style={{ color: 'oklch(0.55 0.18 215)' }}>
+                      <Sparkles className="h-3 w-3" />
+                      Feedback personalizado
+                    </div>
+                    <h3 className="text-lg font-bold tracking-tight">
+                      Perfil {discProfile.dominant_profile} · {discProfile.profile_name}
+                    </h3>
+                  </div>
+                </div>
 
-            {discProfile.development_areas?.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 mb-2">
-                  Oportunidades de Desenvolvimento
-                </p>
-                <ul className="space-y-1.5">
-                  {discProfile.development_areas.map((o, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                      {o}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                <div className="grid gap-5 md:grid-cols-2">
+                  {discProfile.selling_strengths?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-3">
+                        Pontos fortes
+                      </p>
+                      <ul className="space-y-2">
+                        {discProfile.selling_strengths.slice(0, 3).map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {discProfile.development_areas?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-3">
+                        Oportunidades
+                      </p>
+                      <ul className="space-y-2">
+                        {discProfile.development_areas.slice(0, 3).map((o, i) => (
+                          <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                            {o}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
 
-            {(discProfile.performance_insight ?? discProfile.wellbeing_insight) && (
-              <div className="rounded-lg border border-blue-500/20 bg-background/50 p-2.5">
-                <p className="text-xs text-muted-foreground">
-                  <Brain className="inline h-3 w-3 text-blue-500 mr-1" />
-                  <strong>Insight:</strong> {discProfile.performance_insight ?? discProfile.wellbeing_insight}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Brain className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Feedback personalizado da VAMO IA</p>
-                <p className="text-xs text-muted-foreground">Complete seu Perfil Comportamental DISC para receber insights personalizados.</p>
-              </div>
-              <Link href="/perfil-comportamental">
-                <Button size="sm" variant="outline" className="text-xs h-7 shrink-0">
-                  Fazer agora <ChevronRight className="h-3 w-3 ml-1" />
+                {(discProfile.performance_insight ?? discProfile.wellbeing_insight) && (
+                  <div className="mt-5 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/15">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      <Brain className="inline h-3 w-3 text-blue-500 mr-1.5 mb-px" />
+                      <strong className="text-foreground">Insight: </strong>
+                      {discProfile.performance_insight ?? discProfile.wellbeing_insight}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-4">
+                <div className="stat-icon stat-icon-blue h-12 w-12 shrink-0">
+                  <Brain className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold">Feedback personalizado da VAMO IA</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Complete seu Perfil DISC para receber insights baseados em dados
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" className="text-xs h-8 shrink-0 gap-1" render={<Link href="/perfil-comportamental" />}>
+                  Fazer agora <ChevronRight className="h-3 w-3" />
                 </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </div>
+            )}
+          </div>
+        </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-3 grid-cols-2">
-        <Button variant="outline" className="h-auto py-3 flex-col gap-1" render={<Link href="/meus-ganhos" />}>
-          <DollarSign className="h-5 w-5 text-emerald-500" />
-          <span className="text-xs font-medium">Meus Ganhos</span>
-        </Button>
-        <Button variant="outline" className="h-auto py-3 flex-col gap-1" render={<Link href="/feed" />}>
-          <TrendingUp className="h-5 w-5 text-blue-500" />
-          <span className="text-xs font-medium">Feed & Recompensas</span>
-        </Button>
+        {/* Quick actions */}
+        <Link href="/meus-ganhos" className="span-3 group">
+          <div className="glass-card glass-hover p-5 h-full flex items-center gap-4">
+            <div className="stat-icon stat-icon-green h-12 w-12 shrink-0">
+              <DollarSign className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold">Meus Ganhos</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Comissão, bônus e projeções</p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition-all" />
+          </div>
+        </Link>
+        <Link href="/feed" className="span-3 group">
+          <div className="glass-card glass-hover p-5 h-full flex items-center gap-4">
+            <div className="stat-icon stat-icon-blue h-12 w-12 shrink-0">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold">Feed & Recompensas</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Loja, conquistas e atividades</p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition-all" />
+          </div>
+        </Link>
       </div>
 
       {/* Coach VAMO IA */}

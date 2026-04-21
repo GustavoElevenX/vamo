@@ -145,7 +145,7 @@ export default function PlatformLayout({
     }
 
     fetchXp().catch(() => {})
-  }, [user])
+  }, [user?.id, user?.organization_id])
 
   if (loading) {
     return (
@@ -177,7 +177,17 @@ export default function PlatformLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="relative flex h-screen overflow-hidden bg-background">
+
+      {/* ── Ambient Scene: blobs animados + grid + noise ── */}
+      <div className="ambient-scene" aria-hidden="true">
+        <div className="ambient-blob ambient-blob-green" />
+        <div className="ambient-blob ambient-blob-cyan" />
+        <div className="ambient-blob ambient-blob-violet" />
+        <div className="ambient-grid" />
+        <div className="ambient-noise" />
+      </div>
+
       {/* Modal de troca de senha — aparece automaticamente no primeiro acesso de vendedores criados pela IA */}
       <PasswordChangeModal />
 
@@ -187,8 +197,8 @@ export default function PlatformLayout({
       {/* Chat IA FAB — botão flutuante visível em todas as páginas */}
       <ChatFAB />
 
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-60 lg:flex-col border-r border-white/8 bg-sidebar">
+      {/* Desktop Sidebar — floating glass panel */}
+      <aside className="hidden lg:flex lg:w-60 lg:flex-col glass-sidebar relative z-20">
         <Sidebar role={user.role} userName={user.name.split(' ')[0]} />
       </aside>
 
@@ -201,7 +211,7 @@ export default function PlatformLayout({
       />
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden relative z-10">
         <Topbar
           user={user}
           userXp={userXp}
@@ -210,8 +220,8 @@ export default function PlatformLayout({
           onMenuToggle={() => setMobileOpen(true)}
           onSignOut={handleSignOut}
         />
-        <main className="flex-1 overflow-y-auto bg-background">
-          <div className="p-4 md:p-6 max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-8 max-w-7xl mx-auto">
             {children}
           </div>
         </main>

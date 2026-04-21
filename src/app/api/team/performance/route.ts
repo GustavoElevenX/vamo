@@ -47,23 +47,31 @@ export async function GET() {
 
     const xpMap = new Map((xpData ?? []).map((x) => [x.user_id, x]))
 
-    // Fetch mission completion counts
-    const missionsResults = await Promise.allSettled(
-      sellers.map(async (seller) => {
-        const { count } = await adminClient
-          .from('ai_missions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', seller.id)
-          .eq('status', 'completed')
-        return { user_id: seller.id, count: count ?? 0 }
-      })
-    )
+    // Fetch all completed mission rows for these sellers in a single query,
+    // then group/count client-side. Replaces N sequential count() calls.
+    const { data: missionRows } = await adminClient
+      .from('ai_missions')
+      .select('user_id')
+      .in('user_id', sellerIds)
+      .eq('status', 'completed')
 
-    const missionsMap = new Map(
-      missionsResults
-        .filter((r): r is PromiseFulfilledResult<{ user_id: string; count: number }> => r.status === 'fulfilled')
-        .map((r) => [r.value.user_id, r.value.count])
-    )
+    const missionsMap = new Map<string, number>()
+    for (const row of missionRows ?? []) {
+      missionsMap.set(row.user_id, (missionsMap.get(row.user_id) ?? 0) + 1)
+    }
+
+    // Fetch individual goals from program_goals (latest entry for this org)
+    const { data: goalsData } = await adminClient
+      .from('program_goals')
+      .select('individual_goals, team_goal')
+      .eq('organization_id', appUser.organization_id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const individualGoals: Array<{ user_id: string; goal: string }> = goalsData?.individual_goals ?? []
+    const goalsMap = new Map(individualGoals.map((g) => [g.user_id, g.goal]))
+    const teamGoal = goalsData?.team_goal ?? null
 
     const members = sellers.map((seller) => {
       const xp = xpMap.get(seller.id)
@@ -81,13 +89,14 @@ export async function GET() {
         current_streak: streak,
         last_activity_date: xp?.last_activity_date ?? null,
         missions_completed: missionsMap.get(seller.id) ?? 0,
+        individual_goal: goalsMap.get(seller.id) ?? null,
         trend,
       }
     })
 
-    members.sort((a, b) => b.total_xp - a.total_xp)
+    members.sort((a, b) => b.missions_completed - a.missions_completed || b.total_xp - a.total_xp)
 
-    return NextResponse.json({ members })
+    return NextResponse.json({ members, team_goal: teamGoal })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erro interno' },

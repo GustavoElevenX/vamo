@@ -49,41 +49,12 @@ import type { UserRole } from '@/types'
 import { useAlertsCount } from '@/hooks/use-alerts-count'
 
 const iconMap: Record<string, LucideIcon> = {
-  LayoutDashboard,
-  Target,
-  Trophy,
-  Medal,
-  ShoppingBag,
-  Users,
-  ClipboardCheck,
-  Settings,
-  Building2,
-  FileText,
-  BarChart3,
-  Sparkles,
-  DollarSign,
-  HeartPulse,
-  FileSearch,
-  Rocket,
-  Zap,
-  Plug,
-  Search,
-  User,
-  ClipboardList,
-  Star,
-  Link: LinkIcon,
-  Gamepad2,
-  TrendingUp,
-  Filter,
-  PieChart,
-  CheckSquare,
-  Bot,
-  Megaphone,
-  Terminal,
-  Wrench,
-  Newspaper,
-  RefreshCw,
-  Mail,
+  LayoutDashboard, Target, Trophy, Medal, ShoppingBag, Users,
+  ClipboardCheck, Settings, Building2, FileText, BarChart3, Sparkles,
+  DollarSign, HeartPulse, FileSearch, Rocket, Zap, Plug, Search, User,
+  ClipboardList, Star, Link: LinkIcon, Gamepad2, TrendingUp, Filter,
+  PieChart, CheckSquare, Bot, Megaphone, Terminal, Wrench, Newspaper,
+  RefreshCw, Mail,
 }
 
 interface SidebarProps {
@@ -94,9 +65,7 @@ interface SidebarProps {
 
 function isGroupActive(group: NavGroup, pathname: string): boolean {
   return group.items.some(
-    (item) =>
-      pathname === item.href ||
-      pathname.startsWith(item.href + '/')
+    (item) => pathname === item.href || pathname.startsWith(item.href + '/')
   )
 }
 
@@ -105,7 +74,6 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
   const groups = NAV_CONFIG[role] || NAV_CONFIG.seller
   const alertsCount = useAlertsCount(role === 'manager' || role === 'admin')
 
-  // Initialize collapsed state: only the active group is expanded
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {}
     for (const group of groups) {
@@ -120,44 +88,47 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
 
   return (
     <div className="flex flex-col h-full bg-sidebar">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-auto flex items-center justify-center">
-            <img src="/logo.png" alt="Logo" className="h-8 object-contain" />
+
+      {/* ── Logo ── */}
+      <div className="px-4 py-4 border-b border-sidebar-border/60">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg overflow-hidden flex-shrink-0">
+            <img src="/logo.png" alt="Logo" className="h-8 w-8 object-cover" />
           </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground mt-0.5 leading-none">
+          <div className="min-w-0">
+            <p className="text-[11px] text-muted-foreground/60 leading-none truncate">
               {ROLE_LABELS[role]}{userName ? ` · ${userName}` : ''}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-3 px-3">
+      {/* ── Navigation ── */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
         {groups.map((group) => {
           const groupActive = isGroupActive(group, pathname)
           const isCollapsed = collapsed[group.key] && !groupActive
 
           return (
-            <div key={group.key} className="mb-2">
+            <div key={group.key} className="mb-1">
+
               {/* Group Header */}
               <button
                 onClick={() => toggleGroup(group.key)}
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-1.5 mb-0.5 rounded-md transition-colors',
-                  'hover:bg-sidebar-accent/60',
-                  groupActive && 'text-primary'
+                  'w-full flex items-center gap-2 px-2 py-1.5 mb-0.5 rounded-md',
+                  'transition-colors duration-150 group',
+                  'hover:bg-black/5 dark:hover:bg-white/5',
+                  groupActive ? 'text-primary' : 'text-foreground/30 dark:text-foreground/25'
                 )}
               >
                 {group.prefix && (
                   <span
                     className={cn(
-                      'flex items-center justify-center h-5 w-5 rounded text-[10px] font-bold shrink-0',
+                      'inline-flex items-center justify-center h-4 w-4 rounded text-[9px] font-bold shrink-0 tabular-nums',
                       groupActive
-                        ? 'bg-primary/20 text-primary'
-                        : 'bg-sidebar-accent text-muted-foreground'
+                        ? 'bg-primary/15 text-primary'
+                        : 'bg-black/8 text-foreground/35 dark:bg-white/8 dark:text-foreground/30'
                     )}
                   >
                     {group.prefix}
@@ -165,15 +136,15 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                 )}
                 <span
                   className={cn(
-                    'text-[11px] font-semibold uppercase tracking-wider truncate',
-                    groupActive ? 'text-primary' : 'text-muted-foreground'
+                    'text-[10px] font-bold uppercase tracking-widest truncate flex-1 text-left',
+                    groupActive ? 'text-primary' : 'text-foreground/30 dark:text-foreground/25'
                   )}
                 >
                   {group.label}
                 </span>
                 <ChevronDown
                   className={cn(
-                    'h-3 w-3 ml-auto shrink-0 text-muted-foreground/60 transition-transform duration-200',
+                    'h-3 w-3 shrink-0 transition-transform duration-200 opacity-35',
                     isCollapsed && '-rotate-90'
                   )}
                 />
@@ -181,7 +152,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
 
               {/* Group Items */}
               {!isCollapsed && (
-                <div className="flex flex-col gap-0.5 ml-1">
+                <div className="flex flex-col gap-px pl-0.5">
                   {group.items.map((item) => {
                     const Icon = iconMap[item.icon]
                     const isActive =
@@ -190,7 +161,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                         item.href.split('/').length > 2 &&
                         pathname.startsWith(item.href + '/'))
 
-                    // Special Chat IA highlight
+                    /* Special Chat IA item */
                     if (item.href === '/chat-ia') {
                       return (
                         <Link
@@ -202,7 +173,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                           <span className="vamo-chat-nav-icon">
                             <Sparkles className="h-3.5 w-3.5" />
                           </span>
-                          <span className="truncate flex-1">Converse com VAMO IA</span>
+                          <span className="truncate flex-1 text-[13px]">Converse com VAMO IA</span>
                           <span className="vamo-chat-nav-badge">IA</span>
                         </Link>
                       )
@@ -213,31 +184,26 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                         key={item.href}
                         href={item.href}
                         onClick={onNavigate}
-                        className={cn(
-                          'group flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150',
-                          isActive
-                            ? 'bg-primary/10 text-primary border-l-2 border-primary pl-[10px]'
-                            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground border-l-2 border-transparent pl-[10px]'
-                        )}
+                        className={cn('nav-item', isActive && 'active')}
                       >
                         {Icon && (
                           <Icon
                             className={cn(
-                              'h-4 w-4 shrink-0 transition-colors',
-                              isActive
-                                ? 'text-primary'
-                                : 'text-sidebar-foreground/40 group-hover:text-sidebar-foreground'
+                              'nav-icon h-[15px] w-[15px] shrink-0',
+                              isActive && 'opacity-100'
                             )}
                           />
                         )}
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate flex-1">{item.label}</span>
+
+                        {/* Alert badge */}
                         {item.badge === 'alert' && alertsCount > 0 && (
-                          <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shrink-0">
+                          <span className="ml-auto flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white shrink-0">
                             {alertsCount > 9 ? '9+' : alertsCount}
                           </span>
                         )}
                         {item.badge === 'alert' && alertsCount === 0 && (
-                          <span className="ml-auto h-2 w-2 rounded-full bg-muted-foreground/20 shrink-0" />
+                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-muted-foreground/20 shrink-0" />
                         )}
                       </Link>
                     )
@@ -249,9 +215,12 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-3 border-t border-sidebar-border">
-        <p className="text-[10px] text-muted-foreground/50 font-medium">VAMO v1.0</p>
+      {/* ── Footer ── */}
+      <div className="px-4 py-3 border-t border-sidebar-border/40">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-pulse" />
+          <p className="text-[10px] text-muted-foreground/40 font-medium">VAMO v1.0</p>
+        </div>
       </div>
     </div>
   )

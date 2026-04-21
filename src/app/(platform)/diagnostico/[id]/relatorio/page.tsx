@@ -520,13 +520,13 @@ export default function RelatorioPage() {
                 mission.difficulty === 'Fácil' ? 'text-emerald-500' :
                 mission.difficulty === 'Médio' ? 'text-amber-500' : 'text-red-500'
               }`}>{mission.difficulty}</span>
-              <Badge variant="secondary" className="text-[9px]">+{mission.xp} XP</Badge>
+              <Badge variant="secondary" className="text-[9px]">+{mission.xp} pts</Badge>
               <span className="text-[10px] text-emerald-500 font-medium">R$ {mission.bonus}</span>
             </div>
           ))}
           <div className="pt-2 text-center">
             <p className="text-[11px] text-muted-foreground">
-              Total: <strong className="text-amber-500">{READY_MISSIONS.reduce((s, m) => s + m.xp, 0)} XP</strong> ·{' '}
+              Total: <strong className="text-amber-500">{READY_MISSIONS.reduce((s, m) => s + m.xp, 0)} pts</strong> ·{' '}
               <strong className="text-emerald-500">R$ {READY_MISSIONS.reduce((s, m) => s + m.bonus, 0).toLocaleString('pt-BR')} em bônus</strong> disponíveis
             </p>
           </div>

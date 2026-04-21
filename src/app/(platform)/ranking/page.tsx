@@ -51,7 +51,7 @@ export default function RankingPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Ranking</h2>
-        <p className="text-muted-foreground">Classificação da equipe por XP no período</p>
+        <p className="text-muted-foreground">Classificação da equipe por pts no período</p>
       </div>
 
       <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
@@ -71,7 +71,7 @@ export default function RankingPage() {
           ) : rankings.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
               <Trophy className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Nenhum XP registrado {PERIOD_LABELS[period].toLowerCase()}.</p>
+              <p className="text-sm">Nenhum pts registrado {PERIOD_LABELS[period].toLowerCase()}.</p>
             </div>
           ) : (
             <div className="divide-y">
@@ -97,12 +97,12 @@ export default function RankingPage() {
                         {r.name}
                         {isCurrentUser && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}
                       </p>
-                      <p className="text-xs text-muted-foreground">Nível {r.current_level} · {r.total_xp.toLocaleString('pt-BR')} XP total</p>
+                      <p className="text-xs text-muted-foreground">Nível {r.current_level} · {r.total_xp.toLocaleString('pt-BR')} pts total</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <Zap className="h-3.5 w-3.5 text-primary" />
                       <Badge variant="secondary" className="font-mono">
-                        {r.period_xp.toLocaleString('pt-BR')} XP
+                        {r.period_xp.toLocaleString('pt-BR')} pts
                       </Badge>
                     </div>
                   </div>
@@ -114,7 +114,7 @@ export default function RankingPage() {
       </Card>
 
       <p className="text-xs text-center text-muted-foreground">
-        Mostrando XP conquistado {PERIOD_LABELS[period].toLowerCase()}. Nível e XP total exibidos abaixo do nome.
+        Mostrando pts conquistado {PERIOD_LABELS[period].toLowerCase()}. Nível e pts total exibidos abaixo do nome.
       </p>
     </div>
   )

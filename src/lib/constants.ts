@@ -104,7 +104,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
     },
     {
       key: 'configuracao',
-      label: 'Configuração',
+      label: 'Programa',
       prefix: '3',
       items: [
         { label: 'KPIs', href: '/configuracao/kpis', icon: 'BarChart3' },
@@ -120,7 +120,6 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       prefix: '4',
       items: [
         { label: 'Briefing Semanal', href: '/briefing-semanal', icon: 'Newspaper' },
-        { label: 'Visão Geral — ROI', href: '/monitoramento', icon: 'TrendingUp' },
         { label: 'Funil em Tempo Real', href: '/monitoramento/funil', icon: 'Filter' },
         { label: 'Performance da Equipe', href: '/monitoramento/equipe', icon: 'Users' },
         { label: 'Alertas da VAMO IA', href: '/monitoramento/alertas', icon: 'Zap', badge: 'alert' },
@@ -154,6 +153,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       prefix: 'A',
       items: [
         { label: 'Performance', href: '/performance', icon: 'LayoutDashboard' },
+        { label: 'Minhas Metas', href: '/minhas-metas', icon: 'Target' },
         { label: 'Indicadores', href: '/performance/indicadores', icon: 'BarChart3' },
         { label: 'Missões Ativas', href: '/performance/missoes', icon: 'CheckSquare' },
       ],
@@ -174,7 +174,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       items: [
         { label: 'Feedback da VAMO IA', href: '/desenvolvimento/feedback-ia', icon: 'Bot' },
         { label: 'Simulador de Proposta', href: '/simulador', icon: 'Swords' },
-        { label: 'Conquistas e XP', href: '/desenvolvimento/conquistas', icon: 'Medal' },
+        { label: 'Conquistas e Pontos', href: '/desenvolvimento/conquistas', icon: 'Medal' },
         { label: 'Loja de Recompensas', href: '/desenvolvimento/loja', icon: 'ShoppingBag' },
       ],
     },
@@ -246,6 +246,7 @@ export const SELLER_ONLY_ROUTES = [
   '/performance',
   '/ganhos',
   '/desenvolvimento',
+  '/minhas-metas',
 ]
 
 export const DEVELOPER_ONLY_ROUTES = [

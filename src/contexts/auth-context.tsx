@@ -133,6 +133,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           return
         }
+        // Fast path: if cached user matches the session's auth_id, skip the
+        // heavy `/api/auth/me` round-trip on initial load. The cached user is
+        // already shown — revalidation isn't needed unless the auth identity changed.
+        if (cached && session?.user && cached.auth_id === session.user.id) {
+          return
+        }
         await resolveUser(session?.user ?? null)
       } catch (err) {
         console.error('[Auth] Erro ao restaurar sessão:', err)

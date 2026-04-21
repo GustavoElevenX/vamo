@@ -1,6 +1,5 @@
 'use client'
 
-import { Progress } from '@/components/ui/progress'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface XpBarProps {
@@ -17,13 +16,29 @@ export function XpBar({ currentXp, currentLevelXp, nextLevelXp, level }: XpBarPr
 
   return (
     <Tooltip>
-      <TooltipTrigger className="flex items-center gap-2" render={<div />}>
-          <span className="text-xs font-bold text-primary">Lv.{level}</span>
-          <Progress value={progress} className="h-2 flex-1" />
-          <span className="text-xs text-muted-foreground">{currentXp} XP</span>
+      <TooltipTrigger
+        render={<div />}
+        className="flex flex-col gap-1 cursor-default w-full"
+        role="progressbar"
+        aria-valuenow={Math.round(progress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${xpInLevel} de ${xpNeeded} pontos para o próximo nível`}
+      >
+        <div className="xp-track h-1.5 w-full">
+          <div className="xp-fill h-full" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {currentXp.toLocaleString()} pontos
+          </span>
+          <span className="text-[10px] text-muted-foreground/50">{Math.round(progress)}%</span>
+        </div>
       </TooltipTrigger>
-      <TooltipContent>
-        <p>{xpInLevel}/{xpNeeded} XP para o próximo nível</p>
+      <TooltipContent side="bottom">
+        <p className="text-xs">
+          {xpInLevel.toLocaleString()} / {xpNeeded.toLocaleString()} pontos para Nível {level + 1}
+        </p>
       </TooltipContent>
     </Tooltip>
   )

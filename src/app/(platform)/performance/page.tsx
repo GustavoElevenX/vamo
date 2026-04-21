@@ -147,7 +147,7 @@ export default function PerformancePage() {
         )}
       </div>
 
-      {/* XP & Level Hero */}
+      {/* pts & Level Hero */}
       <Card className="border-border/50">
         <CardContent className="pt-5">
           <div className="flex items-center gap-4">
@@ -168,7 +168,7 @@ export default function PerformancePage() {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-lg font-bold">{(userXp?.total_xp ?? 0).toLocaleString()} XP</p>
+                <p className="text-lg font-bold">{(userXp?.total_xp ?? 0).toLocaleString()} pts</p>
                 {currentLevel && (
                   <Badge variant="secondary" className="text-[10px]">{currentLevel.name}</Badge>
                 )}
@@ -182,7 +182,7 @@ export default function PerformancePage() {
                 <>
                   <Progress value={xpProgress} className="h-2 mt-2 [&>div]:bg-emerald-500" />
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    {xpToNext.toLocaleString()} XP para Nivel {nextLevel.level} ({nextLevel.name})
+                    {xpToNext.toLocaleString()} pts para Nivel {nextLevel.level} ({nextLevel.name})
                   </p>
                 </>
               )}

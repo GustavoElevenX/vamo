@@ -30,7 +30,7 @@ export function BadgeCard({ name, description, rarity, xpReward, earned = false,
       <Badge variant="outline" className="mt-1.5" style={{ borderColor: rarityInfo.color, color: rarityInfo.color }}>
         {rarityInfo.label}
       </Badge>
-      <span className="mt-1 text-xs font-medium text-primary">+{xpReward} XP</span>
+      <span className="mt-1 text-xs font-medium text-primary">+{xpReward} pts</span>
       {earned && earnedAt && (
         <span className="mt-1 text-xs text-muted-foreground">
           {new Date(earnedAt).toLocaleDateString('pt-BR')}

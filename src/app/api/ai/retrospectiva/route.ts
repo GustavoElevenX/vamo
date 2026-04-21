@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { callOpenAIJSON, isOpenAIConfigured } from '@/lib/services/openai.service'
+import { callOpenRouterJSON, isOpenRouterConfigured } from '@/lib/services/openrouter.service'
 
 interface RetrospectivaContent {
   o_que_foi_prometido: string
@@ -12,7 +13,7 @@ interface RetrospectivaContent {
 }
 
 export async function POST() {
-  if (!isOpenAIConfigured()) {
+  if (!isOpenAIConfigured() && !isOpenRouterConfigured()) {
     return NextResponse.json({ error: 'VAMO IA não configurada' }, { status: 503 })
   }
 
@@ -38,6 +39,22 @@ export async function POST() {
     const now = new Date()
     const cycleEnd = now.toISOString().split('T')[0]
     const cycleStart = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0]
+
+    // Duplicate prevention: block if a retrospective already covers this cycle
+    const { data: recentRetro } = await adminClient
+      .from('monthly_retrospectives')
+      .select('id')
+      .eq('organization_id', appUser.organization_id)
+      .gte('cycle_end', cycleStart)
+      .limit(1)
+      .maybeSingle()
+
+    if (recentRetro) {
+      return NextResponse.json(
+        { error: 'Já existe uma retrospectiva para este ciclo. Aguarde o próximo período de 30 dias.' },
+        { status: 409 },
+      )
+    }
 
     // Gather cycle data
     const [
@@ -124,14 +141,27 @@ Responda em JSON com exatamente estes 5 campos (strings em português, com markd
   "recomendacao_proximo_ciclo": "3 focos prioritários para o próximo ciclo com justificativa baseada nos dados"
 }`
 
-    const { data: retroContent, model } = await callOpenAIJSON<RetrospectivaContent>({
-      systemPrompt,
-      userPrompt: contextSummary,
-      temperature: 0.5,
-      maxTokens: 1200,
-    })
+    const aiParams = { systemPrompt, userPrompt: contextSummary, temperature: 0.5, maxTokens: 1200 }
+    let retroContent: RetrospectivaContent
+    let model: string
 
-    const { data: saved, error } = await supabase
+    if (isOpenAIConfigured()) {
+      try {
+        const result = await callOpenAIJSON<RetrospectivaContent>(aiParams)
+        retroContent = result.data
+        model = result.model
+      } catch {
+        const result = await callOpenRouterJSON<RetrospectivaContent>(aiParams)
+        retroContent = result.data
+        model = result.model
+      }
+    } else {
+      const result = await callOpenRouterJSON<RetrospectivaContent>(aiParams)
+      retroContent = result.data
+      model = result.model
+    }
+
+    const { data: saved, error } = await adminClient
       .from('monthly_retrospectives')
       .insert({
         organization_id: appUser.organization_id,
@@ -177,7 +207,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
   }
 
-  const { data: retrospectives } = await supabase
+  const { data: retrospectives } = await adminClient
     .from('monthly_retrospectives')
     .select('*')
     .eq('organization_id', appUser.organization_id)

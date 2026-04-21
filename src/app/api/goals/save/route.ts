@@ -7,6 +7,10 @@ export const runtime = 'nodejs'
 interface IndividualGoal {
   user_id: string
   goal: string
+  xp_reward?: number
+  commission_bonus?: number
+  status?: string
+  progresso?: string
 }
 
 interface CompanyGoal {
@@ -68,7 +72,11 @@ export async function POST(req: NextRequest) {
     // 2. Individual goal notifications + 1:1 chats
     const sellersWithGoal = individual_goals.filter((g) => g.goal.trim())
     for (const ig of sellersWithGoal) {
-      const message = `${managerName} definiu sua meta: "${ig.goal}"`
+      const rewards: string[] = []
+      if (ig.xp_reward) rewards.push(`${ig.xp_reward} XP`)
+      if (ig.commission_bonus) rewards.push(`R$ ${ig.commission_bonus} de bônus`)
+      const rewardStr = rewards.length ? ` | Recompensa: ${rewards.join(' + ')}` : ''
+      const message = `${managerName} definiu sua meta: "${ig.goal}"${rewardStr}`
 
       // Notification (bell)
       await adminClient.from('notifications').insert({

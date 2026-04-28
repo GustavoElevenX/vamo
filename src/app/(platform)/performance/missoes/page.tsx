@@ -4,20 +4,16 @@ import { useEffect, useState, useRef } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { getCached, setCache } from '@/lib/cache'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import {
   Sparkles,
   Zap,
   Clock,
-  Brain,
   Target,
-  TrendingUp,
   Play,
   Users,
-  DollarSign,
   CheckSquare,
   AlertTriangle,
   BookOpen,
@@ -131,21 +127,9 @@ export default function MissoesPage() {
   }
 
   const individualMissions = missions.filter(m => !m.is_collective)
+  const collectiveMissions = missions.filter(m => m.is_collective)
   const pendingMissions = individualMissions.filter(m => m.status === 'pending')
   const activeMissions = individualMissions.filter(m => m.status === 'in_progress')
-
-  // Mock collective mission data
-  const collectiveMission = {
-    title: 'Meta Coletiva: 50 Reunioes no Mes',
-    teamProgress: 72,
-    teamGoal: 50,
-    teamCurrent: 36,
-    myContribution: 8,
-    myPercentage: 22,
-    deadline: '30/03/2026',
-    xpReward: 500,
-    bonus: 750,
-  }
 
   return (
     <div className="space-y-6">
@@ -169,7 +153,6 @@ export default function MissoesPage() {
             const diff = difficultyLabel(mission.difficulty)
             const bonus = Math.round(mission.xp_reward * 1.5)
             const expiration = getExpiration(mission.created_at)
-            const mockProgress = 60
 
             return (
               <Card key={mission.id} className="border-border/50">
@@ -192,15 +175,6 @@ export default function MissoesPage() {
                         </Badge>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Progress */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-muted-foreground">Progresso</span>
-                      <span className="text-[10px] font-medium text-emerald-500">{mockProgress}%</span>
-                    </div>
-                    <Progress value={mockProgress} className="h-1.5 [&>div]:bg-emerald-500" />
                   </div>
 
                   {/* Expiration + Actions */}
@@ -366,85 +340,57 @@ export default function MissoesPage() {
               <Zap className="mb-2 h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">Nenhuma missao ativa.</p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Missoes sao geradas pela VAMO IA com base no seu perfil e indicadores.
+                As missões aparecem aqui quando forem criadas a partir do diagnóstico, perfil e indicadores reais.
               </p>
+              <Button variant="outline" size="sm" className="mt-3 text-xs" render={<Link href="/diagnostico/novo" />}>
+                Fazer diagnóstico
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Collective Mission */}
-      <Card className="border-violet-500/20 bg-violet-500/5">
-        <CardContent className="pt-4 pb-4 space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
-              <Users className="h-5 w-5 text-violet-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium">{collectiveMission.title}</p>
-                <Badge className="text-[9px] h-4 px-1.5 bg-violet-500/10 text-violet-600 border-0">
-                  Coletiva
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Prazo: {collectiveMission.deadline}
-              </p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-xs font-bold text-violet-600">+{collectiveMission.xpReward} XP</p>
-              <p className="text-[10px] text-emerald-500 font-medium">R$ {collectiveMission.bonus}</p>
-            </div>
-          </div>
-
-          {/* Team Progress */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-muted-foreground">
-                Progresso do Time: {collectiveMission.teamCurrent}/{collectiveMission.teamGoal} reunioes
-              </span>
-              <span className="text-[10px] font-medium text-violet-600">{collectiveMission.teamProgress}%</span>
-            </div>
-            <Progress value={collectiveMission.teamProgress} className="h-1.5 [&>div]:bg-violet-500" />
-          </div>
-
-          {/* My Contribution */}
-          <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-3 py-2">
-            <Target className="h-3.5 w-3.5 text-violet-500 shrink-0" />
-            <p className="text-[11px] text-violet-600 font-medium">
-              Sua contribuicao: {collectiveMission.myContribution} reunioes ({collectiveMission.myPercentage}% do time)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* AI Suggestion */}
-      <Card className="border-blue-500/20 bg-blue-500/5">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex items-start gap-3">
-            <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-              <Brain className="h-5 w-5 text-blue-500" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">Sugestao da VAMO IA</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Voce pode melhorar em ticket medio. Aceitar a Missao de Upsell Consultivo pode te render{' '}
-                <strong className="text-emerald-500">+R$ 600</strong> este mes. Seu perfil tem 3x mais chances de sucesso nesse tipo de missao.
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <Button size="sm" className="h-7 text-xs gap-1.5">
-                  <Sparkles className="h-3 w-3" />
-                  Aceitar Missao Sugerida
-                </Button>
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <DollarSign className="h-3 w-3" />
-                  Impacto: +R$ 600/mes
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {collectiveMissions.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Users className="h-3.5 w-3.5" />
+            Coletivas ({collectiveMissions.length})
+          </h3>
+          {collectiveMissions.map((mission) => {
+            const diff = difficultyLabel(mission.difficulty)
+            const bonus = Math.round(mission.xp_reward * 1.5)
+            return (
+              <Card key={mission.id} className="border-violet-500/20 bg-violet-500/5">
+                <CardContent className="pt-4 pb-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                      <Users className="h-5 w-5 text-violet-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{mission.title}</p>
+                        <Badge className="text-[9px] h-4 px-1.5 bg-violet-500/10 text-violet-600 border-0">
+                          Coletiva
+                        </Badge>
+                        <Badge className={`text-[9px] h-4 px-1.5 border-0 ${diff.color}`}>
+                          {diff.text}
+                        </Badge>
+                      </div>
+                      {mission.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{mission.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-bold text-violet-600">+{mission.xp_reward} XP</p>
+                      <p className="text-[10px] text-emerald-500 font-medium">R$ {bonus}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

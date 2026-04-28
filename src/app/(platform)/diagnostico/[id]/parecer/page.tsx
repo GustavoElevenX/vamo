@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,15 +15,52 @@ import Link from 'next/link'
 import { DIAGNOSTIC_AREAS, DIAGNOSTIC_QUADRANTS } from '@/lib/constants'
 import type { DiagnosticSession, DiagnosticArea } from '@/types'
 
-const READY_MISSIONS = [
-  { title: 'Follow-up em 24h', xp: 150, bonus: 225, difficulty: 'Facil' },
-  { title: 'Prospeccao Ativa — 5 contatos/dia', xp: 200, bonus: 300, difficulty: 'Medio' },
-  { title: 'CRM 100% Atualizado', xp: 100, bonus: 150, difficulty: 'Facil' },
-  { title: 'Taxa de Conversao +10%', xp: 500, bonus: 750, difficulty: 'Dificil' },
-  { title: 'Apresentacao Impecavel', xp: 120, bonus: 180, difficulty: 'Facil' },
-  { title: 'Feedback de Clientes (NPS)', xp: 180, bonus: 270, difficulty: 'Medio' },
-  { title: 'Venda Adicional (Upsell)', xp: 400, bonus: 600, difficulty: 'Dificil' },
-]
+const MISSION_TEMPLATES: Record<DiagnosticArea, { title: string; description: string; impact: 'alto' | 'medio' | 'baixo' }> = {
+  lead_generation: {
+    title: 'Aumentar volume de leads qualificados',
+    description: 'Criar rotina de prospecção com meta diária e revisão semanal da qualidade dos leads.',
+    impact: 'alto',
+  },
+  sales_process: {
+    title: 'Reduzir perda em proposta e follow-up',
+    description: 'Padronizar retorno em até 24h para propostas abertas e medir conversão por etapa.',
+    impact: 'alto',
+  },
+  team_management: {
+    title: 'Elevar aderência do time às metas',
+    description: 'Criar check-ins curtos por vendedor e missão coletiva com reconhecimento semanal.',
+    impact: 'medio',
+  },
+  tools_technology: {
+    title: 'Melhorar qualidade dos dados no CRM',
+    description: 'Garantir atualização de oportunidades no mesmo dia para dar visibilidade real ao funil.',
+    impact: 'medio',
+  },
+}
+
+function getMissionSuggestions(session: DiagnosticSession) {
+  return (Object.entries(session.area_scores ?? {}) as [DiagnosticArea, { pct: number }][])
+    .filter(([, score]) => typeof score?.pct === 'number')
+    .sort(([, a], [, b]) => a.pct - b.pct)
+    .slice(0, 4)
+    .map(([area, score]) => ({
+      ...MISSION_TEMPLATES[area],
+      area,
+      areaLabel: DIAGNOSTIC_AREAS[area],
+      scorePct: Math.round(score.pct),
+    }))
+}
+
+function parseMonthlyGoal(value: unknown): number | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.toLowerCase()
+  if (normalized.includes('abaixo') && normalized.includes('50')) return 50_000
+  if (normalized.includes('50') && normalized.includes('200')) return 125_000
+  if (normalized.includes('200') && normalized.includes('500')) return 350_000
+  if (normalized.includes('500') && normalized.includes('2m')) return 1_250_000
+  if (normalized.includes('2m')) return 2_000_000
+  return null
+}
 
 const ROADMAP: Record<string, { d30: string[]; d60: string[]; d90: string[] }> = {
   critical: {
@@ -49,21 +85,10 @@ const ROADMAP: Record<string, { d30: string[]; d60: string[]; d90: string[] }> =
   },
 }
 
-// Simulated burnout detection
-function simulateBurnout(sessionId: string): boolean {
-  let hash = 0
-  for (let i = 0; i < sessionId.length; i++) {
-    hash = (hash << 5) - hash + sessionId.charCodeAt(i)
-    hash |= 0
-  }
-  return Math.abs(hash) % 4 === 0 // ~25% chance
-}
-
 export default function ParecerPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useRequiredAuth()
   const router = useRouter()
-  const supabase = createClient()
 
   const [session, setSession] = useState<DiagnosticSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -73,17 +98,17 @@ export default function ParecerPage() {
     let cancelled = false
 
     const load = async () => {
-      const query = supabase
-        .from('diagnostic_sessions')
-        .select('*')
-        .eq('id', id)
-        .single()
+      const request = fetch(`/api/diagnostics/${id}`).then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Erro ao carregar diagnóstico')
+        return data as { session: DiagnosticSession }
+      })
 
-      const timeout = new Promise<never>((_, reject) =>
+      const timeout = new Promise<{ session: DiagnosticSession }>((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), 20_000)
       )
 
-      const { data } = await Promise.race([query, timeout])
+      const { session: data } = await Promise.race([request, timeout])
       if (!cancelled) {
         setSession(data)
         setLoading(false)
@@ -116,10 +141,12 @@ export default function ParecerPage() {
   }
 
   const quadrant = session.quadrant ? DIAGNOSTIC_QUADRANTS[session.quadrant] : null
-  const estimatedMonthlyRevenue = 50000
-  const estimatedLoss = Math.round(estimatedMonthlyRevenue * ((100 - session.health_pct) / 100) * 0.3)
+  const estimatedMonthlyRevenue = parseMonthlyGoal((session.company_context as Record<string, unknown> | null)?.meta_mensal)
+  const estimatedLoss = estimatedMonthlyRevenue
+    ? Math.round(estimatedMonthlyRevenue * ((100 - session.health_pct) / 100) * 0.3)
+    : null
   const roadmap = ROADMAP[session.quadrant ?? 'at_risk']
-  const hasBurnout = simulateBurnout(id)
+  const missionSuggestions = getMissionSuggestions(session)
 
   // Top bottlenecks by financial impact
   const areas = Object.entries(session.area_scores || {}) as [DiagnosticArea, { score: number; max: number; pct: number }][]
@@ -127,7 +154,7 @@ export default function ParecerPage() {
   const topBottlenecks = sortedAreas.slice(0, Math.min(5, sortedAreas.length)).map((entry) => {
     const [area, scores] = entry
     const impactWeight = (100 - scores.pct) / 100
-    const lossValue = Math.round(estimatedLoss * impactWeight * 0.6)
+    const lossValue = estimatedLoss ? Math.round(estimatedLoss * impactWeight * 0.6) : null
     return {
       area,
       label: DIAGNOSTIC_AREAS[area],
@@ -159,29 +186,24 @@ export default function ParecerPage() {
         </div>
       </div>
 
-      {/* Burnout Alert Banner */}
-      {hasBurnout && (
-        <Card className="border-2 border-red-500/40 bg-red-500/10">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-start gap-3">
-              <HeartPulse className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-red-500">
-                  Burnout detectado nesta equipe
-                </p>
-                <p className="text-xs text-red-500/80 mt-1">
-                  Recomendamos conversa 1:1 antes de lancar missoes de volume. Gamificacao sobre alguem sobrecarregado piora o problema.
-                </p>
-                <Link href="/saude-equipe">
-                  <Button variant="outline" size="sm" className="mt-2 text-xs h-7 border-red-500/30 text-red-500 hover:bg-red-500/10">
-                    Verificar Saude da Equipe <ArrowRight className="h-3 w-3 ml-1" />
-                  </Button>
-                </Link>
-              </div>
+      <Card className="border-red-500/20 bg-red-500/5">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-start gap-3">
+            <HeartPulse className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-500">Antes de lançar missões, valide a saúde da equipe</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                O diagnóstico comercial aponta gargalos de performance, mas risco de burnout precisa vir dos check-ins e da tela de saúde da equipe.
+              </p>
+              <Link href="/saude-equipe">
+                <Button variant="outline" size="sm" className="mt-2 text-xs h-7">
+                  Verificar Saúde da Equipe <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Section 1: Total Estimated Loss */}
       <Card className="border-red-500/30 bg-red-500/5">
@@ -195,11 +217,14 @@ export default function ParecerPage() {
                 Perda Total Estimada
               </p>
               <p className="text-3xl font-bold text-red-500 mt-0.5">
-                R$ {estimatedLoss.toLocaleString('pt-BR')}
-                <span className="text-base font-normal">/mes</span>
+                {estimatedLoss ? (
+                  <>R$ {estimatedLoss.toLocaleString('pt-BR')}<span className="text-base font-normal">/mes</span></>
+                ) : (
+                  'Sem meta mensal'
+                )}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Baseado nos gargalos identificados no diagnostico
+                {estimatedLoss ? 'Baseado nos gargalos identificados no diagnostico' : 'Preencha a meta mensal no diagnóstico para calcular impacto financeiro'}
               </p>
             </div>
           </div>
@@ -224,7 +249,7 @@ export default function ParecerPage() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">{bottleneck.label}</p>
                       <Badge variant="outline" className="text-[10px] text-red-500 border-red-500/30">
-                        -R$ {bottleneck.lossValue.toLocaleString('pt-BR')}/mes
+                        {bottleneck.lossValue ? `-R$ ${bottleneck.lossValue.toLocaleString('pt-BR')}/mes` : `${Math.round(bottleneck.pct)}%`}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">
@@ -232,9 +257,9 @@ export default function ParecerPage() {
                       <span className="text-[10px] text-muted-foreground">{bottleneck.pct}%</span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="shrink-0 text-[11px] h-7">
+                  <Button variant="outline" size="sm" className="shrink-0 text-[11px] h-7" render={<Link href="/objetivos/plano-acao" />}>
                     <Target className="h-3 w-3 mr-1" />
-                    Gerar Missao Corretiva
+                    Criar Missão
                   </Button>
                 </div>
               </CardContent>
@@ -285,57 +310,46 @@ export default function ParecerPage() {
         </CardContent>
       </Card>
 
-      {/* Section 4: 7 Pre-Generated Missions */}
-      <Card className="border-amber-500/20 bg-amber-500/5">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <CardTitle className="text-sm font-medium">7 Missoes Gamificadas Prontas para Ativar</CardTitle>
-            </div>
-            <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-500 border-0">
-              Geradas pela VAMO IA
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {READY_MISSIONS.map((mission, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 p-2.5 rounded-lg border border-amber-500/10 bg-background/60"
-            >
-              <div className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                <span className="text-[10px] font-bold text-amber-500">{i + 1}</span>
+      {missionSuggestions.length > 0 && (
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-sm font-medium">Missões Recomendadas pelo Diagnóstico</CardTitle>
               </div>
-              <span className="text-sm flex-1">{mission.title}</span>
-              <Badge
-                variant="outline"
-                className={`text-[10px] ${
-                  mission.difficulty === 'Facil'
-                    ? 'text-emerald-500 border-emerald-500/30'
-                    : mission.difficulty === 'Medio'
-                    ? 'text-amber-500 border-amber-500/30'
-                    : 'text-red-500 border-red-500/30'
-                }`}
-              >
-                {mission.difficulty}
+              <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-500 border-0">
+                Fonte: áreas com menor score
               </Badge>
-              <Badge variant="secondary" className="text-[9px]">+{mission.xp} pts</Badge>
-              <span className="text-[10px] text-emerald-500 font-medium">R$ {mission.bonus}</span>
-              <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Ativar
-              </Button>
             </div>
-          ))}
-          <div className="pt-2 text-center">
-            <p className="text-[11px] text-muted-foreground">
-              Total: <strong className="text-amber-500">{READY_MISSIONS.reduce((s, m) => s + m.xp, 0)} pts</strong> ·{' '}
-              <strong className="text-emerald-500">R$ {READY_MISSIONS.reduce((s, m) => s + m.bonus, 0).toLocaleString('pt-BR')} em bonus</strong> disponiveis
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {missionSuggestions.map((mission, i) => (
+              <div
+                key={mission.area}
+                className="flex items-center gap-3 p-2.5 rounded-lg border border-amber-500/10 bg-background/60"
+              >
+                <div className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-[10px] font-bold text-amber-500">{i + 1}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{mission.title}</p>
+                  <p className="text-[11px] text-muted-foreground">{mission.description}</p>
+                </div>
+                <Badge variant="outline" className="text-[9px] shrink-0">
+                  {mission.areaLabel}: {mission.scorePct}%
+                </Badge>
+                <Badge variant="secondary" className="text-[9px] shrink-0">
+                  Impacto {mission.impact}
+                </Badge>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" render={<Link href="/objetivos/plano-acao" />}>
+                  Criar
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Section 5 & 6: Actions */}
       <div className="flex flex-col sm:flex-row gap-3 print:hidden">

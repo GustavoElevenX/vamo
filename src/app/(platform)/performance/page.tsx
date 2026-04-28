@@ -4,16 +4,13 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import {
-  TrendingUp,
   Flame,
   Medal,
-  ArrowRight,
-  Sparkles,
   Target,
   DollarSign,
   Star,
@@ -252,7 +249,7 @@ export default function PerformancePage() {
         </Card>
       </div>
 
-      {/* Weekly AI Feedback */}
+      {/* Real performance summary */}
       <Card className="border-blue-500/20 bg-blue-500/5">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-start gap-3">
@@ -260,47 +257,16 @@ export default function PerformancePage() {
               <Brain className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm font-medium">Feedback Semanal da VAMO IA</p>
+              <p className="text-sm font-medium">Resumo real de performance</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                <strong className="text-foreground">Ponto forte:</strong> Seu streak de {userXp?.current_streak ?? 0} dias mostra consistencia acima da media da equipe.
+                <strong className="text-foreground">Base atual:</strong> {userXp?.current_streak ?? 0} dias de streak,
+                {' '}{todayKpiCount} KPI{todayKpiCount === 1 ? '' : 's'} registrado{todayKpiCount === 1 ? '' : 's'} hoje
+                {myRank ? ` e posição #${myRank} no ranking` : ''}.
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                <strong className="text-foreground">Oportunidade:</strong> Sua taxa de conversao esta 13pp abaixo da meta.
                 {activeMissions.length > 0
-                  ? ` Complete suas ${activeMissions.length} missoes ativas para ganhar ate +R$ ${(activeMissions.reduce((s, m) => s + Math.round(m.xp_reward * 1.5), 0)).toLocaleString('pt-BR')} em bonus.`
-                  : ' Aceite a missao de follow-up sugerida pela VAMO IA para melhorar.'}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Metrics with commission link */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Metricas Rapidas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 grid-cols-3">
-            <div className="text-center space-y-0.5">
-              <p className="text-lg font-bold text-emerald-500">22%</p>
-              <p className="text-[10px] text-muted-foreground">Taxa Conversao</p>
-              <p className="text-[9px] text-emerald-500/80 font-medium">
-                <DollarSign className="h-2.5 w-2.5 inline" /> Atingir meta: +R$ 400
-              </p>
-            </div>
-            <div className="text-center space-y-0.5">
-              <p className="text-lg font-bold text-blue-500">R$ 7.200</p>
-              <p className="text-[10px] text-muted-foreground">Ticket Medio</p>
-              <p className="text-[9px] text-blue-500/80 font-medium">
-                <DollarSign className="h-2.5 w-2.5 inline" /> Atingir meta: +R$ 600
-              </p>
-            </div>
-            <div className="text-center space-y-0.5">
-              <p className="text-lg font-bold text-amber-500">R$ 45k</p>
-              <p className="text-[10px] text-muted-foreground">Pipeline</p>
-              <p className="text-[9px] text-amber-500/80 font-medium">
-                <DollarSign className="h-2.5 w-2.5 inline" /> Atingir meta: +R$ 280
+                  ? `Prioridade: concluir ${activeMissions.length} missão${activeMissions.length === 1 ? '' : 'ões'} ativa${activeMissions.length === 1 ? '' : 's'} antes de aceitar novas.`
+                  : 'Nenhuma missão ativa agora. Solicite ao gestor uma missão vinculada ao diagnóstico ou aos KPIs do ciclo.'}
               </p>
             </div>
           </div>

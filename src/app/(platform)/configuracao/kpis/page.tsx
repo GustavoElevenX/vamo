@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,6 +36,7 @@ import {
   Percent,
   Trash2,
 } from 'lucide-react'
+import type { PerformanceInsight } from '@/lib/services/performance-insights.service'
 
 interface KPI {
   id: string
@@ -83,11 +84,12 @@ function StatusBadge({ status }: { status: 'verde' | 'amarelo' | 'vermelho' }) {
 
 export default function KpisPage() {
   const { user } = useRequiredAuth()
-  const supabase = createClient()
   const [kpis, setKpis] = useState<KPI[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [aiAccepted, setAiAccepted] = useState(false)
+  const [aiInsight, setAiInsight] = useState<PerformanceInsight | null>(null)
+  const [aiInsightLoading, setAiInsightLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [newKpi, setNewKpi] = useState({
     name: '',
@@ -102,100 +104,117 @@ export default function KpisPage() {
     if (!user) return
     setLoading(true)
     try {
-      const { data: defs } = await supabase
-        .from('kpi_definitions')
-        .select('*')
-        .eq('organization_id', user.organization_id)
-        .eq('active', true)
-        .order('created_at')
-
-      if (!defs || defs.length === 0) {
-        setKpis([])
-        return
-      }
-
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      const startStr = startOfMonth.toISOString().split('T')[0]
-
-      const { data: entries } = await supabase
-        .from('kpi_entries')
-        .select('kpi_id, value')
-        .eq('organization_id', user.organization_id)
-        .gte('recorded_at', startStr)
-
-      const currentByKpi: Record<string, number> = {}
-      for (const entry of entries ?? []) {
-        currentByKpi[entry.kpi_id] = (currentByKpi[entry.kpi_id] ?? 0) + Number(entry.value)
-      }
-
-      setKpis(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (defs as any[]).map((row) => ({
-          id: row.id,
-          name: row.name,
-          source: (row.targets?.source ?? 'manual') as 'CRM' | 'manual',
-          target: row.targets?.monthly ?? 0,
-          current: currentByKpi[row.id] ?? 0,
-          unit: row.unit,
-          alertTolerance: row.targets?.alert_tolerance ?? 10,
-          active: row.active,
-        }))
-      )
+      const res = await fetch('/api/kpis', { credentials: 'same-origin' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar KPIs')
+      setKpis(data.kpis ?? [])
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao carregar KPIs')
+      setKpis([])
     } finally {
       setLoading(false)
     }
   }, [user])
 
+  const fetchAiInsight = useCallback(async () => {
+    if (!user) return
+    setAiInsightLoading(true)
+    try {
+      const res = await fetch('/api/ai/performance-insights', { credentials: 'same-origin' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar sugestão')
+      setAiInsight(data.insight)
+    } catch {
+      setAiInsight({
+        status: 'needs_diagnostic',
+        title: 'Sugestão indisponível',
+        message:
+          'Não foi possível validar dados reais agora. Faça ou revise o diagnóstico antes de aceitar qualquer sugestão de KPI.',
+        confidence: 'baixa',
+        source: { activeKpis: activeCount, activeMissions: 0, recentKpiEntries: 0 },
+      })
+    } finally {
+      setAiInsightLoading(false)
+    }
+  }, [user, activeCount])
+
   useEffect(() => {
     fetchKpis()
   }, [fetchKpis])
 
-  const handleAddKpi = async () => {
-    if (!user || !newKpi.name || !newKpi.target || activeCount >= MAX_KPIS) return
+  useEffect(() => {
+    fetchAiInsight()
+  }, [fetchAiInsight])
+
+  const addKpi = async (input: typeof newKpi, successMessage = 'KPI adicionado com sucesso') => {
+    if (!user || !input.name || !input.target || activeCount >= MAX_KPIS) return
     setSaving(true)
     try {
-      const slug =
-        newKpi.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') +
-        '_' +
-        Date.now()
-      const { error } = await supabase.from('kpi_definitions').insert({
-        organization_id: user.organization_id,
-        name: newKpi.name,
-        slug,
-        unit: newKpi.unit || 'unid.',
-        points_per_unit: 10,
-        targets: {
-          monthly: Number(newKpi.target),
-          alert_tolerance: 10,
-          source: newKpi.source,
-        },
-        active: true,
+      const res = await fetch('/api/kpis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          name: input.name,
+          source: input.source,
+          target: input.target,
+          unit: input.unit || 'unid.',
+        }),
       })
-      if (error) throw error
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao adicionar KPI')
       setNewKpi({ name: '', source: 'manual', target: '', unit: '' })
       setDialogOpen(false)
-      toast.success('KPI adicionado com sucesso')
+      toast.success(successMessage)
       await fetchKpis()
-    } catch {
-      toast.error('Erro ao adicionar KPI')
+      await fetchAiInsight()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao adicionar KPI')
     } finally {
       setSaving(false)
     }
   }
 
+  const handleAddKpi = async () => {
+    await addKpi(newKpi)
+  }
+
+  const handleAcceptAiSuggestion = async () => {
+    const recommendation = aiInsight?.kpiRecommendation
+    if (!recommendation) return
+    if (activeCount >= MAX_KPIS) {
+      toast.error('Limite de KPIs ativos atingido')
+      return
+    }
+
+    await addKpi(
+      {
+        name: recommendation.name,
+        source: recommendation.source,
+        target: String(recommendation.monthlyTarget),
+        unit: recommendation.unit,
+      },
+      'KPI sugerido pela IA adicionado'
+    )
+    setAiAccepted(true)
+  }
+
   const handleRemoveKpi = async (id: string) => {
     setSaving(true)
     try {
-      const { error } = await supabase
-        .from('kpi_definitions')
-        .update({ active: false })
-        .eq('id', id)
-      if (error) throw error
+      const res = await fetch('/api/kpis', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ id, action: 'deactivate' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao remover KPI')
       setKpis((prev) => prev.filter((k) => k.id !== id))
       toast.success('KPI removido')
-    } catch {
-      toast.error('Erro ao remover KPI')
+      await fetchAiInsight()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao remover KPI')
     } finally {
       setSaving(false)
     }
@@ -212,21 +231,26 @@ export default function KpisPage() {
     try {
       await Promise.all(
         kpis.map((kpi) =>
-          supabase
-            .from('kpi_definitions')
-            .update({
-              targets: {
-                monthly: kpi.target,
-                alert_tolerance: kpi.alertTolerance,
-                source: kpi.source,
-              },
+          fetch('/api/kpis', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              id: kpi.id,
+              target: kpi.target,
+              alertTolerance: kpi.alertTolerance,
+              source: kpi.source,
             })
-            .eq('id', kpi.id)
+          }).then(async (res) => {
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao salvar')
+          })
         )
       )
       toast.success('Configurações salvas')
-    } catch {
-      toast.error('Erro ao salvar')
+      await fetchAiInsight()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao salvar')
     } finally {
       setSaving(false)
     }
@@ -343,24 +367,61 @@ export default function KpisPage() {
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">Sugestão da VAMO IA</p>
+              <p className="text-sm font-medium">{aiInsight?.title ?? 'Insight de performance'}</p>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                A VAMO IA sugere: Sua maior perda é em proposta — sugiro taxa de conversão como KPI
-                principal. Confirma?
+                {aiInsightLoading
+                  ? 'Analisando diagnóstico, KPIs e missões para sugerir somente com base em dados reais...'
+                  : aiInsight?.message}
               </p>
-              {!aiAccepted ? (
+
+              {aiInsight?.source?.diagnosticId && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="text-[10px] border-0">
+                    Fonte: diagnóstico {aiInsight.source.diagnosticDate ? new Date(aiInsight.source.diagnosticDate).toLocaleDateString('pt-BR') : ''}
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px] border-0">
+                    Gargalo: {aiInsight.source.weakestArea} ({aiInsight.source.weakestAreaPct}%)
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px] border-0">
+                    Score geral: {aiInsight.source.healthPct}%
+                  </Badge>
+                </div>
+              )}
+
+              {!aiInsightLoading && aiInsight?.status === 'needs_diagnostic' && (
                 <Button
                   size="sm"
                   className="h-7 text-xs mt-3"
-                  onClick={() => setAiAccepted(true)}
+                  render={<Link href="/diagnostico/novo" />}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+                  Fazer diagnóstico
+                </Button>
+              )}
+
+              {!aiInsightLoading && aiInsight?.status === 'ready' && aiInsight.kpiRecommendation && !aiAccepted && (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs mt-3"
+                  onClick={handleAcceptAiSuggestion}
+                  disabled={saving || activeCount >= MAX_KPIS}
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                  Aceitar sugestão
+                  Adicionar KPI sugerido
                 </Button>
-              ) : (
+              )}
+
+              {!aiInsightLoading && aiInsight?.status === 'ready' && !aiInsight.kpiRecommendation && (
                 <div className="flex items-center gap-1.5 mt-3 text-emerald-600">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span className="text-xs font-medium">Sugestão aceita</span>
+                  <span className="text-xs font-medium">KPI principal já configurado</span>
+                </div>
+              )}
+
+              {aiAccepted && (
+                <div className="flex items-center gap-1.5 mt-3 text-emerald-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Sugestão aplicada com base no diagnóstico</span>
                 </div>
               )}
             </div>

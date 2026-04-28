@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,15 +17,52 @@ import { AIAnalysisCard, AIActionsCard } from '@/components/ai/ai-analysis-card'
 import { AILoadingSkeleton } from '@/components/ai/loading-skeleton'
 import type { DiagnosticSession, DiagnosticArea, AIAnalysisResult } from '@/types'
 
-const READY_MISSIONS = [
-  { title: 'Follow-up em 24h', xp: 150, bonus: 225, difficulty: 'Médio' },
-  { title: 'Prospecção Ativa — 5 contatos/dia', xp: 200, bonus: 300, difficulty: 'Médio' },
-  { title: 'CRM 100% Atualizado', xp: 100, bonus: 150, difficulty: 'Fácil' },
-  { title: 'Taxa de Conversão +10%', xp: 500, bonus: 750, difficulty: 'Difícil' },
-  { title: 'Apresentação Impecável', xp: 120, bonus: 180, difficulty: 'Fácil' },
-  { title: 'Feedback de Clientes (NPS)', xp: 180, bonus: 270, difficulty: 'Médio' },
-  { title: 'Venda Adicional (Upsell)', xp: 400, bonus: 600, difficulty: 'Difícil' },
-]
+const MISSION_TEMPLATES: Record<DiagnosticArea, { title: string; description: string; impact: 'alto' | 'medio' | 'baixo' }> = {
+  lead_generation: {
+    title: 'Aumentar volume de leads qualificados',
+    description: 'Criar uma rotina de prospecção com meta diária e revisão semanal de qualidade dos leads.',
+    impact: 'alto',
+  },
+  sales_process: {
+    title: 'Reduzir perda em proposta e follow-up',
+    description: 'Padronizar retorno em até 24h para propostas abertas e medir conversão por etapa.',
+    impact: 'alto',
+  },
+  team_management: {
+    title: 'Elevar aderência do time às metas',
+    description: 'Criar check-ins curtos por vendedor e missão coletiva com reconhecimento semanal.',
+    impact: 'medio',
+  },
+  tools_technology: {
+    title: 'Melhorar qualidade dos dados no CRM',
+    description: 'Garantir atualização de oportunidades no mesmo dia para dar visibilidade real ao funil.',
+    impact: 'medio',
+  },
+}
+
+function getMissionSuggestions(session: DiagnosticSession) {
+  return (Object.entries(session.area_scores ?? {}) as [DiagnosticArea, { pct: number }][])
+    .filter(([, score]) => typeof score?.pct === 'number')
+    .sort(([, a], [, b]) => a.pct - b.pct)
+    .slice(0, 4)
+    .map(([area, score]) => ({
+      ...MISSION_TEMPLATES[area],
+      area,
+      areaLabel: DIAGNOSTIC_AREAS[area],
+      scorePct: Math.round(score.pct),
+    }))
+}
+
+function parseMonthlyGoal(value: unknown): number | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.toLowerCase()
+  if (normalized.includes('abaixo') && normalized.includes('50')) return 50_000
+  if (normalized.includes('50') && normalized.includes('200')) return 125_000
+  if (normalized.includes('200') && normalized.includes('500')) return 350_000
+  if (normalized.includes('500') && normalized.includes('2m')) return 1_250_000
+  if (normalized.includes('2m')) return 2_000_000
+  return null
+}
 
 // Roadmap 30/60/90 by quadrant
 const ROADMAP: Record<string, { d30: string[]; d60: string[]; d90: string[] }> = {
@@ -56,7 +92,6 @@ export default function RelatorioPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useRequiredAuth()
   const router = useRouter()
-  const supabase = createClient()
 
   const [session, setSession] = useState<DiagnosticSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -97,17 +132,17 @@ export default function RelatorioPage() {
     let cancelled = false
 
     const load = async () => {
-      const query = supabase
-        .from('diagnostic_sessions')
-        .select('*')
-        .eq('id', id)
-        .single()
+      const request = fetch(`/api/diagnostics/${id}`).then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Erro ao carregar diagnóstico')
+        return data as { session: DiagnosticSession }
+      })
 
-      const timeout = new Promise<never>((_, reject) =>
+      const timeout = new Promise<{ session: DiagnosticSession }>((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), 20_000)
       )
 
-      const { data } = await Promise.race([query, timeout])
+      const { session: data } = await Promise.race([request, timeout])
       if (cancelled) return
       setSession(data)
       setLoading(false)
@@ -144,20 +179,13 @@ export default function RelatorioPage() {
   const quadrant = session.quadrant ? DIAGNOSTIC_QUADRANTS[session.quadrant] : null
   const areas = Object.entries(session.area_scores || {}) as [DiagnosticArea, { score: number; max: number; pct: number }][]
 
-  // Financial calculations
-  const estimatedMonthlyRevenue = 50000 // fallback — ideally stored in session
-  const estimatedLoss = Math.round(estimatedMonthlyRevenue * ((100 - session.health_pct) / 100) * 0.3)
-  const recoveryPotential = Math.round(estimatedLoss * 0.65)
+  const estimatedMonthlyRevenue = parseMonthlyGoal((session.company_context as Record<string, unknown> | null)?.meta_mensal)
+  const estimatedLoss = estimatedMonthlyRevenue
+    ? Math.round(estimatedMonthlyRevenue * ((100 - session.health_pct) / 100) * 0.3)
+    : null
+  const recoveryPotential = estimatedLoss ? Math.round(estimatedLoss * 0.65) : null
   const roadmap = ROADMAP[session.quadrant ?? 'at_risk']
-
-  // Simulated funnel data (would come from CRM in production)
-  const funnelData = [
-    { stage: 'Leads', current: 347, benchmark: 347, conversion: null },
-    { stage: 'Qualificados', current: 57, benchmark: 62, conversion: 57, loss: Math.round(estimatedLoss * 0.15) },
-    { stage: 'Propostas', current: 45, benchmark: 62, conversion: 45, loss: Math.round(estimatedLoss * 0.35) },
-    { stage: 'Negociação', current: 58, benchmark: 70, conversion: 58, loss: Math.round(estimatedLoss * 0.25) },
-    { stage: 'Fechamento', current: 60, benchmark: 75, conversion: 60, loss: Math.round(estimatedLoss * 0.25) },
-  ]
+  const missionSuggestions = getMissionSuggestions(session)
 
   return (
     <div className="space-y-6">
@@ -178,6 +206,10 @@ export default function RelatorioPage() {
           <h2 className="text-xl font-semibold tracking-tight">Relatório de Diagnóstico</h2>
           <p className="text-sm text-muted-foreground">{session.respondent_name}</p>
         </div>
+        <Button variant="outline" size="sm" render={<Link href={`/diagnostico/${id}/parecer`} />} className="ml-auto">
+          <Brain className="mr-2 h-4 w-4" />
+          Parecer final da IA
+        </Button>
       </div>
 
       {/* ── MOMENTO UAU — Financial Impact ── */}
@@ -191,9 +223,15 @@ export default function RelatorioPage() {
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wider text-red-500/80">Perda Estimada</p>
                 <p className="text-2xl font-bold text-red-500 mt-0.5">
-                  R$ {estimatedLoss.toLocaleString('pt-BR')}<span className="text-sm font-normal">/mês</span>
+                  {estimatedLoss ? (
+                    <>R$ {estimatedLoss.toLocaleString('pt-BR')}<span className="text-sm font-normal">/mês</span></>
+                  ) : (
+                    'Sem meta mensal'
+                  )}
                 </p>
-                <p className="text-[11px] text-muted-foreground">nos gargalos identificados</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {estimatedLoss ? 'nos gargalos identificados' : 'preencha a meta mensal no diagnóstico'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -208,7 +246,11 @@ export default function RelatorioPage() {
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wider text-emerald-600">Potencial de Recuperação</p>
                 <p className="text-2xl font-bold text-emerald-500 mt-0.5">
-                  R$ {recoveryPotential.toLocaleString('pt-BR')}<span className="text-sm font-normal">/mês</span>
+                  {recoveryPotential ? (
+                    <>R$ {recoveryPotential.toLocaleString('pt-BR')}<span className="text-sm font-normal">/mês</span></>
+                  ) : (
+                    'A calcular'
+                  )}
                 </p>
                 <p className="text-[11px] text-muted-foreground">com plano gamificado em 90 dias</p>
               </div>
@@ -252,61 +294,34 @@ export default function RelatorioPage() {
         </CardContent>
       </Card>
 
-      {/* Funil de Vendas com comparação de benchmark */}
+      {/* Leitura real por área */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Funil de Vendas — Atual vs Benchmark do Setor</CardTitle>
+          <CardTitle className="text-sm font-medium">Áreas do Diagnóstico — prioridade de ação</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {funnelData.map((stage, i) => (
-            <div key={stage.stage}>
+          {areas
+            .sort(([, a], [, b]) => a.pct - b.pct)
+            .map(([area, scores]) => (
+            <div key={area}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium">{stage.stage}</span>
-                <div className="flex items-center gap-3">
-                  {stage.conversion !== null && (
-                    <>
-                      <span className={`text-xs font-medium ${
-                        stage.current < stage.benchmark ? 'text-red-500' : 'text-emerald-500'
-                      }`}>
-                        {stage.current}% atual
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        (benchmark: {stage.benchmark}%)
-                      </span>
-                      {stage.current < stage.benchmark && stage.loss && (
-                        <span className="text-[10px] text-red-500 font-medium">
-                          -R$ {stage.loss.toLocaleString('pt-BR')}/mês
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
+                <span className="text-sm font-medium">{DIAGNOSTIC_AREAS[area]}</span>
+                <span className={scores.pct < 50 ? 'text-xs font-medium text-red-500' : 'text-xs font-medium text-emerald-500'}>
+                  {Math.round(scores.pct)}%
+                </span>
               </div>
               <div className="relative h-2 rounded-full bg-muted/50 overflow-hidden">
-                {/* Benchmark bar (behind) */}
-                {stage.conversion !== null && (
-                  <div
-                    className="absolute inset-0 rounded-full bg-muted"
-                    style={{ width: `${stage.benchmark}%` }}
-                  />
-                )}
-                {/* Current bar */}
                 <div
                   className={`absolute inset-0 rounded-full transition-all ${
-                    stage.conversion === null
-                      ? 'bg-blue-500'
-                      : stage.current < stage.benchmark
-                      ? 'bg-red-400'
-                      : 'bg-emerald-500'
+                    scores.pct < 50 ? 'bg-red-400' : scores.pct < 75 ? 'bg-amber-400' : 'bg-emerald-500'
                   }`}
-                  style={{ width: `${stage.conversion ?? 100}%` }}
+                  style={{ width: `${scores.pct}%` }}
                 />
               </div>
             </div>
           ))}
           <div className="flex items-center gap-4 pt-1 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="h-2 w-4 rounded-sm bg-red-400 inline-block" /> Atual (abaixo do benchmark)</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-4 rounded-sm bg-muted inline-block" /> Benchmark do setor</span>
+            <span>Fonte: respostas do diagnóstico concluído em {new Date(session.completed_at ?? session.created_at).toLocaleDateString('pt-BR')}</span>
           </div>
         </CardContent>
       </Card>
@@ -339,7 +354,7 @@ export default function RelatorioPage() {
               <div className="flex flex-wrap gap-2 mt-3">
                 <Badge variant="secondary" className="text-[10px]">
                   <Target className="h-2.5 w-2.5 mr-1" />
-                  {READY_MISSIONS.length} missões prontas
+                  {missionSuggestions.length} ações priorizadas
                 </Badge>
                 <Badge variant="secondary" className="text-[10px]">
                   <Users className="h-2.5 w-2.5 mr-1" />
@@ -493,45 +508,46 @@ export default function RelatorioPage() {
         )}
       </div>
 
-      {/* 7 Missões Prontas */}
-      <Card className="border-amber-500/20 bg-amber-500/5">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-amber-500" />
-              <CardTitle className="text-sm font-medium">7 Missões Prontas para Ativar</CardTitle>
-            </div>
-            <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-500 border-0">
-              Geradas pelo diagnóstico
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {READY_MISSIONS.map((mission, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 p-2.5 rounded-lg border border-amber-500/10 bg-background/60"
-            >
-              <div className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                <span className="text-[10px] font-bold text-amber-500">{i + 1}</span>
+      {missionSuggestions.length > 0 && (
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-sm font-medium">Ações para Transformar em Missões</CardTitle>
               </div>
-              <span className="text-sm flex-1">{mission.title}</span>
-              <span className={`text-[10px] font-medium ${
-                mission.difficulty === 'Fácil' ? 'text-emerald-500' :
-                mission.difficulty === 'Médio' ? 'text-amber-500' : 'text-red-500'
-              }`}>{mission.difficulty}</span>
-              <Badge variant="secondary" className="text-[9px]">+{mission.xp} pts</Badge>
-              <span className="text-[10px] text-emerald-500 font-medium">R$ {mission.bonus}</span>
+              <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-500 border-0">
+                Fonte: diagnóstico
+              </Badge>
             </div>
-          ))}
-          <div className="pt-2 text-center">
-            <p className="text-[11px] text-muted-foreground">
-              Total: <strong className="text-amber-500">{READY_MISSIONS.reduce((s, m) => s + m.xp, 0)} pts</strong> ·{' '}
-              <strong className="text-emerald-500">R$ {READY_MISSIONS.reduce((s, m) => s + m.bonus, 0).toLocaleString('pt-BR')} em bônus</strong> disponíveis
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {missionSuggestions.map((mission, i) => (
+              <div
+                key={mission.area}
+                className="flex items-center gap-3 p-2.5 rounded-lg border border-amber-500/10 bg-background/60"
+              >
+                <div className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                  <span className="text-[10px] font-bold text-amber-500">{i + 1}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{mission.title}</p>
+                  <p className="text-[11px] text-muted-foreground">{mission.description}</p>
+                </div>
+                <Badge variant="outline" className="text-[9px] shrink-0">
+                  {mission.areaLabel}: {mission.scorePct}%
+                </Badge>
+                <Badge variant="secondary" className="text-[9px] shrink-0">
+                  Impacto {mission.impact}
+                </Badge>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" className="mt-2 text-xs" render={<Link href="/objetivos/plano-acao" />}>
+              Criar missões no plano de ação <ArrowRight className="h-3 w-3 ml-1" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alerta de burnout */}
       <Card className="border-red-500/20 bg-red-500/5">

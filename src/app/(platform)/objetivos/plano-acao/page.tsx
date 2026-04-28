@@ -10,6 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 import {
   Sparkles,
@@ -275,26 +282,32 @@ export default function PlanoAcaoPage() {
           <CardContent className="py-3">
             <div className="flex items-center gap-2 flex-wrap">
               <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as MissionStatus | 'all')}
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none"
-              >
-                <option value="all">Todos os status</option>
+              <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as MissionStatus | 'all')}>
+                <SelectTrigger className="h-8 w-[160px] text-xs">
+                  <SelectValue>
+                    {(value) => value === 'all' ? 'Todos os status' : STATUS_CONFIG[value as MissionStatus]?.label}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
                 {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
+                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
                 ))}
-              </select>
-              <select
-                value={filterSeller}
-                onChange={(e) => setFilterSeller(e.target.value)}
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none"
-              >
-                <option value="all">Todos os vendedores</option>
+                </SelectContent>
+              </Select>
+              <Select value={filterSeller} onValueChange={(value) => value && setFilterSeller(value)}>
+                <SelectTrigger className="h-8 w-[190px] text-xs">
+                  <SelectValue>
+                    {(value) => value === 'all' ? 'Todos os vendedores' : sellers.find((s) => s.id === value)?.name}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os vendedores</SelectItem>
                 {sellers.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -331,15 +344,18 @@ export default function PlanoAcaoPage() {
                     Nenhum vendedor cadastrado
                   </div>
                 ) : (
-                  <select
-                    value={newMission.user_id}
-                    onChange={(e) => setNewMission((p) => ({ ...p, user_id: e.target.value }))}
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none"
-                  >
+                  <Select value={newMission.user_id} onValueChange={(value) => value && setNewMission((p) => ({ ...p, user_id: value }))}>
+                    <SelectTrigger className="h-9 w-full text-sm">
+                      <SelectValue>
+                        {(value) => sellers.find((s) => s.id === value)?.name}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
                     {sellers.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
-                  </select>
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>
@@ -356,27 +372,33 @@ export default function PlanoAcaoPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Área</Label>
-                <select
-                  value={newMission.area}
-                  onChange={(e) => setNewMission((p) => ({ ...p, area: e.target.value as MissionArea }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none"
-                >
+                <Select value={newMission.area} onValueChange={(value) => value && setNewMission((p) => ({ ...p, area: value as MissionArea }))}>
+                  <SelectTrigger className="h-9 w-full text-sm">
+                    <SelectValue>
+                      {(value) => AREA_CONFIG[value as MissionArea]?.label}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
                   {Object.entries(AREA_CONFIG).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
+                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
                   ))}
-                </select>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Dificuldade</Label>
-                <select
-                  value={newMission.difficulty}
-                  onChange={(e) => setNewMission((p) => ({ ...p, difficulty: Number(e.target.value) }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none"
-                >
-                  <option value={1}>Fácil</option>
-                  <option value={2}>Médio</option>
-                  <option value={3}>Difícil</option>
-                </select>
+                <Select value={String(newMission.difficulty)} onValueChange={(value) => value && setNewMission((p) => ({ ...p, difficulty: Number(value) }))}>
+                  <SelectTrigger className="h-9 w-full text-sm">
+                    <SelectValue>
+                      {(value) => DIFFICULTY_LABEL[Number(value)]}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Fácil</SelectItem>
+                    <SelectItem value="2">Médio</SelectItem>
+                    <SelectItem value="3">Difícil</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Recompensa XP</Label>

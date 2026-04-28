@@ -16,66 +16,62 @@ import {
 } from 'lucide-react'
 import type { BehavioralProfile } from '@/types'
 
-const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string[]; insight: string; collectiveImpact: string; mission: string; missionBonus: number }> = {
+const DISC_FEEDBACK: Record<string, { strengths: string[]; opportunities: string[]; insight: string; collectiveImpact: string; mission: string }> = {
   D: {
     strengths: [
-      'Sua taxa de fechamento em 1a reuniao e 78% — 18pp acima da media da equipe (60%)',
-      'Alta capacidade de superar objecoes: voce converte 3 de cada 4 objecoes, media da equipe e 2 de 4',
-      'Velocidade de resposta: seu tempo medio de follow-up e 2h, media da equipe e 6h',
+      'Tende a agir rápido, assumir responsabilidade e buscar resultado direto.',
+      'Costuma lidar bem com metas claras, pressão e negociação objetiva.',
+      'Pode ser uma boa referência para missões que exigem ritmo e tomada de decisão.',
     ],
     opportunities: [
-      'Ticket medio R$ 7.200 vs potencial de R$ 9.500 — perfil D tende a ir direto ao preco sem construir valor suficiente',
-      'Perguntas consultivas antes de apresentar solucao podem aumentar ticket em 15-20% (~R$ 1.100/venda)',
+      'Antes de apresentar preço, valide dor, impacto financeiro e critério de decisão.',
+      'Use perguntas consultivas para não acelerar uma venda sem construir valor suficiente.',
     ],
-    insight: 'A VAMO IA detectou que seu engajamento aumenta o resultado coletivo quando voce lidera desafios de time. Nas ultimas 3 missoes coletivas que voce participou, o time bateu a meta 2x mais rapido.',
-    collectiveImpact: 'Quando voce completa missoes, o engajamento medio da equipe sobe 12%. Voce e uma referencia de ritmo para o time.',
+    insight: 'Com base no perfil DISC, missões de fechamento, priorização e decisão tendem a gerar mais aderência para este perfil.',
+    collectiveImpact: 'Pode ajudar o time quando assume metas claras e compartilha critérios objetivos de avanço.',
     mission: 'Liderar desafio de time de fechamento',
-    missionBonus: 800,
   },
   I: {
     strengths: [
-      'Sua conversao em 1a reuniao e 78% — 18pp acima da media da equipe. Seu perfil I cria rapport rapidamente',
-      'Maior indice de indicacoes da equipe: 8 indicacoes/mes vs media de 3',
-      'NPS dos seus clientes: 92 vs media da equipe de 78',
+      'Tende a criar conexão com facilidade e manter conversas comerciais mais leves.',
+      'Costuma ter força em relacionamento, indicação e abertura de portas.',
+      'Pode contribuir em missões que dependem de rapport e influência positiva.',
     ],
     opportunities: [
-      'Ticket medio R$ 6.800 vs potencial de R$ 9.500 — perfil I tem alta capacidade para vendas consultivas de maior valor',
-      'Identificar oportunidades de upsell pode aumentar ticket em 15-20% (~R$ 1.300/venda)',
+      'Estruture próximos passos para não perder oportunidades por falta de follow-up.',
+      'Formalize critérios de compra depois de criar conexão com o cliente.',
     ],
-    insight: 'A VAMO IA detectou que seu engajamento sobe o engajamento medio coletivo quando voce esta ativo em missoes colaborativas. O time performa 15% melhor nos meses em que voce participa de desafios coletivos.',
-    collectiveImpact: 'Suas indicacoes geraram R$ 24.000 em pipeline para o time nos ultimos 60 dias. Voce e o maior conector da equipe.',
+    insight: 'Com base no perfil DISC, missões de indicação, relacionamento e reativação de clientes tendem a ter melhor encaixe.',
+    collectiveImpact: 'Pode fortalecer o time compartilhando abordagens, mensagens e boas práticas de conexão.',
     mission: 'Campanha de indicacoes com clientes ativos',
-    missionBonus: 500,
   },
   S: {
     strengths: [
-      'Maior taxa de retencao de clientes da equipe: 94% vs media de 82%',
-      'Consistencia no CRM: 95% atualizado vs media de 68% — dados sempre organizados',
-      'Maior LTV medio: R$ 18.500/cliente vs media de R$ 12.000',
+      'Tende a ser consistente, confiável e cuidadoso no relacionamento com clientes.',
+      'Costuma performar melhor em rotinas com clareza, previsibilidade e acompanhamento.',
+      'Pode sustentar missões de qualidade, retenção e cadência de relacionamento.',
     ],
     opportunities: [
-      'Metas de volume alto podem gerar estresse — prefira metas de qualidade que se alinham ao seu perfil S',
-      'Prospeccao ativa (frio) e o ponto de desenvolvimento — taxa de conversao em cold calls 12% vs 22% do time',
+      'Evite metas de volume sem contexto; combine cadência realista com critérios de qualidade.',
+      'Trabalhe scripts simples para prospecção ativa sem perder o estilo consultivo.',
     ],
-    insight: 'A VAMO IA sugere missoes de upsell em clientes existentes — area onde seu perfil S tem 3x mais chances de sucesso do que prospeccao fria.',
-    collectiveImpact: 'Sua retencao de clientes economiza R$ 8.000/mes para a empresa em custo de reposicao. Voce estabiliza a receita recorrente do time.',
+    insight: 'Com base no perfil DISC, missões com clientes ativos, retenção e expansão consultiva tendem a ter melhor encaixe.',
+    collectiveImpact: 'Pode estabilizar o time quando ajuda a manter processos, cadência e qualidade no atendimento.',
     mission: 'Upsell em base de clientes ativos',
-    missionBonus: 600,
   },
   C: {
     strengths: [
-      'Taxa de conversao em propostas tecnicas: 68% — a mais alta da equipe (media 45%)',
-      'Apresentacoes mais completas: taxa de aceite pos-proposta 72% vs 55% da media',
-      'Analise pre-reuniao: seus clientes reportam 90% de satisfacao com preparacao tecnica',
+      'Tende a se preparar bem, analisar detalhes e construir argumentos consistentes.',
+      'Costuma ter força em propostas, diagnóstico técnico e comparação de opções.',
+      'Pode contribuir em missões que exigem precisão, documentação e padrão de qualidade.',
     ],
     opportunities: [
-      'Ciclo de vendas 42 dias vs media de 28 — perfil C tende a analisar demais antes de avancar',
-      'Estabelecer criterios claros de quando avancar pode reduzir ciclo em 25-30% (10-12 dias)',
+      'Defina critérios objetivos para avançar sem alongar demais o ciclo comercial.',
+      'Use checklists para decidir quando a análise está suficiente para propor o próximo passo.',
     ],
-    insight: 'A VAMO IA detectou que voce fecha mais quando tem acesso a dados e comparativos. Suas conversoes sobem 35% quando voce usa estudos de caso.',
-    collectiveImpact: 'Suas propostas detalhadas elevam a qualidade media das propostas do time. Colegas que usam seus templates convertem 20% mais.',
+    insight: 'Com base no perfil DISC, missões de proposta, estudo de caso e melhoria de processo tendem a ter melhor encaixe.',
+    collectiveImpact: 'Pode elevar a qualidade do time quando transforma boas análises em templates e checklists reutilizáveis.',
     mission: 'Criar banco de estudos de caso',
-    missionBonus: 400,
   },
 }
 
@@ -169,6 +165,10 @@ export default function FeedbackIAPage() {
   }
 
   const feedback = DISC_FEEDBACK[discProfile.dominant_profile] ?? DISC_FEEDBACK['I']
+  const strengths = discProfile.selling_strengths?.length ? discProfile.selling_strengths : feedback.strengths
+  const opportunities = discProfile.development_areas?.length ? discProfile.development_areas : feedback.opportunities
+  const performanceInsight = discProfile.performance_insight || feedback.insight
+  const wellbeingInsight = discProfile.wellbeing_insight || feedback.collectiveImpact
   const scores: Record<string, number> = {
     D: discProfile.scores?.D ?? 0,
     I: discProfile.scores?.I ?? 0,
@@ -222,12 +222,12 @@ export default function FeedbackIAPage() {
       <Card className="border-emerald-500/20 bg-emerald-500/5">
         <CardHeader className="pb-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">
-            Pontos Fortes Confirmados pelos Dados
+            Pontos fortes do perfil
           </p>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2">
-            {feedback.strengths.map((s, i) => (
+            {strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
                 {s}
@@ -246,7 +246,7 @@ export default function FeedbackIAPage() {
         </CardHeader>
         <CardContent>
           <ul className="space-y-2">
-            {feedback.opportunities.map((o, i) => (
+            {opportunities.map((o, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
                 {o}
@@ -262,8 +262,8 @@ export default function FeedbackIAPage() {
           <div className="flex items-start gap-3">
             <Brain className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-semibold text-blue-600 mb-1">Insight Coletivo</p>
-              <p className="text-xs text-muted-foreground">{feedback.insight}</p>
+              <p className="text-xs font-semibold text-blue-600 mb-1">Insight de performance</p>
+              <p className="text-xs text-muted-foreground">{performanceInsight}</p>
             </div>
           </div>
         </CardContent>
@@ -277,8 +277,8 @@ export default function FeedbackIAPage() {
               <Brain className="h-5 w-5 text-violet-500" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-violet-600 mb-1">Seu Impacto no Time</p>
-              <p className="text-xs text-muted-foreground">{feedback.collectiveImpact}</p>
+              <p className="text-xs font-semibold text-violet-600 mb-1">Ritmo e bem-estar</p>
+              <p className="text-xs text-muted-foreground">{wellbeingInsight}</p>
             </div>
           </div>
         </CardContent>
@@ -294,11 +294,11 @@ export default function FeedbackIAPage() {
             <div className="flex-1">
               <p className="text-sm font-medium">Missao Sugerida</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {feedback.mission} — bonus estimado: <strong className="text-emerald-500">+R$ {feedback.missionBonus}</strong>
+                {feedback.mission}. A recompensa deve ser definida no plano de ação conforme meta, dificuldade e retorno esperado.
               </p>
-              <Button size="sm" className="h-7 text-xs mt-2 gap-1.5" render={<Link href="/performance/missoes" />}>
+              <Button size="sm" className="h-7 text-xs mt-2 gap-1.5" render={<Link href="/objetivos/plano-acao" />}>
                 <Sparkles className="h-3 w-3" />
-                Aceitar Missao
+                Criar Missão
               </Button>
             </div>
           </div>

@@ -194,6 +194,16 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  select {
+    color-scheme: light;
+  }
+
+  option,
+  optgroup {
+    background-color: white;
+    color: #111827;
+  }
+
   /* Scrollbar slim & branded */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }

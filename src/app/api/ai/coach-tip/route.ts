@@ -59,6 +59,15 @@ export async function POST() {
         .maybeSingle(),
     ])
 
+    if (!latestDiagnostic) {
+      return NextResponse.json({
+        tip: {
+          tip: 'Faça o diagnóstico comercial para receber recomendações reais de performance e retorno financeiro.',
+          category: 'estrategica',
+        },
+      })
+    }
+
     const prompt = buildCoachTipPrompt({
       userName: appUser.name.split(' ')[0],
       level: userXp?.current_level ?? 1,

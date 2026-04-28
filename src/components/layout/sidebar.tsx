@@ -110,7 +110,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
         {groups.map((group) => {
           const groupActive = isGroupActive(group, pathname)
-          const isCollapsed = collapsed[group.key] && !groupActive
+          const isCollapsed = collapsed[group.key]
 
           return (
             <div key={group.key} className="mb-1">
@@ -118,6 +118,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
               {/* Group Header */}
               <button
                 onClick={() => toggleGroup(group.key)}
+                aria-expanded={!isCollapsed}
                 className={cn(
                   'w-full flex items-center gap-2 px-2 py-1.5 mb-0.5 rounded-md',
                   'transition-colors duration-150 group',

@@ -19,15 +19,72 @@ import {
   BarChart3,
   CheckCircle2,
 } from 'lucide-react'
-import type { DiagnosticSession } from '@/types'
+import type { DiagnosticArea, DiagnosticSession } from '@/types'
 
 interface Bottleneck {
-  area: string
+  area: DiagnosticArea
   label: string
   severity: 'critical' | 'at_risk' | 'developing'
-  lossPerMonth: number
+  lossPerMonth: number | null
   description: string
   missionSuggestion: string
+  scorePct: number
+  sourceDate: string
+}
+
+const AREA_LABELS: Record<DiagnosticArea, string> = {
+  lead_generation: 'Geração de Leads',
+  sales_process: 'Processo de Vendas',
+  team_management: 'Gestão de Equipe',
+  tools_technology: 'Ferramentas e Tecnologia',
+}
+
+const MISSION_BY_AREA: Record<DiagnosticArea, string> = {
+  lead_generation: 'Criar missão: prospecção diária com leads qualificados e revisão semanal de qualidade',
+  sales_process: 'Criar missão: follow-up em até 24h para propostas abertas e medição de conversão',
+  team_management: 'Criar missão: check-in semanal de performance com cada vendedor',
+  tools_technology: 'Criar missão: CRM atualizado no mesmo dia para todas as oportunidades',
+}
+
+function parseMonthlyGoal(value: unknown): number | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.toLowerCase()
+  if (normalized.includes('abaixo') && normalized.includes('50')) return 50_000
+  if (normalized.includes('50') && normalized.includes('200')) return 125_000
+  if (normalized.includes('200') && normalized.includes('500')) return 350_000
+  if (normalized.includes('500') && normalized.includes('2m')) return 1_250_000
+  if (normalized.includes('2m')) return 2_000_000
+  return null
+}
+
+function buildBottlenecks(sessions: DiagnosticSession[]): Bottleneck[] {
+  const latest = sessions.find((session) => session.status === 'completed' && session.area_scores)
+  if (!latest) return []
+
+  const monthlyGoal = parseMonthlyGoal((latest.company_context as Record<string, unknown> | null)?.meta_mensal)
+
+  return (Object.entries(latest.area_scores ?? {}) as [DiagnosticArea, { pct: number }][])
+    .filter(([, score]) => typeof score?.pct === 'number')
+    .sort(([, a], [, b]) => a.pct - b.pct)
+    .slice(0, 3)
+    .map(([area, score]) => {
+      const scorePct = Math.round(score.pct)
+      const severity = scorePct < 35 ? 'critical' : scorePct < 60 ? 'at_risk' : 'developing'
+      const lossPerMonth = monthlyGoal
+        ? Math.round(monthlyGoal * ((100 - Number(latest.health_pct ?? 0)) / 100) * ((100 - scorePct) / 100) * 0.25)
+        : null
+
+      return {
+        area,
+        label: AREA_LABELS[area],
+        severity,
+        lossPerMonth,
+        scorePct,
+        sourceDate: latest.completed_at ?? latest.created_at,
+        description: `No diagnóstico de ${new Date(latest.completed_at ?? latest.created_at).toLocaleDateString('pt-BR')}, esta área ficou com ${scorePct}%. Isso indica prioridade de correção antes de criar novas metas agressivas.`,
+        missionSuggestion: MISSION_BY_AREA[area],
+      }
+    })
 }
 
 export default function AuditoriaComercialPage() {
@@ -35,34 +92,6 @@ export default function AuditoriaComercialPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [sessions, setSessions] = useState<DiagnosticSession[]>([])
-
-  // Simulated bottleneck data (from AI analysis in production)
-  const bottlenecks: Bottleneck[] = [
-    {
-      area: 'sales_process',
-      label: 'Processo de Vendas',
-      severity: 'critical',
-      lossPerMonth: 23400,
-      description: 'Taxa de conversão de proposta para negociação caiu 18% nos últimos 30 dias. Vendedores não estão seguindo o script de follow-up.',
-      missionSuggestion: 'Criar missão: "Follow-up em 24h" — cada vendedor deve retornar propostas abertas dentro de 24h',
-    },
-    {
-      area: 'lead_generation',
-      label: 'Geração de Leads',
-      severity: 'at_risk',
-      lossPerMonth: 12800,
-      description: 'Volume de leads qualificados reduziu 15%. Canal orgânico em queda desde a última semana.',
-      missionSuggestion: 'Criar missão: "Prospecção ativa" — 5 novos contatos qualificados por dia',
-    },
-    {
-      area: 'team_management',
-      label: 'Gestão de Equipe',
-      severity: 'developing',
-      lossPerMonth: 5200,
-      description: '2 vendedores com queda consistente de performance. Possível desmotivação ou sobrecarga.',
-      missionSuggestion: 'Criar missão: "Check-in semanal" — reunião individual de 15min com cada membro',
-    },
-  ]
 
   const severityConfig = {
     critical: { label: 'Crítico', color: 'bg-red-500', textColor: 'text-red-500', bgLight: 'bg-red-500/5 border-red-500/10' },
@@ -97,7 +126,8 @@ export default function AuditoriaComercialPage() {
     )
   }
 
-  const totalLoss = bottlenecks.reduce((sum, b) => sum + b.lossPerMonth, 0)
+  const bottlenecks = buildBottlenecks(sessions)
+  const totalLoss = bottlenecks.reduce((sum, b) => sum + (b.lossPerMonth ?? 0), 0)
 
   return (
     <div className="space-y-6">
@@ -122,12 +152,20 @@ export default function AuditoriaComercialPage() {
               <TrendingDown className="h-6 w-6 text-red-500" />
             </div>
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-red-500/70">Perda Estimada Total</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-red-500/70">
+                {totalLoss > 0 ? 'Perda Estimada Total' : 'Diagnóstico Necessário'}
+              </p>
               <p className="text-3xl font-bold text-red-500">
-                R$ {totalLoss.toLocaleString('pt-BR')}<span className="text-base font-normal">/mês</span>
+                {totalLoss > 0 ? (
+                  <>R$ {totalLoss.toLocaleString('pt-BR')}<span className="text-base font-normal">/mês</span></>
+                ) : (
+                  'Sem base real'
+                )}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {bottlenecks.length} gargalos identificados pela VAMO IA
+                {bottlenecks.length > 0
+                  ? `${bottlenecks.length} gargalos calculados a partir do último diagnóstico`
+                  : 'Faça o diagnóstico comercial para estimar gargalos e impacto financeiro'}
               </p>
             </div>
           </div>
@@ -137,6 +175,19 @@ export default function AuditoriaComercialPage() {
       {/* Bottlenecks */}
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground">Gargalos por Criticidade</h3>
+
+        {bottlenecks.length === 0 && (
+          <Card className="border-border/50">
+            <CardContent className="flex flex-col items-center py-8 text-center">
+              <FileSearch className="mb-2 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Nenhum diagnóstico concluído para auditar.</p>
+              <Button variant="outline" size="sm" className="mt-3 text-xs" render={<Link href="/diagnostico/novo" />}>
+                <Plus className="h-3 w-3 mr-1" />
+                Fazer diagnóstico
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {bottlenecks.map((bottleneck, i) => {
           const config = severityConfig[bottleneck.severity]
@@ -154,7 +205,9 @@ export default function AuditoriaComercialPage() {
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-3.5 w-3.5 text-red-500" />
                     <span className="text-sm font-bold text-red-500">
-                      -R$ {bottleneck.lossPerMonth.toLocaleString('pt-BR')}/mês
+                      {bottleneck.lossPerMonth
+                        ? `-R$ ${bottleneck.lossPerMonth.toLocaleString('pt-BR')}/mês`
+                        : `Score ${bottleneck.scorePct}%`}
                     </span>
                   </div>
                 </div>
@@ -166,7 +219,7 @@ export default function AuditoriaComercialPage() {
                     <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                     <p className="text-xs text-muted-foreground">{bottleneck.missionSuggestion}</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-xs h-7 shrink-0">
+                  <Button variant="ghost" size="sm" className="text-xs h-7 shrink-0" render={<Link href="/objetivos/plano-acao" />}>
                     <Plus className="h-3 w-3 mr-1" />
                     Criar Missão
                   </Button>

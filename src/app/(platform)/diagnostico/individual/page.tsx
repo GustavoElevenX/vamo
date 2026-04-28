@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
-  Users, AlertTriangle, ChevronDown, ChevronUp, Brain, TrendingUp,
+  Users, ChevronDown, ChevronUp, Brain, TrendingUp,
   ArrowLeft, Sparkles, Eye,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -19,7 +19,6 @@ interface CollaboratorData {
   user: User
   profile: BehavioralProfile | null
   status: 'pending' | 'in_progress' | 'completed'
-  hasBurnout: boolean
 }
 
 const STATUS_CONFIG = {
@@ -42,16 +41,6 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .join('')
     .toUpperCase()
-}
-
-// Simulated burnout detection (random but deterministic per user id)
-function simulateBurnout(userId: string): boolean {
-  let hash = 0
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash << 5) - hash + userId.charCodeAt(i)
-    hash |= 0
-  }
-  return Math.abs(hash) % 5 === 0 // ~20% chance
 }
 
 export default function DiagnosticoIndividualPage() {
@@ -104,15 +93,12 @@ export default function DiagnosticoIndividualPage() {
           let status: 'pending' | 'in_progress' | 'completed' = 'pending'
           if (profile) {
             status = 'completed'
-          } else if (simulateBurnout(seller.id + '_progress')) {
-            status = 'in_progress'
           }
 
           return {
             user: seller,
             profile,
             status,
-            hasBurnout: simulateBurnout(seller.id),
           }
         })
 
@@ -144,7 +130,6 @@ export default function DiagnosticoIndividualPage() {
   }
 
   const totalCompleted = collaborators.filter((c) => c.status === 'completed').length
-  const totalBurnout = collaborators.filter((c) => c.hasBurnout).length
 
   return (
     <div className="space-y-6">
@@ -164,7 +149,7 @@ export default function DiagnosticoIndividualPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-border/50">
           <CardContent className="pt-5">
             <div className="flex items-center gap-3">
@@ -199,23 +184,6 @@ export default function DiagnosticoIndividualPage() {
           </CardContent>
         </Card>
 
-        {totalBurnout > 0 && (
-          <Card className="border-red-500/30 bg-red-500/5">
-            <CardContent className="pt-5">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-red-500/80">
-                    Sinais de Burnout
-                  </p>
-                  <p className="text-2xl font-bold text-red-500">{totalBurnout}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Collaborator List */}
@@ -255,13 +223,6 @@ export default function DiagnosticoIndividualPage() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {collab.hasBurnout && (
-                      <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-500 border-red-500/30 gap-1">
-                        <AlertTriangle className="h-2.5 w-2.5" />
-                        Sinal de Burnout
-                      </Badge>
-                    )}
-
                     <Badge variant="outline" className={`text-[10px] ${statusConfig.className}`}>
                       {statusConfig.label}
                     </Badge>
@@ -322,7 +283,7 @@ export default function DiagnosticoIndividualPage() {
                                 <p className="text-[11px] font-medium text-primary mb-1">Insight da VAMO IA</p>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
                                   {collab.profile.performance_insight ||
-                                    `Perfil ${collab.profile.dominant_profile} alto vai direto ao preco sem construir valor. Explica baixa conversao em fechamento.`}
+                                    `Perfil ${collab.profile.dominant_profile} concluído. Use esse dado para calibrar comunicação, metas e missões sem presumir performance financeira ainda.`}
                                 </p>
                               </div>
                             </div>
@@ -365,26 +326,6 @@ export default function DiagnosticoIndividualPage() {
                           O colaborador precisa responder o questionario de perfil comportamental.
                         </p>
                       </div>
-                    )}
-
-                    {/* Burnout alert inside expanded */}
-                    {collab.hasBurnout && (
-                      <Card className="border-red-500/20 bg-red-500/5">
-                        <CardContent className="pt-3 pb-3">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-xs font-medium text-red-500">
-                                Alerta: Sinal de Burnout Detectado
-                              </p>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                Recomendamos uma conversa 1:1 antes de atribuir novas missoes de volume.
-                                Gamificacao sobre alguem sobrecarregado pode piorar o quadro.
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
                     )}
 
                     {/* Performance data placeholder */}

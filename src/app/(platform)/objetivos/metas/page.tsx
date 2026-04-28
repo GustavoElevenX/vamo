@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -27,6 +28,7 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
+import type { PerformanceInsight } from '@/lib/services/performance-insights.service'
 
 interface CompanyGoal {
   kpiFinanceiro: string
@@ -59,6 +61,7 @@ interface AiSuggestion {
   valorAtual: string
   valorMeta: string
   days: number
+  medicao: 'auto_crm' | 'manual'
 }
 
 const DISC_LABELS: Record<string, string> = {
@@ -81,6 +84,8 @@ export default function MetasPage() {
   })
   const [individualGoals, setIndividualGoals] = useState<IndividualGoal[]>([])
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null)
+  const [aiInsight, setAiInsight] = useState<PerformanceInsight | null>(null)
+  const [aiInsightLoading, setAiInsightLoading] = useState(true)
   const [aiAccepted, setAiAccepted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -89,14 +94,22 @@ export default function MetasPage() {
   const fetchData = useCallback(async () => {
     if (!user) return
     setLoading(true)
+    setAiInsightLoading(true)
     try {
       const [
         sellersRes,
+        aiInsightRes,
         { data: profiles },
         { data: savedGoals },
-        { data: diagAnalysis },
       ] = await Promise.all([
         fetch('/api/team/sellers', { credentials: 'same-origin' }).then((r) => r.json()),
+        fetch('/api/ai/performance-insights', { credentials: 'same-origin' })
+          .then(async (r) => {
+            const data = await r.json()
+            if (!r.ok) throw new Error(data.error || 'Erro ao carregar insight')
+            return data as { insight: PerformanceInsight }
+          })
+          .catch(() => ({ insight: null })),
         supabase
           .from('behavioral_profiles')
           .select('user_id, disc_type')
@@ -106,14 +119,10 @@ export default function MetasPage() {
           .select('*')
           .eq('organization_id', user.organization_id)
           .maybeSingle(),
-        supabase
-          .from('ai_analyses')
-          .select('health_pct, quadrant, area_scores')
-          .eq('organization_id', user.organization_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
       ])
+
+      const insight = aiInsightRes.insight
+      setAiInsight(insight)
 
       const sellers: { id: string; name: string }[] = sellersRes.sellers ?? []
 
@@ -165,35 +174,28 @@ export default function MetasPage() {
         })
       }
 
-      // Build AI suggestion from real diagnostic data
-      if (diagAnalysis && !savedGoals?.team_goal?.kpiComportamental) {
-        const scores = diagAnalysis.area_scores as Record<string, number> | null
-        if (scores) {
-          const weakestArea = Object.entries(scores).sort((a, b) => a[1] - b[1])[0]
-          const healthPct = diagAnalysis.health_pct ?? 0
-          const areaLabels: Record<string, string> = {
-            lead_generation: 'Geração de Leads',
-            sales_process: 'Taxa de Conversão',
-            team_management: 'Engajamento do Time',
-            tools_technology: 'Uso do CRM',
-          }
-          const areaLabel = weakestArea ? areaLabels[weakestArea[0]] ?? weakestArea[0] : 'Taxa de Conversão'
-          const currentPct = weakestArea ? Math.round(weakestArea[1]) : healthPct
-          const targetPct = Math.min(100, Math.round(currentPct * 1.2))
-          const quadrantLabel = diagAnalysis.quadrant === 'critical' ? 'crítico'
-            : diagAnalysis.quadrant === 'at_risk' ? 'em risco'
-            : diagAnalysis.quadrant === 'developing' ? 'em desenvolvimento' : 'otimizado'
+      // Build AI suggestion only from the audited performance insight API.
+      if (insight?.status === 'ready' && !savedGoals?.team_goal?.kpiComportamental) {
+        const recommendation = insight.kpiRecommendation
+        const currentPct = Math.round(insight.source.weakestAreaPct ?? insight.source.healthPct ?? 0)
+        const isPercent = recommendation?.unit === '%'
+        const target = recommendation
+          ? recommendation.monthlyTarget
+          : Math.min(100, Math.max(currentPct + 15, Math.round(currentPct * 1.2)))
 
-          setAiSuggestion({
-            text: `Diagnóstico indica saúde ${healthPct}% (${quadrantLabel}). A área mais fraca é ${areaLabel} com ${currentPct}%. Meta realista de ${targetPct}% em 30 dias mantém o time motivado com crescimento de ${targetPct - currentPct} pontos percentuais.`,
-            kpi: areaLabel,
-            valorAtual: `${currentPct}%`,
-            valorMeta: `${targetPct}%`,
-            days: 30,
-          })
-        }
+        setAiSuggestion({
+          text: insight.message,
+          kpi: recommendation?.name ?? insight.source.weakestArea ?? 'Performance comercial',
+          valorAtual: isPercent || !recommendation ? `${currentPct}%` : '',
+          valorMeta: isPercent ? `${target}%` : `${target}${recommendation?.unit ? ` ${recommendation.unit}` : ''}`,
+          days: Number(insight.source.healthPct ?? 0) < 50 ? 30 : 60,
+          medicao: recommendation?.source === 'manual' ? 'manual' : 'auto_crm',
+        })
+      } else {
+        setAiSuggestion(null)
       }
     } finally {
+      setAiInsightLoading(false)
       setLoading(false)
     }
   }, [user])
@@ -220,10 +222,10 @@ export default function MetasPage() {
       valorAtual: aiSuggestion.valorAtual,
       valorMeta: aiSuggestion.valorMeta,
       prazo: deadline,
-      medicao: 'auto_crm',
+      medicao: aiSuggestion.medicao,
     }))
     setAiAccepted(true)
-    toast.success('Sugestão da VAMO IA aplicada!')
+    toast.success('Sugestão aplicada com base no diagnóstico')
   }
 
   const handleSave = async () => {
@@ -404,23 +406,53 @@ export default function MetasPage() {
             </div>
           </div>
 
-          {/* AI Suggestion com dados reais */}
-          {aiSuggestion && (
+          {(aiInsightLoading || aiInsight || aiSuggestion) && (
             <div className={`rounded-lg border p-4 transition-all ${aiAccepted ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-violet-500/30 bg-violet-500/5'}`}>
               <div className="flex items-start gap-2">
-                <Sparkles className={`h-4 w-4 mt-0.5 shrink-0 ${aiAccepted ? 'text-emerald-500' : 'text-violet-500'}`} />
+                {aiInsight?.status === 'needs_diagnostic' ? (
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+                ) : (
+                  <Sparkles className={`h-4 w-4 mt-0.5 shrink-0 ${aiAccepted ? 'text-emerald-500' : 'text-violet-500'}`} />
+                )}
                 <div className="flex-1">
                   <p className="text-xs font-medium mb-1">
                     {aiAccepted ? (
                       <span className="flex items-center gap-1 text-emerald-500">
                         <CheckCircle className="h-3 w-3" /> Sugestão aplicada
                       </span>
+                    ) : aiInsight?.status === 'needs_diagnostic' ? (
+                      <span className="text-amber-500">Diagnóstico necessário para sugestão real</span>
                     ) : (
-                      <span className="text-violet-500">A VAMO IA sugere (com base no seu diagnóstico):</span>
+                      <span className="text-violet-500">Sugestão real baseada no diagnóstico</span>
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground">{aiSuggestion.text}</p>
-                  {!aiAccepted && (
+
+                  <p className="text-xs text-muted-foreground">
+                    {aiInsightLoading
+                      ? 'Analisando diagnóstico, KPIs e missões antes de sugerir uma meta.'
+                      : aiInsight?.status === 'needs_diagnostic'
+                        ? aiInsight.message
+                        : aiSuggestion?.text ?? aiInsight?.message}
+                  </p>
+
+                  {aiInsight?.source?.diagnosticId && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Badge variant="secondary" className="text-[10px] border-0">
+                        Fonte: diagnóstico {aiInsight.source.diagnosticDate ? new Date(aiInsight.source.diagnosticDate).toLocaleDateString('pt-BR') : ''}
+                      </Badge>
+                      <Badge variant="secondary" className="text-[10px] border-0">
+                        Gargalo: {aiInsight.source.weakestArea} ({Math.round(aiInsight.source.weakestAreaPct ?? 0)}%)
+                      </Badge>
+                    </div>
+                  )}
+
+                  {!aiInsightLoading && aiInsight?.status === 'needs_diagnostic' && (
+                    <Button size="sm" variant="outline" className="text-xs mt-3" render={<Link href="/diagnostico/novo" />}>
+                      Fazer diagnóstico
+                    </Button>
+                  )}
+
+                  {!aiAccepted && aiSuggestion && (
                     <div className="flex gap-2 mt-3">
                       <Button size="sm" className="text-xs bg-violet-500 hover:bg-violet-600 text-white" onClick={handleAcceptAiSuggestion}>
                         <CheckCircle className="h-3 w-3 mr-1" /> Aceitar

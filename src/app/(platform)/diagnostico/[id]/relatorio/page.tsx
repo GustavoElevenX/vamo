@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,8 @@ import { DIAGNOSTIC_AREAS, DIAGNOSTIC_QUADRANTS } from '@/lib/constants'
 import { AIAnalysisCard, AIActionsCard } from '@/components/ai/ai-analysis-card'
 import { AILoadingSkeleton } from '@/components/ai/loading-skeleton'
 import type { DiagnosticSession, DiagnosticArea, AIAnalysisResult } from '@/types'
+
+const DIAGNOSTIC_ANALYSIS_CACHE_TTL = 12 * 60 * 60 * 1000
 
 const MISSION_TEMPLATES: Record<DiagnosticArea, { title: string; description: string; impact: 'alto' | 'medio' | 'baixo' }> = {
   lead_generation: {
@@ -99,7 +102,17 @@ export default function RelatorioPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
 
-  const generateAnalysis = async (signal?: AbortSignal) => {
+  const generateAnalysis = async (signal?: AbortSignal, force = false) => {
+    const cacheKey = `diagnostic-analysis:${id}`
+    if (!force) {
+      const cached = getCached<AIAnalysisResult>(cacheKey)
+      if (cached) {
+        setAiAnalysis(cached)
+        setAiLoading(false)
+        return
+      }
+    }
+
     setAiLoading(true)
     setAiError(null)
     const controller = new AbortController()
@@ -117,6 +130,7 @@ export default function RelatorioPage() {
       }
       const data = await res.json()
       setAiAnalysis(data.analysis)
+      setCache(cacheKey, data.analysis, DIAGNOSTIC_ANALYSIS_CACHE_TTL)
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
         setAiError(error.message)

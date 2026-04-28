@@ -1,10 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Sparkles, RefreshCw, Loader2 } from 'lucide-react'
 import type { CoachTip } from '@/lib/ai/types'
+
+const COACH_TIP_TTL = 10 * 60 * 1000
 
 const categoryLabels: Record<string, string> = {
   motivacional: 'Motivacional',
@@ -21,11 +25,24 @@ const categoryColors: Record<string, string> = {
 }
 
 export function CoachWidget() {
-  const [tip, setTip] = useState<CoachTip | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user } = useRequiredAuth()
+  const cacheKey = user ? `coach-tip:${user.id}` : null
+  const initialTip = cacheKey ? getCached<CoachTip>(cacheKey) : null
+  const [tip, setTip] = useState<CoachTip | null>(initialTip)
+  const [loading, setLoading] = useState(!initialTip)
   const [refreshCount, setRefreshCount] = useState(0)
 
-  const fetchTip = async () => {
+  const fetchTip = async (force = false) => {
+    if (!cacheKey) return
+    if (!force) {
+      const cached = getCached<CoachTip>(cacheKey)
+      if (cached) {
+        setTip(cached)
+        setLoading(false)
+        return
+      }
+    }
+
     setLoading(true)
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 20_000)
@@ -34,6 +51,7 @@ export function CoachWidget() {
       if (res.ok) {
         const data = await res.json()
         setTip(data.tip)
+        setCache(cacheKey, data.tip, COACH_TIP_TTL)
       }
     } catch {
       // Silently fail - widget is non-critical
@@ -45,12 +63,12 @@ export function CoachWidget() {
 
   useEffect(() => {
     fetchTip()
-  }, [])
+  }, [cacheKey])
 
   const handleRefresh = () => {
     if (refreshCount >= 5) return // Rate limit
     setRefreshCount((c) => c + 1)
-    fetchTip()
+    fetchTip(true)
   }
 
   // Don't render if loading initially failed and no tip

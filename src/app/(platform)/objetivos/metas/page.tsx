@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
+import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -71,6 +72,8 @@ const DISC_LABELS: Record<string, string> = {
   C: 'C - Consciencioso',
 }
 
+const INSIGHT_CACHE_TTL = 60 * 1000
+
 export default function MetasPage() {
   const { user } = useRequiredAuth()
   const router = useRouter()
@@ -96,6 +99,8 @@ export default function MetasPage() {
     setLoading(true)
     setAiInsightLoading(true)
     try {
+      const insightCacheKey = `performance-insight:${user.organization_id}`
+      const cachedInsight = getCached<PerformanceInsight>(insightCacheKey)
       const [
         sellersRes,
         aiInsightRes,
@@ -103,13 +108,16 @@ export default function MetasPage() {
         { data: savedGoals },
       ] = await Promise.all([
         fetch('/api/team/sellers', { credentials: 'same-origin' }).then((r) => r.json()),
-        fetch('/api/ai/performance-insights', { credentials: 'same-origin' })
-          .then(async (r) => {
-            const data = await r.json()
-            if (!r.ok) throw new Error(data.error || 'Erro ao carregar insight')
-            return data as { insight: PerformanceInsight }
-          })
-          .catch(() => ({ insight: null })),
+        cachedInsight
+          ? Promise.resolve({ insight: cachedInsight })
+          : fetch('/api/ai/performance-insights', { credentials: 'same-origin' })
+              .then(async (r) => {
+                const data = await r.json()
+                if (!r.ok) throw new Error(data.error || 'Erro ao carregar insight')
+                setCache(insightCacheKey, data.insight, INSIGHT_CACHE_TTL)
+                return data as { insight: PerformanceInsight }
+              })
+              .catch(() => ({ insight: null })),
         supabase
           .from('behavioral_profiles')
           .select('user_id, disc_type')

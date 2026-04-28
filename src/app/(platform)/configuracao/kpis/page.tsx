@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { clearCache, getCached, setCache } from '@/lib/cache'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -50,6 +51,7 @@ interface KPI {
 }
 
 const MAX_KPIS = 5
+const INSIGHT_CACHE_TTL = 60 * 1000
 
 function getKpiStatus(kpi: KPI): 'verde' | 'amarelo' | 'vermelho' {
   if (kpi.target === 0) return 'amarelo'
@@ -116,14 +118,25 @@ export default function KpisPage() {
     }
   }, [user])
 
-  const fetchAiInsight = useCallback(async () => {
+  const fetchAiInsight = useCallback(async (force = false) => {
     if (!user) return
+    const cacheKey = `performance-insight:${user.organization_id}`
+    if (!force) {
+      const cached = getCached<PerformanceInsight>(cacheKey)
+      if (cached) {
+        setAiInsight(cached)
+        setAiInsightLoading(false)
+        return
+      }
+    }
+
     setAiInsightLoading(true)
     try {
       const res = await fetch('/api/ai/performance-insights', { credentials: 'same-origin' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao carregar sugestão')
       setAiInsight(data.insight)
+      setCache(cacheKey, data.insight, INSIGHT_CACHE_TTL)
     } catch {
       setAiInsight({
         status: 'needs_diagnostic',
@@ -166,8 +179,9 @@ export default function KpisPage() {
       setNewKpi({ name: '', source: 'manual', target: '', unit: '' })
       setDialogOpen(false)
       toast.success(successMessage)
+      clearCache(`performance-insight:${user.organization_id}`)
       await fetchKpis()
-      await fetchAiInsight()
+      await fetchAiInsight(true)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao adicionar KPI')
     } finally {
@@ -212,7 +226,8 @@ export default function KpisPage() {
       if (!res.ok) throw new Error(data.error || 'Erro ao remover KPI')
       setKpis((prev) => prev.filter((k) => k.id !== id))
       toast.success('KPI removido')
-      await fetchAiInsight()
+      clearCache(`performance-insight:${user.organization_id}`)
+      await fetchAiInsight(true)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao remover KPI')
     } finally {
@@ -248,7 +263,8 @@ export default function KpisPage() {
         )
       )
       toast.success('Configurações salvas')
-      await fetchAiInsight()
+      clearCache(`performance-insight:${user.organization_id}`)
+      await fetchAiInsight(true)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erro ao salvar')
     } finally {

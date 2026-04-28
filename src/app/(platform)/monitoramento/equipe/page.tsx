@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   Trophy,
@@ -89,12 +90,11 @@ export default function MonitoramentoEquipePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Performance da Equipe</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Ranking e desempenho individual dos vendedores
-        </p>
-      </div>
+      <PageHeader
+        label="Monitoramento"
+        title={<>Performance da <TitleHighlight>Equipe</TitleHighlight></>}
+        description="Ranking e desempenho individual dos vendedores em tempo real"
+      />
 
       {/* Meta da Equipe */}
       {teamGoal && (teamGoal.kpiComportamental || teamGoal.valorMeta) && (

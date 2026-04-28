@@ -1,9 +1,8 @@
 'use client'
 
-import { Menu, LogOut, User as UserIcon, ChevronDown, Zap } from 'lucide-react'
+import { Menu, LogOut, User as UserIcon, ChevronDown, Zap, Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +31,14 @@ const rolePillClasses: Record<string, string> = {
   seller:  'bg-primary/10 text-primary',
 }
 
+function getGreeting(name: string): string {
+  const hour = new Date().getHours()
+  const firstName = name.split(' ')[0]
+  if (hour < 12) return `Bom dia, ${firstName}`
+  if (hour < 18) return `Boa tarde, ${firstName}`
+  return `Boa noite, ${firstName}`
+}
+
 export function Topbar({ user, userXp, currentLevel, nextLevel, onMenuToggle, onSignOut }: TopbarProps) {
   const initials = user.name
     .split(' ')
@@ -41,7 +48,7 @@ export function Topbar({ user, userXp, currentLevel, nextLevel, onMenuToggle, on
     .slice(0, 2)
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center justify-between bg-background/95 backdrop-blur-md px-4 gap-4 topbar-border">
+    <header className="glass-topbar sticky top-0 z-40 flex items-center justify-between px-4 gap-4 topbar-border" style={{ height: 60 }}>
 
       {/* ── Left ── */}
       <div className="flex items-center gap-3 min-w-0">
@@ -54,19 +61,37 @@ export function Topbar({ user, userXp, currentLevel, nextLevel, onMenuToggle, on
           <Menu className="h-4 w-4" />
         </Button>
 
-        {/* XP Pill */}
+        {/* Saudação */}
+        <p className="hidden md:block text-[14px] font-semibold text-foreground/80 truncate">
+          {getGreeting(user.name)}
+        </p>
+
+        {/* Pills de status */}
         {userXp && user.role !== 'admin' && (
-          <div className="hidden sm:flex items-center gap-2.5 animate-fade-in">
-            {/* Level badge */}
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-primary/8 dark:bg-primary/10 border border-primary/15 dark:border-primary/20">
+          <div className="hidden sm:flex items-center gap-2 animate-fade-in">
+            {/* Streak pill (amber) */}
+            {userXp.current_streak > 0 && (
+              <div className="streak-pill">
+                <Flame className="h-3 w-3" />
+                {userXp.current_streak}d
+              </div>
+            )}
+
+            {/* Level pill (green) */}
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full border"
+              style={{
+                background: 'oklch(0.45 0.18 145 / 0.1)',
+                borderColor: 'oklch(0.45 0.18 145 / 0.2)',
+              }}
+            >
               <Zap className="h-3 w-3 text-primary" />
               <span className="text-[11px] font-bold text-primary tabular-nums">
-                Nível {userXp.current_level}
+                Nv. {userXp.current_level}
               </span>
             </div>
 
             {/* XP Bar */}
-            <div className="w-32">
+            <div className="hidden lg:block w-28">
               <XpBar
                 currentXp={userXp.total_xp}
                 currentLevelXp={currentLevel?.xp_required ?? 0}

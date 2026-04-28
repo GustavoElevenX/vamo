@@ -90,13 +90,16 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
     <div className="flex flex-col h-full bg-sidebar">
 
       {/* ── Logo ── */}
-      <div className="px-4 py-4 border-b border-sidebar-border/60">
+      <div className="px-4 py-4 border-b border-sidebar-border/40">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg overflow-hidden flex-shrink-0">
             <img src="/logo.png" alt="Logo" className="h-8 w-8 object-cover" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground/60 leading-none truncate">
+            <p className="text-[13px] font-black tracking-tight text-sidebar-foreground leading-none">
+              VAMO
+            </p>
+            <p className="text-[10px] text-sidebar-foreground/40 leading-none mt-0.5 truncate font-medium uppercase tracking-wider">
               {ROLE_LABELS[role]}{userName ? ` · ${userName}` : ''}
             </p>
           </div>
@@ -217,9 +220,12 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
 
       {/* ── Footer ── */}
       <div className="px-4 py-3 border-t border-sidebar-border/40">
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-pulse" />
-          <p className="text-[10px] text-muted-foreground/40 font-medium">VAMO v1.0</p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <p className="text-[10px] text-sidebar-foreground/35 font-semibold tracking-wide uppercase">Online</p>
+          </div>
+          <p className="text-[9px] text-sidebar-foreground/20 font-medium">v1.0</p>
         </div>
       </div>
     </div>

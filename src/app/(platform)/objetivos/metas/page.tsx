@@ -26,6 +26,7 @@ import {
   Zap,
   DollarSign,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
 interface CompanyGoal {
   kpiFinanceiro: string
@@ -266,21 +267,17 @@ export default function MetasPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.push('/objetivos')} className="px-2">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <h2 className="text-xl font-semibold tracking-tight">Definir Metas</h2>
-            <Badge variant="secondary" className="text-[10px] bg-violet-500/10 text-violet-500 border-0">
-              Etapa 2
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1 ml-10">
-            Alinhe metas da empresa, do time e individuais
-          </p>
-        </div>
+      <div className="flex items-start gap-3">
+        <Button variant="ghost" size="sm" onClick={() => router.push('/objetivos')} className="px-2 mt-1 shrink-0">
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <PageHeader
+          label="Objetivos · Etapa 2"
+          labelIcon={<Target className="h-3 w-3" />}
+          title={<>Definir <TitleHighlight>Metas</TitleHighlight></>}
+          description="Alinhe metas da empresa, do time e individuais com base no diagnóstico DISC"
+          className="flex-1"
+        />
       </div>
 
       {/* Aviso sem vendedores */}

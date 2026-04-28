@@ -15,6 +15,7 @@ import {
   Sparkles,
   RefreshCw,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
 type AlertSeverity = 'critical' | 'warning' | 'opportunity' | 'positive'
 
@@ -203,50 +204,39 @@ export default function AlertasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-            Alertas da VAMO IA
+      <PageHeader
+        label="Monitoramento · IA"
+        title={<>Alertas <TitleHighlight>VAMO IA</TitleHighlight></>}
+        description="Insights proativos gerados a partir de dados reais da sua equipe"
+        actions={
+          <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <Badge className="bg-red-500 text-white text-[10px] h-5 min-w-5 flex items-center justify-center">
-                {unreadCount}
-              </Badge>
+              <Button variant="outline" size="sm" className="text-xs" onClick={markAllRead}>
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                Marcar todos lidos
+              </Button>
             )}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Insights gerados a partir de dados reais da sua equipe
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <Button variant="outline" size="sm" className="text-xs" onClick={markAllRead}>
-              <Eye className="h-3.5 w-3.5 mr-1" />
-              Marcar todos lidos
+            <Button
+              size="sm"
+              className="text-xs"
+              onClick={generateAlerts}
+              disabled={generating}
+            >
+              {generating ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Atualizar alertas
+                </>
+              )}
             </Button>
-          )}
-          <Button
-            size="sm"
-            className="text-xs"
-            onClick={generateAlerts}
-            disabled={generating}
-          >
-            {generating ? (
-              <>
-                <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
-                Gerando...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-3.5 w-3.5 mr-1" />
-                Atualizar alertas
-              </>
-            )}
-          </Button>
-          <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-            <Brain className="h-5 w-5 text-violet-500" />
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {error && (
         <Card className="border-red-500/30 bg-red-500/5">

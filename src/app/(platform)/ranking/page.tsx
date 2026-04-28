@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, Medal, Award, Zap } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
 type Period = 'daily' | 'weekly' | 'monthly'
 
@@ -49,10 +50,12 @@ export default function RankingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Ranking</h2>
-        <p className="text-muted-foreground">Classificação da equipe por pts no período</p>
-      </div>
+      <PageHeader
+        label="Gamificação"
+        labelIcon={<Trophy className="h-3 w-3" />}
+        title={<><TitleHighlight>Ranking</TitleHighlight> da Equipe</>}
+        description="Classificação por pontos de XP no período selecionado"
+      />
 
       <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
         <TabsList>

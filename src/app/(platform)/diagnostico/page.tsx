@@ -8,7 +8,8 @@ import { getCached, setCache } from '@/lib/cache'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Eye } from 'lucide-react'
+import { Plus, Eye, BarChart3 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { DIAGNOSTIC_QUADRANTS } from '@/lib/constants'
 import type { DiagnosticSession } from '@/types'
 
@@ -53,18 +54,20 @@ export default function DiagnosticoPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Diagnósticos</h2>
-          <p className="text-muted-foreground">Auditorias de performance comercial</p>
-        </div>
-        {(user.role === 'admin' || user.role === 'manager') && (
-          <Button render={<Link href="/diagnostico/novo" />}>
+      <PageHeader
+        label="Diagnóstico"
+        labelIcon={<BarChart3 className="h-3 w-3" />}
+        title={<><TitleHighlight>Diagnósticos</TitleHighlight> DISC</>}
+        description="Auditorias de performance comercial e perfil comportamental"
+        actions={
+          (user.role === 'admin' || user.role === 'manager') ? (
+            <Button render={<Link href="/diagnostico/novo" />}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Diagnóstico
-</Button>
-        )}
-      </div>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-12">

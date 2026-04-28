@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
-import { Inter, Geist_Mono } from 'next/font/google'
+import { DM_Sans, Geist_Mono } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import './globals.css'
 
-const inter = Inter({
+const dmSans = DM_Sans({
   variable: '--font-sans',
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
 })
 
 const geistMono = Geist_Mono({
@@ -26,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${dmSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

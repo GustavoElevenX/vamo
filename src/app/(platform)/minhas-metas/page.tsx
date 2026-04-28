@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -242,17 +243,12 @@ export default function MinhasMetasPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Target className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Minhas Metas</h2>
-            <p className="text-sm text-muted-foreground">Metas e missões do programa</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        label="Performance"
+        labelIcon={<Target className="h-3 w-3" />}
+        title={<>Minhas <TitleHighlight>Metas</TitleHighlight></>}
+        description="Metas e missões do programa definidas pelo seu gestor"
+      />
 
       {!hasAnyContent ? (
         <Card className="border-border/50">

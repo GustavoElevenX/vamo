@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Clock,
   BarChart3,
-  Download,
   Users,
   RefreshCw,
   Info,
@@ -19,6 +18,7 @@ import {
   Calculator,
   Zap,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { cn } from '@/lib/utils'
 
 interface RoiData {
@@ -154,29 +154,24 @@ export default function ROIPage() {
     <div className="space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold tracking-tight">ROI da Plataforma</h2>
-            <Badge className="text-[10px] h-5 px-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0">
-              {roi.period_label}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Baseado em dados reais · Atualizado {updatedAt}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={fetchRoi}>
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Atualizar
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowMethodology(v => !v)}>
-            <Info className="h-3.5 w-3.5 mr-1.5" />
-            {showMethodology ? 'Ocultar' : 'Como é calculado'}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        label="Monitoramento"
+        labelIcon={<DollarSign className="h-3 w-3" />}
+        title={<>ROI da <TitleHighlight>Plataforma</TitleHighlight></>}
+        description={`Baseado em dados reais · ${roi.period_label} · Atualizado ${updatedAt}`}
+        actions={
+          <>
+            <Button variant="ghost" size="sm" onClick={fetchRoi}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Atualizar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowMethodology(v => !v)}>
+              <Info className="h-3.5 w-3.5 mr-1.5" />
+              {showMethodology ? 'Ocultar' : 'Como é calculado'}
+            </Button>
+          </>
+        }
+      />
 
       {/* Hero ROI */}
       <Card className={cn(

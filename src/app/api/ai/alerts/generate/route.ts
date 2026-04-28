@@ -59,7 +59,7 @@ export async function POST() {
       supabase.from('kpi_definitions').select('id, name, unit, targets').eq('organization_id', orgId).eq('active', true),
       supabase.from('kpi_entries').select('user_id, kpi_id, value, points_earned, recorded_at').eq('organization_id', orgId).gte('recorded_at', twoWeeksAgo),
       supabase.from('ai_missions').select('user_id, status, created_at, completed_at').eq('organization_id', orgId).gte('created_at', `${twoWeeksAgo}T00:00:00`),
-      supabase.from('daily_checkins').select('user_id, energy_level, checkin_date').eq('organization_id', orgId).gte('checkin_date', weekAgo),
+      adminClient.from('daily_checkins').select('user_id, energy_level, checkin_date').eq('organization_id', orgId).gte('checkin_date', weekAgo),
       supabase.from('challenges').select('id, title, end_date, active').eq('organization_id', orgId).eq('active', true),
     ])
 
@@ -71,8 +71,10 @@ export async function POST() {
       const sellerMissions = missions?.filter((m: { user_id: string }) => m.user_id === s.id) || []
       const activeMissions = sellerMissions.filter((m: { status: string }) => m.status === 'pending' || m.status === 'in_progress').length
       const completedMissions = sellerMissions.filter((m: { status: string }) => m.status === 'completed').length
-      const sellerCheckins = checkins?.filter((c: { user_id: string }) => c.user_id === s.id) || []
+      const sellerCheckins = checkins?.filter((c: { user_id: string; checkin_date: string }) => c.user_id === s.id) || []
       const avgEnergy = sellerCheckins.length > 0 ? sellerCheckins.reduce((sum: number, c: { energy_level: number }) => sum + c.energy_level, 0) / sellerCheckins.length : null
+      const todayCheckin = sellerCheckins.find((c: { checkin_date: string }) => c.checkin_date === today.toISOString().split('T')[0])
+      const todayEnergy: number | null = todayCheckin ? (todayCheckin as { energy_level: number }).energy_level : null
       const sellerKpis = kpiEntries?.filter((e: { user_id: string }) => e.user_id === s.id) || []
 
       return {
@@ -86,6 +88,7 @@ export async function POST() {
         active_missions: activeMissions,
         completed_missions_14d: completedMissions,
         avg_energy_7d: avgEnergy,
+        today_energy: todayEnergy,
         kpi_entries_14d: sellerKpis.length,
       }
     })
@@ -118,6 +121,8 @@ REGRAS DE ANÁLISE:
 - KPI com tendência negativa (trend_pct < -10%) → severity: warning, type: performance, quick_action: "review_kpi"
 - Vendedor com streak 5+ dias → severity: positive, type: milestone, quick_action: "award_xp"
 - Vendedor com streak recorde (longest_streak >= 10) → severity: positive, type: milestone, quick_action: null
+- Vendedor com today_energy = 1 (energia crítica hoje no check-in) → severity: critical, type: engagement, quick_action: "contact"
+- Vendedor com today_energy = 2 (energia baixa hoje no check-in) → severity: warning, type: engagement, quick_action: "contact"
 - Média de energia (avg_energy_7d) < 2.5 → severity: warning, type: engagement, quick_action: "contact"
 - KPI com tendência positiva forte (trend_pct > 20%) → severity: opportunity, type: opportunity, quick_action: null
 - Equipe sem missões ativas (total_missions < sellers) → severity: warning, type: engagement, quick_action: "chat"

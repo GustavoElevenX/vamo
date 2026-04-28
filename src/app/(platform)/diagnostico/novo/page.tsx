@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
   Building2, Users, Target, Sparkles, ChevronRight, ChevronLeft,
-  CheckCircle2, Brain, BarChart3, Zap,
+  CheckCircle2, Brain, BarChart3, Zap, Check, X,
 } from 'lucide-react'
 import { DIAGNOSTIC_AREAS } from '@/lib/constants'
 import type { DiagnosticArea } from '@/types'
@@ -59,6 +59,7 @@ export default function NovoDiagnosticoPage() {
 
   const [step, setStep] = useState<Step>('fonte')
   const [fonte, setFonte] = useState<'equipe' | 'vendedor' | 'eu'>('equipe')
+  const [organizationName, setOrganizationName] = useState('')
   const [ctx, setCtx] = useState<CompanyContext>({
     respondent_name: '',
     segmento: '',
@@ -82,6 +83,41 @@ export default function NovoDiagnosticoPage() {
   const [saving, setSaving] = useState(false)
   const [savingTimeout, setSavingTimeout] = useState(false)
 
+  useEffect(() => {
+    if (!user?.organization_id) return
+    let cancelled = false
+
+    const loadOrganizationName = async () => {
+      const { data } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', user.organization_id)
+        .maybeSingle()
+
+      const name = data?.name?.trim() || user.name || 'Empresa'
+      if (cancelled) return
+      setOrganizationName(name)
+      setCtx((prev) => ({
+        ...prev,
+        respondent_name: prev.respondent_name.trim() || name,
+      }))
+    }
+
+    loadOrganizationName().catch(() => {
+      if (cancelled) return
+      const fallbackName = user.name || 'Empresa'
+      setOrganizationName(fallbackName)
+      setCtx((prev) => ({
+        ...prev,
+        respondent_name: prev.respondent_name.trim() || fallbackName,
+      }))
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.organization_id, user?.name])
+
 
   const setField = (field: keyof CompanyContext, value: any) =>
     setCtx((prev) => ({ ...prev, [field]: value }))
@@ -95,7 +131,6 @@ export default function NovoDiagnosticoPage() {
     }))
 
   const canSubmitEmpresa =
-    ctx.respondent_name.trim() &&
     ctx.segmento &&
     ctx.num_funcionarios &&
     ctx.num_vendedores &&
@@ -109,13 +144,17 @@ export default function NovoDiagnosticoPage() {
   const handleGerarPerguntas = async () => {
     setStep('gerando')
     setError('')
+    const companyContext = {
+      ...ctx,
+      respondent_name: ctx.respondent_name || organizationName || user?.name || 'Empresa',
+    }
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 90_000)
     try {
       const res = await fetch('/api/ai/generate-diagnostic-questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyContext: ctx }),
+        body: JSON.stringify({ companyContext }),
         signal: controller.signal,
       })
       const data = await res.json()
@@ -190,13 +229,16 @@ export default function NovoDiagnosticoPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          respondent_name: ctx.respondent_name,
+          respondent_name: ctx.respondent_name || organizationName || user.name,
           total_score: totalScore,
           max_score: maxScore,
           health_pct: healthPct,
           quadrant,
           area_scores: areaScores,
-          company_context: ctx,
+          company_context: {
+            ...ctx,
+            respondent_name: ctx.respondent_name || organizationName || user.name,
+          },
           ai_qa: { questions, answers },
         }),
       }).then(async (res) => {
@@ -248,7 +290,7 @@ export default function NovoDiagnosticoPage() {
         <Progress value={progress} className="h-1.5" />
         <div className="flex justify-between text-[10px] text-muted-foreground">
           <span className={step === 'fonte' ? 'text-primary font-medium' : ''}>Fonte</span>
-          <span className={step === 'empresa' ? 'text-primary font-medium' : ''}>Empresa</span>
+          <span className={step === 'empresa' ? 'text-primary font-medium' : ''}>Contexto</span>
           <span className={step === 'gerando' || step === 'questionario' ? 'text-primary font-medium' : ''}>Questionário VAMO IA</span>
           <span className={step === 'finalizando' ? 'text-primary font-medium' : ''}>Resultado</span>
         </div>
@@ -315,14 +357,14 @@ export default function NovoDiagnosticoPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Nome / empresa */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Nome da empresa ou respondente *</Label>
-              <Input
-                value={ctx.respondent_name}
-                onChange={(e) => setField('respondent_name', e.target.value)}
-                placeholder="Ex: Empresa XYZ / João Silva"
-                className="h-8 text-sm"
-              />
+            <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Building2 className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Empresa detectada</p>
+                <p className="truncate text-sm font-semibold">{organizationName || ctx.respondent_name || 'Carregando...'}</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -512,16 +554,39 @@ export default function NovoDiagnosticoPage() {
             </div>
 
             {/* Tem gestor */}
-            <div className="flex items-center justify-between rounded-lg border border-border/40 p-3">
-              <div>
+            <div className="flex flex-col gap-3 rounded-lg border border-border/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-sm font-medium">Gestor comercial dedicado</p>
                 <p className="text-xs text-muted-foreground">Existe um gestor focado exclusivamente na equipe de vendas</p>
               </div>
               <button
+                type="button"
+                role="switch"
+                aria-checked={ctx.tem_gestor}
+                aria-label="Gestor comercial dedicado"
                 onClick={() => setField('tem_gestor', !ctx.tem_gestor)}
-                className={`relative shrink-0 h-5 w-9 rounded-full transition-colors ${ctx.tem_gestor ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                className={`inline-flex h-9 w-full shrink-0 items-center rounded-lg border p-1 transition-colors sm:w-[104px] ${
+                  ctx.tem_gestor
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-border bg-muted/40 text-muted-foreground'
+                }`}
               >
-                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${ctx.tem_gestor ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                <span
+                  className={`flex h-7 w-1/2 items-center justify-center rounded-md text-xs font-semibold transition-all ${
+                    ctx.tem_gestor ? 'bg-primary text-primary-foreground shadow-sm' : ''
+                  }`}
+                >
+                  <Check className="mr-1 h-3 w-3" />
+                  Sim
+                </span>
+                <span
+                  className={`flex h-7 w-1/2 items-center justify-center rounded-md text-xs font-semibold transition-all ${
+                    !ctx.tem_gestor ? 'bg-background text-foreground shadow-sm' : ''
+                  }`}
+                >
+                  <X className="mr-1 h-3 w-3" />
+                  Não
+                </span>
               </button>
             </div>
 

@@ -96,7 +96,7 @@
   --chart-5: oklch(0.69 0.17 290);   /* purple */
 
   /* Sidebar — cinza neutro */
-  --sidebar: oklch(0.97 0 0);
+  --sidebar: oklch(0.97 0.003 145);
   --sidebar-foreground: oklch(0.20 0 0);
   --sidebar-primary: oklch(0.45 0.18 145);
   --sidebar-primary-foreground: oklch(1 0 0);
@@ -104,6 +104,13 @@
   --sidebar-accent-foreground: oklch(0.25 0 0);
   --sidebar-border: oklch(0.89 0 0);
   --sidebar-ring: oklch(0.45 0.18 145);
+
+  /* Semantic support colors */
+  --amber:  oklch(0.77 0.19 70);
+  --rose:   oklch(0.65 0.24 16);
+  --blue:   oklch(0.70 0.17 215);
+  --violet: oklch(0.69 0.17 290);
+  --orange: oklch(0.75 0.18 45);
 
   /* Extra surfaces */
   --surface-raised: oklch(0.97 0.003 145);
@@ -152,15 +159,22 @@
   --chart-4: oklch(0.65 0.24 16);
   --chart-5: oklch(0.69 0.17 290);
 
-  /* Sidebar dark — cinza escuro neutro */
-  --sidebar: oklch(0.085 0 0);
+  /* Sidebar dark — cinza escuro (0.17, não preto puro) */
+  --sidebar: oklch(0.17 0 0);
   --sidebar-foreground: oklch(0.97 0 0);
   --sidebar-primary: oklch(0.87 0.29 145);
   --sidebar-primary-foreground: oklch(0.05 0 0);
-  --sidebar-accent: oklch(0.14 0 0);
+  --sidebar-accent: oklch(0.22 0 0);
   --sidebar-accent-foreground: oklch(0.87 0.29 145);
-  --sidebar-border: oklch(1 0 0 / 6%);
+  --sidebar-border: oklch(1 0 0 / 7%);
   --sidebar-ring: oklch(0.87 0.29 145);
+
+  /* Semantic support colors (dark) */
+  --amber:  oklch(0.77 0.19 70);
+  --rose:   oklch(0.65 0.24 16);
+  --blue:   oklch(0.70 0.17 215);
+  --violet: oklch(0.69 0.17 290);
+  --orange: oklch(0.75 0.18 45);
 
   /* Extra surfaces — camadas de elevação */
   --surface-raised: oklch(0.13 0.004 145);
@@ -278,6 +292,13 @@
   .stagger-6  { animation-delay: 300ms; }
   .stagger-7  { animation-delay: 350ms; }
   .stagger-8  { animation-delay: 400ms; }
+
+  /* Design System aliases (fade-up = fade-in-up) */
+  .fade-up { animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .s1 { animation-delay: 60ms; }
+  .s2 { animation-delay: 120ms; }
+  .s3 { animation-delay: 180ms; }
+  .s4 { animation-delay: 240ms; }
 
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
@@ -897,16 +918,40 @@
 
   /* === Floating sidebar panel — cinza neutro === */
   .glass-sidebar {
-    background: oklch(0.97 0 0 / 0.85);
+    background: oklch(0.97 0.003 145 / 0.92);
     backdrop-filter: blur(20px) saturate(120%);
     -webkit-backdrop-filter: blur(20px) saturate(120%);
     border-right: 1px solid oklch(0.88 0 0 / 0.8);
   }
   .dark .glass-sidebar {
-    background: oklch(0.085 0 0 / 0.82);
+    background: oklch(0.17 0 0 / 0.95);
     backdrop-filter: blur(20px) saturate(120%);
     -webkit-backdrop-filter: blur(20px) saturate(120%);
-    border-right: 1px solid oklch(1 0 0 / 0.055);
+    border-right: 1px solid oklch(1 0 0 / 0.07);
+  }
+
+  /* === Shadcn Card → glass effect automático === */
+  [data-slot="card"] {
+    border-radius: 20px;
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  [data-slot="card"]:hover {
+    transform: translateY(-2px);
+    border-color: oklch(0.45 0.18 145 / 0.25);
+    box-shadow: 0 12px 40px -8px oklch(0.45 0.18 145 / 0.12);
+  }
+  .dark [data-slot="card"] {
+    background: oklch(0.115 0.005 145 / 0.7);
+    border-color: oklch(1 0 0 / 0.07);
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.3);
+  }
+  .dark [data-slot="card"]:hover {
+    border-color: oklch(0.87 0.29 145 / 0.25);
+    box-shadow: 0 12px 40px -8px oklch(0.87 0.29 145 / 0.15);
   }
 
   /* Glass topbar */
@@ -987,13 +1032,102 @@
     align-items: center;
     gap: 5px;
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
+    font-weight: 800;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: oklch(0.45 0.18 145);
     opacity: 0.8;
   }
   .dark .bento-label {
     color: oklch(0.87 0.29 145);
+  }
+
+  /* === Section label (obrigatório no topo de cada seção) === */
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: oklch(0.45 0.18 145);
+    opacity: 0.85;
+    margin-bottom: 6px;
+  }
+  .dark .section-label {
+    color: oklch(0.87 0.29 145);
+  }
+
+  /* === Page title === */
+  .page-title {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  /* === Card title === */
+  .card-title-vamo {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  /* === Stat number === */
+  .stat-number {
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* === Briefing banner === */
+  .briefing-banner {
+    background: linear-gradient(135deg, oklch(0.87 0.29 145 / 0.10), oklch(0.70 0.17 215 / 0.06));
+    border: 1px solid oklch(0.87 0.29 145 / 0.2);
+    border-radius: 20px;
+    padding: 20px 24px;
+  }
+
+  /* === Progress bar design system === */
+  .progress-track {
+    height: 6px;
+    border-radius: 99px;
+    background: oklch(1 0 0 / 0.08);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, oklch(0.45 0.18 145), oklch(0.55 0.20 155));
+    box-shadow: 0 0 8px oklch(0.45 0.18 145 / 0.5);
+    transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .dark .progress-track {
+    background: oklch(1 0 0 / 0.08);
+  }
+  .dark .progress-fill {
+    background: linear-gradient(90deg, oklch(0.87 0.29 145), oklch(0.78 0.26 155));
+    box-shadow: 0 0 8px oklch(0.87 0.29 145 / 0.5);
+  }
+
+  /* === Streak pill (amber) === */
+  .streak-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    background: oklch(0.77 0.19 70 / 0.12);
+    border: 1px solid oklch(0.77 0.19 70 / 0.25);
+    color: oklch(0.60 0.17 70);
+  }
+  .dark .streak-pill {
+    color: oklch(0.77 0.19 70);
+    background: oklch(0.77 0.19 70 / 0.12);
+    border-color: oklch(0.77 0.19 70 / 0.25);
   }
 }

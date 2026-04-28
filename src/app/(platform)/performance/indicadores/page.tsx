@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import {
   Target,
   TrendingUp,
@@ -39,13 +40,13 @@ export default function IndicadoresPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Meus Indicadores</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Acompanhe seus KPIs e metas</p>
-        </div>
-        <Badge variant="secondary" className="text-[10px]">Marco 2026</Badge>
-      </div>
+      <PageHeader
+        label="Performance"
+        labelIcon={<Target className="h-3 w-3" />}
+        title={<>Meus <TitleHighlight>Indicadores</TitleHighlight></>}
+        description="Acompanhe seus KPIs e metas em tempo real"
+        actions={<span className="pill-glow">Marco 2026</span>}
+      />
 
       {/* KPI Cards */}
       <div className="space-y-4">

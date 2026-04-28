@@ -23,6 +23,13 @@ import {
   PauseCircle,
   ThumbsUp,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
+
+interface CheckinToday {
+  energy_level: number
+  intention: string | null
+  obstacle: string | null
+}
 
 interface TeamMemberHealth {
   user_id: string
@@ -33,7 +40,10 @@ interface TeamMemberHealth {
   risk_level: 'healthy' | 'attention' | 'burnout'
   last_activity: string
   ai_suggestion: string
+  checkin_today: CheckinToday | null
 }
+
+const ENERGY_EMOJI: Record<number, string> = { 1: '😔', 2: '😐', 3: '🙂', 4: '😄', 5: '🔥' }
 
 export default function MonitoramentoSaudeEquipePage() {
   const { user } = useRequiredAuth()
@@ -55,22 +65,30 @@ export default function MonitoramentoSaudeEquipePage() {
         const daysSinceActivity = m.last_activity_date
           ? Math.floor((Date.now() - new Date(m.last_activity_date).getTime()) / 86400000)
           : 99
+        const energy: number | null = m.checkin_today?.energy_level ?? null
 
         let risk_level: 'healthy' | 'attention' | 'burnout' = 'healthy'
         let engagement = 85
         let xp_trend: 'up' | 'down' | 'stable' = 'stable'
         let ai_suggestion = 'Manter ritmo atual. Bom engajamento.'
 
-        if (daysSinceActivity > 5 || streak === 0) {
+        // Energia baixa no check-in de hoje eleva risco imediatamente
+        const lowEnergyToday = energy !== null && energy <= 2
+
+        if (daysSinceActivity > 5 || streak === 0 || (lowEnergyToday && energy === 1)) {
           risk_level = 'burnout'
           engagement = Math.max(10, 30 - daysSinceActivity * 3)
           xp_trend = 'down'
-          ai_suggestion = '⚠️ Conversar antes de atribuir novas missões. Possível sobrecarga ou desmotivação.'
-        } else if (daysSinceActivity > 2 || streak < 3) {
+          ai_suggestion = lowEnergyToday && daysSinceActivity <= 5
+            ? `⚠️ Energia muito baixa hoje (${energy}/5). Converse antes de atribuir novas missões.`
+            : '⚠️ Conversar antes de atribuir novas missões. Possível sobrecarga ou desmotivação.'
+        } else if (daysSinceActivity > 2 || streak < 3 || lowEnergyToday) {
           risk_level = 'attention'
           engagement = 55
           xp_trend = 'down'
-          ai_suggestion = 'Verificar se precisa de suporte. Considerar missão mais leve.'
+          ai_suggestion = lowEnergyToday
+            ? `Energia baixa hoje (${energy}/5). Verificar se precisa de suporte.`
+            : 'Verificar se precisa de suporte. Considerar missão mais leve.'
         } else {
           xp_trend = streak > 5 ? 'up' : 'stable'
           engagement = Math.min(100, 70 + streak * 3)
@@ -85,6 +103,7 @@ export default function MonitoramentoSaudeEquipePage() {
           risk_level,
           last_activity: m.last_activity_date ?? 'Nunca',
           ai_suggestion,
+          checkin_today: m.checkin_today ?? null,
         }
       }).sort((a: TeamMemberHealth, b: TeamMemberHealth) => a.engagement_score - b.engagement_score)
 
@@ -119,12 +138,11 @@ export default function MonitoramentoSaudeEquipePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Saúde da Equipe</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Monitor de bem-estar com alertas de burnout e ações sugeridas pela VAMO IA
-        </p>
-      </div>
+      <PageHeader
+        label="Monitoramento"
+        title={<>Saúde da <TitleHighlight>Equipe</TitleHighlight></>}
+        description="Monitor de bem-estar com alertas de burnout e ações sugeridas pela VAMO IA"
+      />
 
       {/* Termômetro de Energia */}
       <EnergyThermometer organizationId={user.organization_id} />
@@ -310,8 +328,15 @@ export default function MonitoramentoSaudeEquipePage() {
                           <RiskIcon className="h-3 w-3" />
                           {config.label}
                         </div>
+                        {member.checkin_today ? (
+                          <span className="text-base leading-none" title={`Energia: ${member.checkin_today.energy_level}/5`}>
+                            {ENERGY_EMOJI[member.checkin_today.energy_level]}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/50 italic">sem check-in</span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 mt-1">
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <span className="text-[10px] text-muted-foreground">
                           Streak: {member.streak}d
                         </span>
@@ -321,9 +346,16 @@ export default function MonitoramentoSaudeEquipePage() {
                           {member.xp_trend === 'stable' && <Activity className="h-2.5 w-2.5" />}
                           Tendência
                         </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          Engajamento: {member.engagement_score}%
-                        </span>
+                        {member.checkin_today?.obstacle && (
+                          <span className="text-[10px] text-amber-500 font-medium">
+                            Obstáculo: {member.checkin_today.obstacle}
+                          </span>
+                        )}
+                        {member.checkin_today?.intention && !member.checkin_today.obstacle && (
+                          <span className="text-[10px] text-muted-foreground">
+                            Meta: {member.checkin_today.intention}
+                          </span>
+                        )}
                       </div>
                     </div>
 

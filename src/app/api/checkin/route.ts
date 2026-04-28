@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().split('T')[0]
 
-  const { data: checkin, error } = await supabase
+  const { data: checkin, error } = await adminClient
     .from('daily_checkins')
     .upsert(
       {

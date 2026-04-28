@@ -60,6 +60,17 @@ export async function GET() {
       missionsMap.set(row.user_id, (missionsMap.get(row.user_id) ?? 0) + 1)
     }
 
+    // Fetch today's check-ins
+    const todayDate = new Date().toISOString().split('T')[0]
+    const { data: checkinsToday } = await adminClient
+      .from('daily_checkins')
+      .select('user_id, energy_level, intention, obstacle')
+      .eq('organization_id', appUser.organization_id)
+      .in('user_id', sellerIds)
+      .eq('checkin_date', todayDate)
+
+    const checkinsMap = new Map((checkinsToday ?? []).map((c) => [c.user_id, c]))
+
     // Fetch individual goals from program_goals (latest entry for this org)
     const { data: goalsData } = await adminClient
       .from('program_goals')
@@ -80,6 +91,8 @@ export async function GET() {
       if (streak > 5) trend = 'up'
       else if (streak === 0) trend = 'down'
 
+      const checkin = checkinsMap.get(seller.id) ?? null
+
       return {
         user_id: seller.id,
         name: seller.name,
@@ -91,6 +104,9 @@ export async function GET() {
         missions_completed: missionsMap.get(seller.id) ?? 0,
         individual_goal: goalsMap.get(seller.id) ?? null,
         trend,
+        checkin_today: checkin
+          ? { energy_level: checkin.energy_level, intention: checkin.intention ?? null, obstacle: checkin.obstacle ?? null }
+          : null,
       }
     })
 

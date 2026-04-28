@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Plus, Target } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import type { KpiDefinition, KpiEntry } from '@/types'
 
 export default function KpisPage() {
@@ -57,16 +58,18 @@ export default function KpisPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Meus KPIs</h2>
-          <p className="text-muted-foreground">Registre seus indicadores do dia</p>
-        </div>
-        <Button render={<Link href="/kpis/registrar" />}>
+      <PageHeader
+        label="Performance"
+        labelIcon={<Target className="h-3 w-3" />}
+        title={<>Meus <TitleHighlight>KPIs</TitleHighlight></>}
+        description="Registre e acompanhe seus indicadores do dia"
+        actions={
+          <Button render={<Link href="/kpis/registrar" />}>
             <Plus className="mr-2 h-4 w-4" />
             Registrar KPI
-</Button>
-      </div>
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-12">

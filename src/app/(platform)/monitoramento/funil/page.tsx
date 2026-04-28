@@ -16,6 +16,7 @@ import {
   ArrowRight,
   BarChart3,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
 interface FunnelStage {
   name: string
@@ -50,17 +51,12 @@ export default function FunilPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold tracking-tight">Funil em Tempo Real</h2>
-          <Badge className="text-[10px] h-5 px-2 bg-violet-500/10 text-violet-600 border-0">
-            Etapa 4
-          </Badge>
-        </div>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Visualize cada estágio do funil e compare com o diagnóstico inicial
-        </p>
-      </div>
+      <PageHeader
+        label="Monitoramento · Etapa 4"
+        labelIcon={<BarChart3 className="h-3 w-3" />}
+        title={<>Funil em <TitleHighlight>Tempo Real</TitleHighlight></>}
+        description="Visualize cada estágio do funil e compare com o diagnóstico inicial"
+      />
 
       {/* Visual Funnel */}
       <Card className="border-border/50">

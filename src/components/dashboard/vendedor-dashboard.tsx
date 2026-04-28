@@ -22,6 +22,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import { CoachWidget } from '@/components/ai/coach-widget'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { cn } from '@/lib/utils'
 import type { User, UserXp, XpLevel, BehavioralProfile } from '@/types'
 
@@ -196,26 +197,19 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex items-end justify-between gap-4 animate-fade-in-up">
-        <div>
-          <div className="bento-label mb-2">
-            <span className="h-1 w-1 rounded-full bg-current animate-pulse" />
-            Minha performance
-          </div>
-          <h2 className="text-3xl font-black tracking-tight">
-            Olá, <span className="text-gradient-primary">{user.name.split(' ')[0]}</span>
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Resumo completo do seu progresso em tempo real
-          </p>
-        </div>
-        <div className="hidden md:flex items-center gap-2">
-          <span className="pill-glow">
-            <Zap className="h-3 w-3" />
-            Streak {userXp?.current_streak ?? 0} dias
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        label="Minha Performance"
+        title={<>Olá, <TitleHighlight>{user.name.split(' ')[0]}</TitleHighlight></>}
+        description="Resumo completo do seu progresso em tempo real"
+        actions={
+          userXp && userXp.current_streak > 0 ? (
+            <span className="streak-pill">
+              <Flame className="h-3 w-3" />
+              Streak {userXp.current_streak} dias
+            </span>
+          ) : undefined
+        }
+      />
 
       {/* ── BENTO GRID ── */}
       <div className="bento animate-fade-in-up stagger-1">

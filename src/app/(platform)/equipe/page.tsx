@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { ROLE_LABELS } from '@/lib/constants'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import type { User } from '@/types'
 
 export default function EquipePage() {
@@ -26,10 +27,11 @@ export default function EquipePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Equipe</h2>
-        <p className="text-muted-foreground">{members.length} membros</p>
-      </div>
+      <PageHeader
+        label="Gestão"
+        title={<>Minha <TitleHighlight>Equipe</TitleHighlight></>}
+        description={`${members.length} colaborador${members.length !== 1 ? 'es' : ''} ativos`}
+      />
 
       {loading ? (
         <div className="flex justify-center py-12">

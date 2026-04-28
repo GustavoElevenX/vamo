@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     }
 
     // Insert into DB
-    const { data: session, error: insertError } = await supabase
+    const { data: session, error: insertError } = await adminClient
       .from('diagnostic_sessions')
       .insert({
         organization_id: appUser.organization_id,

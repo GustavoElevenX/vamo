@@ -13,6 +13,7 @@ import {
   TrendingUp,
   AlertCircle,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
 interface CompletedMission {
   id: string
@@ -120,14 +121,12 @@ export default function ComissaoPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight">Minha Comissao</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Detalhamento de ganhos do periodo</p>
-        </div>
-        <Badge variant="secondary" className="text-[10px]">Marco 2026</Badge>
-      </div>
-
+      <PageHeader
+        label="Ganhos"
+        title={<>Minha <TitleHighlight>Comissão</TitleHighlight></>}
+        description="Detalhamento de ganhos e bônus do período"
+        actions={<span className="pill-glow">Marco 2026</span>}
+      />
       {/* Total Summary + Payment Date */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-emerald-500/20 bg-emerald-500/5">

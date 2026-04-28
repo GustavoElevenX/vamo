@@ -13,6 +13,7 @@ import {
   Trophy,
   Calendar,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { BADGE_RARITIES, DEFAULT_XP_LEVELS } from '@/lib/constants'
 import type { UserXp, XpLevel, Badge as BadgeType, UserBadge } from '@/types'
 
@@ -122,12 +123,12 @@ export default function ConquistasPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Conquistas e XP</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {earnedCount} de {totalBadgeCount} badges conquistados
-        </p>
-      </div>
+      <PageHeader
+        label="Desenvolvimento"
+        labelIcon={<Trophy className="h-3 w-3" />}
+        title={<>Conquistas e <TitleHighlight>XP</TitleHighlight></>}
+        description={`${earnedCount} de ${totalBadgeCount} badges conquistados — continue evoluindo`}
+      />
 
       {/* Level Info Card */}
       <Card className="border-border/50">

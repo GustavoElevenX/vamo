@@ -26,6 +26,7 @@ import {
   Swords,
 } from 'lucide-react'
 import Link from 'next/link'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
 interface PlaybookContent {
   por_que_voce_recebe: string
@@ -149,15 +150,14 @@ export default function MissoesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Missoes Ativas</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {missions.length > 0
-            ? `${missions.length} missao${missions.length > 1 ? 'es' : ''} em andamento`
-            : 'Nenhuma missao ativa no momento'}
-        </p>
-      </div>
-
+      <PageHeader
+        label="Performance"
+        labelIcon={<Swords className="h-3 w-3" />}
+        title={<>Missões <TitleHighlight>Ativas</TitleHighlight></>}
+        description={missions.length > 0
+            ? `${missions.length} missão${missions.length > 1 ? 'ões' : ''} em andamento`
+            : 'Nenhuma missão ativa no momento'}
+      />
       {/* In Progress Missions */}
       {activeMissions.length > 0 && (
         <div className="space-y-4">

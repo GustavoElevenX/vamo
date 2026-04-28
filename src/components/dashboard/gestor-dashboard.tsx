@@ -24,6 +24,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { CoachWidget } from '@/components/ai/coach-widget'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { cn } from '@/lib/utils'
 import type { User } from '@/types'
 
@@ -223,26 +224,17 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
     <div className="space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex items-end justify-between gap-4 animate-fade-in-up">
-        <div>
-          <div className="bento-label mb-2">
-            <span className="h-1 w-1 rounded-full bg-current animate-pulse" />
-            Visão executiva
-          </div>
-          <h2 className="text-3xl font-black tracking-tight">
-            Dashboard <span className="text-gradient-primary">Gestor</span>
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Performance comercial da organização em tempo real
-          </p>
-        </div>
-        <div className="hidden md:flex items-center gap-2">
+      <PageHeader
+        label="Visão Executiva"
+        title={<>Dashboard <TitleHighlight>Gestor</TitleHighlight></>}
+        description="Performance comercial da organização em tempo real"
+        actions={
           <span className="pill-glow">
             <Users className="h-3 w-3" />
             {teamSize} vendedores
           </span>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── BENTO GRID PRINCIPAL ── */}
       <div className="bento animate-fade-in-up stagger-1">

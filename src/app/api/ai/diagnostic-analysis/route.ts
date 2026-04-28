@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   // Check cache — return immediately if already analyzed
-  const { data: cached } = await supabase
+  const { data: cached } = await adminClient
     .from('ai_analyses')
     .select('*')
     .eq('session_id', sessionId)
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   }
 
   // Fetch session
-  const { data: session } = await supabase
+  const { data: session } = await adminClient
     .from('diagnostic_sessions')
     .select('*')
     .eq('id', sessionId)
@@ -94,11 +94,11 @@ export async function POST(request: Request) {
   } else {
     // Legacy: fetch from separate tables
     const [{ data: answers }, { data: questions }] = await Promise.all([
-      supabase
+      adminClient
         .from('diagnostic_answers')
         .select('question_id, score, notes')
         .eq('session_id', sessionId),
-      supabase
+      adminClient
         .from('diagnostic_questions')
         .select('id, question_text, area, options, order_index')
         .eq('template_id', session.template_id)
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     })
 
     // Save to cache
-    await supabase.from('ai_analyses').insert({
+    await adminClient.from('ai_analyses').insert({
       session_id: sessionId,
       organization_id: appUser.organization_id,
       user_id: appUser.id,

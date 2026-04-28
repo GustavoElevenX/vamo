@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react'
+import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
 interface StepCard {
   title: string
@@ -63,19 +64,11 @@ export default function ObjetivosPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold tracking-tight">Objetivos</h2>
-            <Badge variant="secondary" className="text-[10px] bg-violet-500/10 text-violet-500 border-0">
-              Etapa 2 de 4
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Do diagn&oacute;stico ao plano gamificado
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        label="Programa · Etapa 2 de 4"
+        title={<><TitleHighlight>Objetivos</TitleHighlight> do Programa</>}
+        description="Do diagnóstico ao plano gamificado — configure metas, recompensas e plano de ação"
+      />
 
       {/* Status Cards Grid */}
       <div className="grid gap-4 sm:grid-cols-2">

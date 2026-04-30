@@ -1,46 +1,56 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
-import { DollarSign, TrendingUp, Zap, Info } from 'lucide-react'
+import {
+  BarChart3,
+  Calculator,
+  DollarSign,
+  Plus,
+  Save,
+  SlidersHorizontal,
+  Target,
+  Trash2,
+  Zap,
+} from 'lucide-react'
+import {
+  calculateCommission,
+  DEFAULT_COMMISSION_CONFIG,
+  formatCurrency,
+  normalizeConfig,
+  type CommissionConfig,
+  type CommissionModel,
+  type CommissionTier,
+  type KpiRule,
+} from '@/lib/commission'
 
-interface CommissionConfig {
-  aliquota_base: string
-  acelerador_threshold: string
-  acelerador_rate: string
-  bonus_missao: string
-  salario_base: string
-  periodo: 'mensal' | 'quinzenal' | 'semanal'
-  elegibilidade: string
-}
-
-const DEFAULTS: CommissionConfig = {
-  aliquota_base: '4',
-  acelerador_threshold: '110',
-  acelerador_rate: '6',
-  bonus_missao: '75',
-  salario_base: '2500',
-  periodo: 'mensal',
-  elegibilidade: '80',
-}
+const models: { value: CommissionModel; label: string }[] = [
+  { value: 'fixo_mais_percentual', label: 'Fixo + percentual' },
+  { value: 'apenas_percentual', label: 'Apenas percentual' },
+  { value: 'apenas_fixo', label: 'Apenas fixo' },
+]
 
 export default function ComissionamentoConfigPage() {
   const { user } = useRequiredAuth()
   const supabase = createClient()
-  const [commission, setCommission] = useState<CommissionConfig>(DEFAULTS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [commission, setCommission] = useState<CommissionConfig>(DEFAULT_COMMISSION_CONFIG)
+  const [scenario, setScenario] = useState({ revenue: '65000', target: '50000', missions: '4' })
 
   useEffect(() => {
     if (!user) return
+
     const fetchConfig = async () => {
+      setLoading(true)
       try {
         const { data } = await supabase
           .from('commission_configs')
@@ -48,37 +58,96 @@ export default function ComissionamentoConfigPage() {
           .eq('organization_id', user.organization_id)
           .maybeSingle()
 
-        if (data) {
-          setCommission({
-            aliquota_base: String(data.aliquota_base),
-            acelerador_threshold: String(data.acelerador_threshold),
-            acelerador_rate: String(data.acelerador_rate),
-            bonus_missao: String(data.bonus_missao),
-            salario_base: String(data.salario_base),
-            periodo: data.periodo as CommissionConfig['periodo'],
-            elegibilidade: String(data.elegibilidade),
-          })
-        }
+        setCommission(normalizeConfig(data as Record<string, unknown> | null))
       } finally {
         setLoading(false)
       }
     }
+
     fetchConfig()
-  }, [user])
+  }, [supabase, user])
+
+  const preview = useMemo(() => calculateCommission({
+    user_id: user?.id ?? 'preview',
+    name: 'Cenario',
+    sales_revenue: Number(scenario.revenue) || 0,
+    goal_target: Number(scenario.target) || 1,
+    missions_completed: Number(scenario.missions) || 0,
+    config: commission,
+  }), [commission, scenario, user?.id])
+
+  const updateNumber = (field: keyof CommissionConfig, value: string) => {
+    const parsed = value === '' ? 0 : Number(value)
+    setCommission((prev) => ({ ...prev, [field]: Number.isFinite(parsed) ? parsed : 0 }))
+  }
+
+  const updateTier = (index: number, field: keyof CommissionTier, value: string) => {
+    setCommission((prev) => ({
+      ...prev,
+      faixas: prev.faixas.map((tier, currentIndex) => (
+        currentIndex === index ? { ...tier, [field]: value === '' ? undefined : Number(value) } : tier
+      )),
+    }))
+  }
+
+  const addTier = () => {
+    setCommission((prev) => ({
+      ...prev,
+      faixas: [...prev.faixas, { acima: prev.faixas[prev.faixas.length - 1]?.ate ?? 110, aliquota: prev.aliquota_base }],
+    }))
+  }
+
+  const removeTier = (index: number) => {
+    setCommission((prev) => ({ ...prev, faixas: prev.faixas.filter((_, currentIndex) => currentIndex !== index) }))
+  }
+
+  const updateKpi = (index: number, field: keyof KpiRule, value: string) => {
+    setCommission((prev) => ({
+      ...prev,
+      regras_kpi: prev.regras_kpi.map((rule, currentIndex) => (
+        currentIndex === index
+          ? { ...rule, [field]: field === 'nome' ? value : Number(value) || 0 }
+          : rule
+      )),
+    }))
+  }
+
+  const addKpi = () => {
+    setCommission((prev) => ({
+      ...prev,
+      regras_kpi: [...prev.regras_kpi, { nome: 'Novo KPI', meta_pct: 80, bonus: 100 }],
+    }))
+  }
+
+  const removeKpi = (index: number) => {
+    setCommission((prev) => ({ ...prev, regras_kpi: prev.regras_kpi.filter((_, currentIndex) => currentIndex !== index) }))
+  }
 
   const handleSave = async () => {
     if (!user) return
     setSaving(true)
     try {
+      const primaryTier = commission.faixas[0]
+      const lastTier = commission.faixas[commission.faixas.length - 1]
       const payload = {
         organization_id: user.organization_id,
-        aliquota_base: parseFloat(commission.aliquota_base) || 4,
-        acelerador_threshold: parseFloat(commission.acelerador_threshold) || 110,
-        acelerador_rate: parseFloat(commission.acelerador_rate) || 6,
-        bonus_missao: parseFloat(commission.bonus_missao) || 75,
-        salario_base: parseFloat(commission.salario_base) || 2500,
+        aliquota_base: primaryTier?.aliquota ?? commission.aliquota_base,
+        acelerador_threshold: commission.acelerador_threshold,
+        acelerador_rate: lastTier?.aliquota ?? commission.acelerador_rate,
+        bonus_missao: commission.bonus_missao,
+        salario_base: commission.salario_base,
         periodo: commission.periodo,
-        elegibilidade: parseFloat(commission.elegibilidade) || 80,
+        elegibilidade: commission.elegibilidade,
+        piso_comissao: commission.piso_comissao,
+        teto_comissao: commission.teto_comissao || null,
+        bonus_kpi: commission.bonus_kpi,
+        modelo: commission.modelo,
+        faixas: commission.faixas,
+        regras_kpi: commission.regras_kpi,
+        acelerador_ativo: commission.acelerador_ativo,
+        acelerador_multiplicador: commission.acelerador_multiplicador,
+        dia_corte: commission.dia_corte,
+        fechamento_automatico: commission.fechamento_automatico,
         updated_at: new Date().toISOString(),
       }
 
@@ -87,18 +156,13 @@ export default function ComissionamentoConfigPage() {
         .upsert(payload, { onConflict: 'organization_id' })
 
       if (error) throw error
-      toast.success('Comissionamento salvo com sucesso!')
+      toast.success('Comissionamento V2 salvo')
     } catch {
-      toast.error('Erro ao salvar configuração')
+      toast.error('Erro ao salvar configuracao')
     } finally {
       setSaving(false)
     }
   }
-
-  const exampleRevenue = 25000
-  const baseComm = Math.round(exampleRevenue * (parseFloat(commission.aliquota_base) / 100))
-  const missionBonus = (parseFloat(commission.bonus_missao) || 0) * 3
-  const totalCommExample = baseComm + missionBonus
 
   if (loading) {
     return (
@@ -110,182 +174,215 @@ export default function ComissionamentoConfigPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <DollarSign className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold tracking-tight">Configuração de Comissionamento</h2>
-            <Badge variant="outline" className="text-[10px] h-5 px-2">
-              Etapa 3
-            </Badge>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <SlidersHorizontal className="h-5 w-5 text-primary" />
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Defina alíquotas, bônus e regras de apuração para toda a equipe
-          </p>
-        </div>
-      </div>
-
-      {/* Salário Base */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Salário e Comissão</h3>
-        </div>
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Salário Base (R$)</Label>
-                <Input
-                  type="number"
-                  value={commission.salario_base}
-                  onChange={(e) => setCommission((prev) => ({ ...prev, salario_base: e.target.value }))}
-                  placeholder="Ex: 2500"
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Alíquota Base (%)</Label>
-                <Input
-                  type="number"
-                  value={commission.aliquota_base}
-                  onChange={(e) => setCommission((prev) => ({ ...prev, aliquota_base: e.target.value }))}
-                  placeholder="Ex: 4"
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Bônus por Missão Concluída (R$)</Label>
-                <Input
-                  type="number"
-                  value={commission.bonus_missao}
-                  onChange={(e) => setCommission((prev) => ({ ...prev, bonus_missao: e.target.value }))}
-                  placeholder="Ex: 75"
-                  className="h-8 text-sm"
-                />
-              </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold tracking-tight">Configuracao de Comissionamento</h2>
+              <Badge variant="outline" className="h-5 px-2 text-[10px]">V2</Badge>
             </div>
-          </CardContent>
-        </Card>
+            <p className="mt-0.5 text-sm text-muted-foreground">Modelo, faixas, acelerador, KPIs e fechamento.</p>
+          </div>
+        </div>
+        <Button onClick={handleSave} disabled={saving}>
+          <Save className="mr-1 h-4 w-4" />
+          {saving ? 'Salvando...' : 'Salvar'}
+        </Button>
       </div>
 
-      {/* Acelerador */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Acelerador de Meta</h3>
-        </div>
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-4">
-            <div className="rounded-lg border border-border/40 bg-accent/20 p-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-muted-foreground">Se atingir</span>
-                <Input
-                  type="number"
-                  value={commission.acelerador_threshold}
-                  onChange={(e) => setCommission((prev) => ({ ...prev, acelerador_threshold: e.target.value }))}
-                  className="h-7 text-xs w-16"
-                />
-                <span className="text-xs text-muted-foreground">% da meta → alíquota sobe para</span>
-                <Input
-                  type="number"
-                  value={commission.acelerador_rate}
-                  onChange={(e) => setCommission((prev) => ({ ...prev, acelerador_rate: e.target.value }))}
-                  className="h-7 text-xs w-16"
-                />
-                <span className="text-xs text-muted-foreground">%</span>
-              </div>
+      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+        <div className="space-y-5">
+          <Section icon={DollarSign} title="Modelo base">
+            <div className="grid gap-3 md:grid-cols-3">
+              {models.map((model) => (
+                <button
+                  key={model.value}
+                  type="button"
+                  onClick={() => setCommission((prev) => ({ ...prev, modelo: model.value }))}
+                  className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                    commission.modelo === model.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:bg-accent/50'
+                  }`}
+                >
+                  {model.label}
+                </button>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <Field label="Salario base (R$)" value={commission.salario_base} onChange={(value) => updateNumber('salario_base', value)} />
+              <Field label="Bonus por missao (R$)" value={commission.bonus_missao} onChange={(value) => updateNumber('bonus_missao', value)} />
+              <Field label="Bonus KPI fixo (R$)" value={commission.bonus_kpi} onChange={(value) => updateNumber('bonus_kpi', value)} />
+            </div>
+          </Section>
 
-      {/* Período e Elegibilidade */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold">Apuração e Elegibilidade</h3>
-        </div>
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-4 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Período de Apuração</Label>
-                <div className="flex gap-1.5">
-                  {(['mensal', 'quinzenal', 'semanal'] as const).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setCommission((prev) => ({ ...prev, periodo: p }))}
-                      className={`flex-1 text-xs py-1.5 rounded-md border transition-colors capitalize ${
-                        commission.periodo === p
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'border-border hover:bg-accent/40'
-                      }`}
-                    >
-                      {p.charAt(0).toUpperCase() + p.slice(1)}
-                    </button>
-                  ))}
+          <Section icon={BarChart3} title="Faixas de comissao">
+            <div className="space-y-3">
+              {commission.faixas.map((tier, index) => (
+                <div key={index} className="grid gap-2 rounded-lg border border-border/40 p-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+                  <Field label="Ate % da meta" value={tier.ate ?? ''} onChange={(value) => updateTier(index, 'ate', value)} />
+                  <Field label="Acima de %" value={tier.acima ?? ''} onChange={(value) => updateTier(index, 'acima', value)} />
+                  <Field label="Aliquota %" value={tier.aliquota} onChange={(value) => updateTier(index, 'aliquota', value)} />
+                  <Button variant="ghost" size="sm" onClick={() => removeTier(index)} disabled={commission.faixas.length <= 1}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
+              ))}
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={addTier}>
+              <Plus className="mr-1 h-4 w-4" />
+              Adicionar faixa
+            </Button>
+          </Section>
+
+          <Section icon={Zap} title="Acelerador">
+            <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr]">
+              <button
+                type="button"
+                onClick={() => setCommission((prev) => ({ ...prev, acelerador_ativo: !prev.acelerador_ativo }))}
+                className={`rounded-lg border px-3 py-2 text-left text-sm ${
+                  commission.acelerador_ativo ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600' : 'border-border/50 text-muted-foreground'
+                }`}
+              >
+                {commission.acelerador_ativo ? 'Ativo' : 'Inativo'}
+              </button>
+              <Field label="Threshold % da meta" value={commission.acelerador_threshold} onChange={(value) => updateNumber('acelerador_threshold', value)} />
+              <Field label="Multiplicador" value={commission.acelerador_multiplicador} onChange={(value) => updateNumber('acelerador_multiplicador', value)} />
+            </div>
+          </Section>
+
+          <Section icon={Target} title="Bonus por KPI">
+            <div className="space-y-3">
+              {commission.regras_kpi.map((rule, index) => (
+                <div key={index} className="grid gap-2 rounded-lg border border-border/40 p-3 md:grid-cols-[1fr_120px_120px_auto] md:items-end">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">KPI</Label>
+                    <Input value={rule.nome} onChange={(event) => updateKpi(index, 'nome', event.target.value)} className="h-8" />
+                  </div>
+                  <Field label="Meta %" value={rule.meta_pct} onChange={(value) => updateKpi(index, 'meta_pct', value)} />
+                  <Field label="Bonus R$" value={rule.bonus} onChange={(value) => updateKpi(index, 'bonus', value)} />
+                  <Button variant="ghost" size="sm" onClick={() => removeKpi(index)} disabled={commission.regras_kpi.length <= 1}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={addKpi}>
+              <Plus className="mr-1 h-4 w-4" />
+              Adicionar KPI
+            </Button>
+          </Section>
+
+          <Section icon={Calculator} title="Elegibilidade e periodo">
+            <div className="grid gap-3 md:grid-cols-4">
+              <Field label="Elegibilidade %" value={commission.elegibilidade} onChange={(value) => updateNumber('elegibilidade', value)} />
+              <Field label="Piso comissao (R$)" value={commission.piso_comissao} onChange={(value) => updateNumber('piso_comissao', value)} />
+              <Field label="Teto comissao (R$)" value={commission.teto_comissao ?? ''} onChange={(value) => setCommission((prev) => ({ ...prev, teto_comissao: value ? Number(value) : null }))} />
+              <Field label="Dia de corte" value={commission.dia_corte} onChange={(value) => updateNumber('dia_corte', value)} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(['mensal', 'quinzenal', 'semanal'] as const).map((period) => (
+                <button
+                  key={period}
+                  type="button"
+                  onClick={() => setCommission((prev) => ({ ...prev, periodo: period }))}
+                  className={`rounded-md border px-3 py-1.5 text-xs capitalize ${
+                    commission.periodo === period ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-accent/40'
+                  }`}
+                >
+                  {period}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCommission((prev) => ({ ...prev, fechamento_automatico: !prev.fechamento_automatico }))}
+              className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                commission.fechamento_automatico
+                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700'
+                  : 'border-border/50 text-muted-foreground hover:bg-accent/50'
+              }`}
+            >
+              Fechamento automatico {commission.fechamento_automatico ? 'ativo' : 'inativo'}
+              <span className="mt-0.5 block text-xs opacity-75">
+                No dia de corte, o sistema calcula o mes anterior e envia para aprovacao.
+              </span>
+            </button>
+          </Section>
+        </div>
+
+        <Card className="h-fit border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Preview ao vivo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3">
+              <Field label="Vendas no periodo (R$)" value={scenario.revenue} onChange={(value) => setScenario((prev) => ({ ...prev, revenue: value }))} />
+              <Field label="Meta do periodo (R$)" value={scenario.target} onChange={(value) => setScenario((prev) => ({ ...prev, target: value }))} />
+              <Field label="Missoes concluidas" value={scenario.missions} onChange={(value) => setScenario((prev) => ({ ...prev, missions: value }))} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Atingimento</span>
+                <span className="font-medium">{preview.goal_pct}%</span>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Elegibilidade (% mínimo da meta)</Label>
-                <Input
-                  type="number"
-                  value={commission.elegibilidade}
-                  onChange={(e) => setCommission((prev) => ({ ...prev, elegibilidade: e.target.value }))}
-                  placeholder="Ex: 80"
-                  className="h-8 text-sm"
-                />
+              <Progress value={Math.min(preview.goal_pct, 100)} />
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-border/40 bg-background/70 p-3 text-sm">
+              <Row label="Salario base" value={formatCurrency(preview.base_salary)} />
+              <Row label="Comissao vendas" value={formatCurrency(preview.sales_commission)} />
+              <Row label="Bonus missoes" value={formatCurrency(preview.mission_bonus)} />
+              <Row label="Bonus KPI" value={formatCurrency(preview.kpi_bonus)} />
+              <div className="border-t border-border/40 pt-2">
+                <Row label="Total" value={formatCurrency(preview.total)} strong />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+    </div>
+  )
+}
 
-      {/* Preview */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="pt-4 pb-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">
-            Exemplo de Comissão Este Mês
-          </p>
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Receita fechada (exemplo)</span>
-              <span className="font-medium">R$ {exampleRevenue.toLocaleString('pt-BR')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Comissão base ({commission.aliquota_base}%)</span>
-              <span className="font-medium">R$ {baseComm.toLocaleString('pt-BR')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Bônus de missões (3 missões × R$ {commission.bonus_missao})</span>
-              <span className="font-medium">R$ {missionBonus.toLocaleString('pt-BR')}</span>
-            </div>
-            <div className="flex justify-between border-t border-border/30 pt-1.5 mt-1.5">
-              <span className="font-semibold">Total estimado</span>
-              <span className="font-bold text-primary">R$ {totalCommExample.toLocaleString('pt-BR')}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+function Section({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof DollarSign
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <Card className="border-border/50">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+          <Icon className="h-4 w-4 text-primary" />
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">{children}</CardContent>
+    </Card>
+  )
+}
 
-      {/* Note */}
-      <div className="rounded-lg border border-border/40 bg-muted/30 p-4">
-        <div className="flex items-start gap-3">
-          <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            As regras se aplicam a toda a equipe. Para configurar valores individuais por vendedor,
-            acesse o perfil do vendedor em <strong>Monitoramento → Performance da Equipe</strong>.
-          </p>
-        </div>
-      </div>
+function Field({ label, value, onChange }: { label: string; value: string | number; onChange: (value: string) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <Input type="number" value={value} onChange={(event) => onChange(event.target.value)} className="h-8 text-sm" />
+    </div>
+  )
+}
 
-      <Button className="w-full" onClick={handleSave} disabled={saving}>
-        {saving ? 'Salvando...' : 'Salvar Configuração'}
-      </Button>
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={`flex justify-between gap-3 ${strong ? 'font-bold' : ''}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <span>{value}</span>
     </div>
   )
 }

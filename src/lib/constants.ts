@@ -18,14 +18,14 @@ export const ROLE_LABELS: Record<string, string> = {
 }
 
 export const DIAGNOSTIC_AREAS = {
-  lead_generation: 'Geração de Leads',
+  lead_generation: 'Geracao de Leads',
   sales_process: 'Processo de Vendas',
-  team_management: 'Gestão de Equipe',
+  team_management: 'Gestao de Equipe',
   tools_technology: 'Ferramentas e Tecnologia',
 } as const
 
 export const DIAGNOSTIC_QUADRANTS = {
-  critical: { label: 'Crítico', color: '#ef4444', min: 0, max: 25 },
+  critical: { label: 'Critico', color: '#ef4444', min: 0, max: 25 },
   at_risk: { label: 'Em Risco', color: '#f59e0b', min: 25, max: 50 },
   developing: { label: 'Em Desenvolvimento', color: '#3b82f6', min: 50, max: 75 },
   optimized: { label: 'Otimizado', color: '#22c55e', min: 75, max: 100 },
@@ -34,8 +34,8 @@ export const DIAGNOSTIC_QUADRANTS = {
 export const BADGE_RARITIES = {
   common: { label: 'Comum', color: '#9ca3af' },
   rare: { label: 'Raro', color: '#3b82f6' },
-  epic: { label: 'Épico', color: '#a855f7' },
-  legendary: { label: 'Lendário', color: '#f59e0b' },
+  epic: { label: 'Epico', color: '#a855f7' },
+  legendary: { label: 'Lendario', color: '#f59e0b' },
 } as const
 
 export const DEFAULT_XP_LEVELS = [
@@ -45,11 +45,9 @@ export const DEFAULT_XP_LEVELS = [
   { level: 4, name: 'Hunter', xp_required: 3000 },
   { level: 5, name: 'Closer', xp_required: 5500 },
   { level: 6, name: 'Elite', xp_required: 9000 },
-  { level: 7, name: 'Campeão', xp_required: 14000 },
+  { level: 7, name: 'Campeao', xp_required: 14000 },
   { level: 8, name: 'Lenda', xp_required: 21000 },
 ] as const
-
-// ============ Navigation ============
 
 export interface NavItem {
   label: string
@@ -68,72 +66,54 @@ export interface NavGroup {
 export const NAV_CONFIG: Record<string, NavGroup[]> = {
   manager: [
     {
-      key: 'chat-ia',
+      key: 'hoje',
+      label: 'Hoje',
+      items: [
+        { label: 'Hoje', href: '/hoje-gestor', icon: 'LayoutDashboard' },
+      ],
+    },
+    {
+      key: 'crm',
+      label: 'CRM',
+      items: [
+        { label: 'Pipeline', href: '/crm', icon: 'Filter' },
+        { label: 'Clientes', href: '/crm/clientes', icon: 'Users' },
+      ],
+    },
+    {
+      key: 'equipe',
+      label: 'Minha Equipe',
+      items: [
+        { label: 'Performance', href: '/monitoramento/equipe', icon: 'BarChart3' },
+        { label: 'Saude da Equipe', href: '/monitoramento/saude-equipe', icon: 'HeartPulse' },
+        { label: 'Alertas', href: '/monitoramento/alertas', icon: 'Zap', badge: 'alert' },
+      ],
+    },
+    {
+      key: 'resultados',
+      label: 'Resultados',
+      items: [
+        { label: 'Funil', href: '/monitoramento/funil', icon: 'Filter' },
+        { label: 'Comissionamento', href: '/monitoramento/comissionamento', icon: 'DollarSign' },
+        { label: 'ROI', href: '/monitoramento/roi', icon: 'PieChart' },
+      ],
+    },
+    {
+      key: 'vamo-ia',
       label: 'VAMO IA',
       items: [
         { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
       ],
     },
     {
-      key: 'mensagens',
-      label: 'Comunicação',
-      items: [
-        { label: 'Mensagens', href: '/mensagens', icon: 'Mail' },
-      ],
-    },
-    {
-      key: 'diagnostico',
-      label: 'Diagnóstico',
-      prefix: '1',
-      items: [
-        { label: 'Diagnóstico da Empresa', href: '/diagnostico', icon: 'Search' },
-        { label: 'Diagnóstico Individual', href: '/diagnostico/individual', icon: 'User' },
-        { label: 'Parecer Final da VAMO IA', href: '/diagnostico/parecer', icon: 'ClipboardList' },
-      ],
-    },
-    {
-      key: 'objetivos',
-      label: 'Objetivos',
-      prefix: '2',
-      items: [
-        { label: 'Definir Metas', href: '/objetivos/metas', icon: 'Target' },
-        { label: 'Plano de Ação', href: '/objetivos/plano-acao', icon: 'Rocket' },
-        { label: 'Recompensas', href: '/objetivos/recompensas', icon: 'Star' },
-        { label: 'Lançamento', href: '/objetivos/lancamento', icon: 'Rocket' },
-      ],
-    },
-    {
-      key: 'configuracao',
-      label: 'Programa',
-      prefix: '3',
-      items: [
-        { label: 'KPIs', href: '/configuracao/kpis', icon: 'BarChart3' },
-        { label: 'Integrações', href: '/configuracao/integracoes', icon: 'Link' },
-        { label: 'Regras e Gatilhos', href: '/configuracao/regras-gatilhos', icon: 'Settings' },
-        { label: 'Comissionamento', href: '/configuracao/comissionamento', icon: 'DollarSign' },
-        { label: 'Gamificação', href: '/configuracao/gamificacao', icon: 'Gamepad2' },
-      ],
-    },
-    {
-      key: 'monitoramento',
-      label: 'Monitoramento',
-      prefix: '4',
-      items: [
-        { label: 'Briefing Semanal', href: '/briefing-semanal', icon: 'Newspaper' },
-        { label: 'Funil em Tempo Real', href: '/monitoramento/funil', icon: 'Filter' },
-        { label: 'Performance da Equipe', href: '/monitoramento/equipe', icon: 'Users' },
-        { label: 'Alertas da VAMO IA', href: '/monitoramento/alertas', icon: 'Zap', badge: 'alert' },
-        { label: 'Saúde da Equipe', href: '/monitoramento/saude-equipe', icon: 'HeartPulse' },
-        { label: 'Comissionamento', href: '/monitoramento/comissionamento', icon: 'DollarSign' },
-        { label: 'ROI da Plataforma', href: '/monitoramento/roi', icon: 'PieChart' },
-        { label: 'Retrospectiva Mensal', href: '/retrospectiva', icon: 'RefreshCw' },
-      ],
-    },
-    {
       key: 'config-geral',
-      label: 'Configurações',
+      label: 'Configuracoes',
       items: [
         { label: 'Empresa e Plano', href: '/configuracoes/empresa', icon: 'Building2' },
+        { label: 'Notificacoes', href: '/configuracoes/notificacoes', icon: 'Bell' },
+        { label: 'Diagnostico', href: '/diagnostico', icon: 'Search' },
+        { label: 'Objetivos e Metas', href: '/objetivos/metas', icon: 'Target' },
+        { label: 'Programa', href: '/configuracao/kpis', icon: 'Settings' },
       ],
     },
   ],
@@ -148,6 +128,14 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       ],
     },
     {
+      key: 'crm',
+      label: 'CRM',
+      items: [
+        { label: 'Pipeline', href: '/crm', icon: 'Filter' },
+        { label: 'Clientes', href: '/crm/clientes', icon: 'Users' },
+      ],
+    },
+    {
       key: 'desempenho',
       label: 'Meu Desempenho',
       prefix: 'A',
@@ -155,7 +143,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
         { label: 'Performance', href: '/performance', icon: 'LayoutDashboard' },
         { label: 'Minhas Metas', href: '/minhas-metas', icon: 'Target' },
         { label: 'Indicadores', href: '/performance/indicadores', icon: 'BarChart3' },
-        { label: 'Missões Ativas', href: '/performance/missoes', icon: 'CheckSquare' },
+        { label: 'Missoes Ativas', href: '/performance/missoes', icon: 'CheckSquare' },
       ],
     },
     {
@@ -163,8 +151,8 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       label: 'Meus Ganhos',
       prefix: 'B',
       items: [
-        { label: 'Comissão', href: '/ganhos/comissao', icon: 'DollarSign' },
-        { label: 'Projeção de Ganhos', href: '/ganhos/projecao', icon: 'TrendingUp' },
+        { label: 'Comissao', href: '/ganhos/comissao', icon: 'DollarSign' },
+        { label: 'Projecao de Ganhos', href: '/ganhos/projecao', icon: 'TrendingUp' },
       ],
     },
     {
@@ -194,19 +182,19 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       prefix: 'T',
       items: [
         { label: 'Logs do Sistema', href: '/sistema/logs', icon: 'Terminal' },
-        { label: 'Integrações API', href: '/sistema/integracoes', icon: 'Plug' },
-        { label: 'Configuração Avançada', href: '/sistema/configuracao', icon: 'Wrench' },
+        { label: 'Integracoes API', href: '/sistema/integracoes', icon: 'Plug' },
+        { label: 'Configuracao Avancada', href: '/sistema/configuracao', icon: 'Wrench' },
       ],
     },
   ],
   admin: [
     {
       key: 'admin',
-      label: 'Administração',
+      label: 'Administracao',
       items: [
         { label: 'Dashboard', href: '/admin', icon: 'LayoutDashboard' },
         { label: 'Clientes', href: '/admin/clientes', icon: 'Building2' },
-        { label: 'Diagnósticos', href: '/admin/diagnosticos', icon: 'ClipboardCheck' },
+        { label: 'Diagnosticos', href: '/admin/diagnosticos', icon: 'ClipboardCheck' },
         { label: 'Templates', href: '/admin/templates', icon: 'FileText' },
         { label: 'Analytics', href: '/admin/analytics', icon: 'BarChart3' },
       ],
@@ -226,16 +214,16 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       prefix: '1',
       items: [
         { label: 'Meus Clientes', href: '/consultor/clientes', icon: 'Building2' },
-        { label: 'Ações Pendentes', href: '/consultor/acoes', icon: 'ClipboardList' },
-        { label: 'Saúde da Carteira', href: '/consultor/saude-carteira', icon: 'HeartPulse' },
+        { label: 'Acoes Pendentes', href: '/consultor/acoes', icon: 'ClipboardList' },
+        { label: 'Saude da Carteira', href: '/consultor/saude-carteira', icon: 'HeartPulse' },
         { label: 'Impacto Consolidado', href: '/consultor/impacto', icon: 'TrendingUp' },
       ],
     },
   ],
 }
 
-// Route protection per role
 export const MANAGER_ONLY_ROUTES = [
+  '/hoje-gestor',
   '/diagnostico',
   '/objetivos',
   '/configuracao',
@@ -261,9 +249,8 @@ export const CONSULTANT_ONLY_ROUTES = [
   '/consultor',
 ]
 
-// Default home route per role
 export const ROLE_HOME: Record<string, string> = {
-  manager: '/monitoramento',
+  manager: '/hoje-gestor',
   seller: '/hoje',
   developer: '/sistema/logs',
   admin: '/monitoramento',

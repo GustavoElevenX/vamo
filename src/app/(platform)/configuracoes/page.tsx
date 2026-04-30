@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { User, Target, Trophy, Settings } from 'lucide-react'
+import { Bell, User, Target, Trophy } from 'lucide-react'
 
 const settingsSections = [
   { title: 'Perfil', description: 'Seus dados pessoais e avatar', href: '/configuracoes/perfil', icon: User },
+  { title: 'Notificacoes', description: 'Canais, horarios e tipos de aviso', href: '/configuracoes/notificacoes', icon: Bell },
   { title: 'KPIs', description: 'Configurar indicadores da equipe', href: '/configuracoes/kpis', icon: Target, roles: ['admin', 'manager'] },
   { title: 'Gamificação', description: 'Badges, desafios e recompensas', href: '/configuracoes/gamificacao', icon: Trophy, roles: ['admin', 'manager'] },
 ]

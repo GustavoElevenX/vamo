@@ -1,4 +1,4 @@
-export const APP_NAME = 'VAMO'
+export const APP_NAME = 'Vamo'
 export const APP_DESCRIPTION = 'Plataforma de Performance Comercial'
 
 export const ROLES = {
@@ -18,9 +18,9 @@ export const ROLE_LABELS: Record<string, string> = {
 }
 
 export const DIAGNOSTIC_AREAS = {
-  lead_generation: 'Geracao de Leads',
+  lead_generation: 'Geração de Leads',
   sales_process: 'Processo de Vendas',
-  team_management: 'Gestao de Equipe',
+  team_management: 'Gestão de Equipe',
   tools_technology: 'Ferramentas e Tecnologia',
 } as const
 
@@ -100,17 +100,17 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
     },
     {
       key: 'vamo-ia',
-      label: 'VAMO IA',
+      label: 'Vamo IA',
       items: [
-        { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
+        { label: 'Converse com Vamo IA', href: '/chat-ia', icon: 'MessageSquare' },
       ],
     },
     {
       key: 'config-geral',
-      label: 'Configuracoes',
+      label: 'Configurações',
       items: [
         { label: 'Empresa e Plano', href: '/configuracoes/empresa', icon: 'Building2' },
-        { label: 'Notificacoes', href: '/configuracoes/notificacoes', icon: 'Bell' },
+        { label: 'Notificações', href: '/configuracoes/notificacoes', icon: 'Bell' },
         { label: 'Diagnostico', href: '/diagnostico', icon: 'Search' },
         { label: 'Objetivos e Metas', href: '/objetivos/metas', icon: 'Target' },
         { label: 'Comissionamento', href: '/configuracao/comissionamento', icon: 'DollarSign' },
@@ -123,56 +123,47 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       key: 'hoje',
       label: 'Hoje',
       items: [
-        { label: 'Meu Dia', href: '/hoje', icon: 'Sun' },
-        { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
+        { label: 'Cockpit diário', href: '/hoje', icon: 'Sun' },
         { label: 'Mensagens', href: '/mensagens', icon: 'Mail' },
       ],
     },
     {
-      key: 'crm',
-      label: 'CRM',
+      key: 'vender',
+      label: 'Vender',
       items: [
-        { label: 'Pipeline', href: '/crm', icon: 'Filter' },
+        { label: 'Pipeline de ações', href: '/crm', icon: 'Filter' },
         { label: 'Clientes', href: '/crm/clientes', icon: 'Users' },
+        { label: 'Registrar KPI', href: '/kpis/registrar', icon: 'BarChart3' },
       ],
     },
     {
-      key: 'desempenho',
-      label: 'Meu Desempenho',
-      prefix: 'A',
+      key: 'ganhar',
+      label: 'Ganhar',
       items: [
+        { label: 'Holerite comercial', href: '/ganhos/comissao', icon: 'DollarSign' },
+        { label: 'Projeção de ganhos', href: '/ganhos/projecao', icon: 'TrendingUp' },
+      ],
+    },
+    {
+      key: 'evoluir',
+      label: 'Evoluir',
+      items: [
+        { label: 'Converse com Vamo IA', href: '/chat-ia', icon: 'MessageSquare' },
+        { label: 'Feedback da Vamo IA', href: '/desenvolvimento/feedback-ia', icon: 'Bot' },
+        { label: 'Simulador de proposta', href: '/simulador', icon: 'Swords' },
         { label: 'Performance', href: '/performance', icon: 'LayoutDashboard' },
-        { label: 'Minhas Metas', href: '/minhas-metas', icon: 'Target' },
         { label: 'Indicadores', href: '/performance/indicadores', icon: 'BarChart3' },
-        { label: 'Missoes Ativas', href: '/performance/missoes', icon: 'CheckSquare' },
+        { label: 'Missões ativas', href: '/performance/missoes', icon: 'CheckSquare' },
+        { label: 'Minhas metas', href: '/minhas-metas', icon: 'Target' },
       ],
     },
     {
-      key: 'ganhos',
-      label: 'Meus Ganhos',
-      prefix: 'B',
+      key: 'reconhecimento',
+      label: 'Reconhecimento',
       items: [
-        { label: 'Comissao', href: '/ganhos/comissao', icon: 'DollarSign' },
-        { label: 'Projecao de Ganhos', href: '/ganhos/projecao', icon: 'TrendingUp' },
-      ],
-    },
-    {
-      key: 'desenvolvimento',
-      label: 'Meu Desenvolvimento',
-      prefix: 'C',
-      items: [
-        { label: 'Feedback da VAMO IA', href: '/desenvolvimento/feedback-ia', icon: 'Bot' },
-        { label: 'Simulador de Proposta', href: '/simulador', icon: 'Swords' },
-        { label: 'Conquistas e Pontos', href: '/desenvolvimento/conquistas', icon: 'Medal' },
-        { label: 'Loja de Recompensas', href: '/desenvolvimento/loja', icon: 'ShoppingBag' },
-      ],
-    },
-    {
-      key: 'feed',
-      label: 'Feed',
-      prefix: 'D',
-      items: [
-        { label: 'Reconhecimento', href: '/feed', icon: 'Megaphone' },
+        { label: 'Feed de reconhecimento', href: '/feed', icon: 'Megaphone' },
+        { label: 'Conquistas e pontos', href: '/desenvolvimento/conquistas', icon: 'Medal' },
+        { label: 'Loja de recompensas', href: '/desenvolvimento/loja', icon: 'ShoppingBag' },
       ],
     },
   ],
@@ -183,15 +174,15 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       prefix: 'T',
       items: [
         { label: 'Logs do Sistema', href: '/sistema/logs', icon: 'Terminal' },
-        { label: 'Integracoes API', href: '/sistema/integracoes', icon: 'Plug' },
-        { label: 'Configuracao Avancada', href: '/sistema/configuracao', icon: 'Wrench' },
+        { label: 'Integrações API', href: '/sistema/integracoes', icon: 'Plug' },
+        { label: 'Configuração Avançada', href: '/sistema/configuracao', icon: 'Wrench' },
       ],
     },
   ],
   admin: [
     {
       key: 'admin',
-      label: 'Administracao',
+      label: 'Administração',
       items: [
         { label: 'Dashboard', href: '/admin', icon: 'LayoutDashboard' },
         { label: 'Clientes', href: '/admin/clientes', icon: 'Building2' },
@@ -204,9 +195,9 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
   consultant: [
     {
       key: 'chat-ia',
-      label: 'VAMO IA',
+      label: 'Vamo IA',
       items: [
-        { label: 'Converse com VAMO IA', href: '/chat-ia', icon: 'MessageSquare' },
+        { label: 'Converse com Vamo IA', href: '/chat-ia', icon: 'MessageSquare' },
       ],
     },
     {
@@ -215,7 +206,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       prefix: '1',
       items: [
         { label: 'Meus Clientes', href: '/consultor/clientes', icon: 'Building2' },
-        { label: 'Acoes Pendentes', href: '/consultor/acoes', icon: 'ClipboardList' },
+        { label: 'Ações Pendentes', href: '/consultor/acoes', icon: 'ClipboardList' },
         { label: 'Saude da Carteira', href: '/consultor/saude-carteira', icon: 'HeartPulse' },
         { label: 'Impacto Consolidado', href: '/consultor/impacto', icon: 'TrendingUp' },
       ],
@@ -232,10 +223,15 @@ export const MANAGER_ONLY_ROUTES = [
 ]
 
 export const SELLER_ONLY_ROUTES = [
+  '/hoje',
   '/performance',
   '/ganhos',
   '/desenvolvimento',
   '/minhas-metas',
+  '/mensagens',
+  '/simulador',
+  '/feed',
+  '/kpis/registrar',
 ]
 
 export const DEVELOPER_ONLY_ROUTES = [

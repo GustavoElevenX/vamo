@@ -5,6 +5,20 @@ import type { DealStage } from '@/types/crm'
 export const runtime = 'nodejs'
 
 const STAGES: DealStage[] = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost']
+const NEXT_ACTION_TYPES = ['follow_up', 'call', 'email', 'proposal', 'meeting', 'review', 'other'] as const
+const FORECAST_CATEGORIES = ['pipeline', 'best_case', 'commit', 'closed'] as const
+
+function parseMoney(value: unknown) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  const raw = String(value ?? '').trim()
+  if (!raw) return 0
+  const normalized = raw
+    .replace(/[^\d,.-]/g, '')
+    .replace(/\.(?=\d{3}(\D|$))/g, '')
+    .replace(',', '.')
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
 
 export async function GET(request: Request) {
   try {
@@ -42,9 +56,13 @@ export async function POST(request: Request) {
     const input = await request.json()
 
     const title = String(input.title ?? '').trim()
-    const value = Number(input.value ?? 0)
+    const value = parseMoney(input.value)
     const stage = STAGES.includes(input.stage) ? input.stage : 'prospecting'
     const ownerId = appUser.role === 'seller' ? appUser.id : String(input.owner_id || appUser.id)
+    const nextActionTitle = String(input.next_action_title ?? '').trim()
+    const nextActionType = NEXT_ACTION_TYPES.includes(input.next_action_type) ? input.next_action_type : 'follow_up'
+    const forecastCategory = FORECAST_CATEGORIES.includes(input.forecast_category) ? input.forecast_category : 'pipeline'
+    const priorityScore = Number(input.ai_priority_score ?? 0)
 
     if (!title) return NextResponse.json({ error: 'Titulo e obrigatorio' }, { status: 400 })
 
@@ -55,11 +73,17 @@ export async function POST(request: Request) {
         account_id: input.account_id || null,
         owner_id: ownerId,
         title,
-        value: Number.isFinite(value) ? value : 0,
+        value,
         stage,
         probability: Number(input.probability ?? 0),
         expected_close: input.expected_close || null,
         notes: input.notes || null,
+        next_action_title: nextActionTitle || null,
+        next_action_type: nextActionTitle ? nextActionType : null,
+        next_action_due_at: input.next_action_due_at || null,
+        next_action_status: nextActionTitle ? 'open' : 'open',
+        forecast_category: forecastCategory,
+        ai_priority_score: Number.isFinite(priorityScore) ? Math.max(0, Math.min(100, priorityScore)) : 0,
       })
       .select('*, account:crm_accounts(id,name), owner:users!crm_deals_owner_id_fkey(id,name,avatar_url)')
       .single()

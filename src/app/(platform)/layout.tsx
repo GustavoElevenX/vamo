@@ -15,7 +15,6 @@ import {
   SELLER_ONLY_ROUTES,
   DEVELOPER_ONLY_ROUTES,
   ADMIN_ONLY_ROUTES,
-  CONSULTANT_ONLY_ROUTES,
   ROLE_HOME,
 } from '@/lib/constants'
 import type { UserXp, XpLevel } from '@/types'
@@ -117,13 +116,14 @@ export default function PlatformLayout({
     }
 
     for (const [oldRoute, newRoute] of Object.entries(oldRouteRedirects)) {
-      if (pathname === oldRoute || pathname.startsWith(oldRoute + '/')) {
+      const shouldRedirect = pathname === oldRoute || (oldRoute !== '/kpis' && pathname.startsWith(oldRoute + '/'))
+      if (shouldRedirect) {
         const target = typeof newRoute === 'string' ? newRoute : home
         router.push(target)
         return
       }
     }
-  }, [user, loading, pathname])
+  }, [user, loading, pathname, router])
 
   useEffect(() => {
     if (!user) return
@@ -145,7 +145,7 @@ export default function PlatformLayout({
     }
 
     fetchXp().catch(() => {})
-  }, [user?.id, user?.organization_id])
+  }, [user])
 
   if (loading) {
     return (

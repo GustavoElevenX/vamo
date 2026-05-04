@@ -14,11 +14,24 @@ export type ActivityType =
   | 'whatsapp'
   | 'note'
 
+export type NextActionType =
+  | 'follow_up'
+  | 'call'
+  | 'email'
+  | 'proposal'
+  | 'meeting'
+  | 'review'
+  | 'other'
+
+export type NextActionStatus = 'open' | 'done' | 'snoozed'
+
+export type ForecastCategory = 'pipeline' | 'best_case' | 'commit' | 'closed'
+
 export const STAGE_LABELS: Record<DealStage, string> = {
-  prospecting: 'Prospeccao',
-  qualification: 'Qualificacao',
+  prospecting: 'Prospecção',
+  qualification: 'Qualificação',
   proposal: 'Proposta',
-  negotiation: 'Negociacao',
+  negotiation: 'Negociação',
   closed_won: 'Ganho',
   closed_lost: 'Perdido',
 }
@@ -41,12 +54,29 @@ export const STAGE_STUCK_DAYS: Record<DealStage, number> = {
 }
 
 export const ACTIVITY_LABELS: Record<ActivityType, string> = {
-  call: 'Ligacao',
+  call: 'Ligação',
   email: 'E-mail',
-  meeting: 'Reuniao',
+  meeting: 'Reunião',
   proposal_sent: 'Proposta',
   whatsapp: 'WhatsApp',
   note: 'Nota',
+}
+
+export const NEXT_ACTION_LABELS: Record<NextActionType, string> = {
+  follow_up: 'Follow-up',
+  call: 'Ligação',
+  email: 'E-mail',
+  proposal: 'Proposta',
+  meeting: 'Reunião',
+  review: 'Revisão',
+  other: 'Outra ação',
+}
+
+export const FORECAST_LABELS: Record<ForecastCategory, string> = {
+  pipeline: 'Pipeline',
+  best_case: 'Provável',
+  commit: 'Comprometido',
+  closed: 'Fechado',
 }
 
 export interface CrmAccount {
@@ -107,6 +137,12 @@ export interface CrmDeal {
   lost_reason: string | null
   notes: string | null
   last_activity_at: string | null
+  next_action_title: string | null
+  next_action_type: NextActionType | null
+  next_action_due_at: string | null
+  next_action_status: NextActionStatus
+  forecast_category: ForecastCategory
+  ai_priority_score: number
   created_at: string
   updated_at: string
   account?: Pick<CrmAccount, 'id' | 'name'> | null

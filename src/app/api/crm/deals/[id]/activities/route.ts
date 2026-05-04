@@ -5,6 +5,14 @@ import type { ActivityType } from '@/types/crm'
 export const runtime = 'nodejs'
 
 const ACTIVITY_TYPES: ActivityType[] = ['call', 'email', 'meeting', 'proposal_sent', 'whatsapp', 'note']
+const ACTIVITY_NEXT_ACTION_TYPE: Record<ActivityType, string> = {
+  call: 'call',
+  email: 'email',
+  meeting: 'meeting',
+  proposal_sent: 'proposal',
+  whatsapp: 'follow_up',
+  note: 'other',
+}
 const ACTIVITY_KPI_MAP: Record<ActivityType, string[]> = {
   call: ['Ligacoes', 'Calls', 'Contatos'],
   meeting: ['Reunioes', 'Meetings', 'Visitas'],
@@ -77,6 +85,30 @@ export async function POST(request: Request, { params }: Params) {
     .select('*')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const nextActionTitle = String(input.next_action_title ?? '').trim()
+  if (nextActionTitle) {
+    await adminClient
+      .from('crm_deals')
+      .update({
+        next_action_title: nextActionTitle,
+        next_action_type: input.next_action_type || ACTIVITY_NEXT_ACTION_TYPE[type],
+        next_action_due_at: input.next_action_due_at || null,
+        next_action_status: 'open',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('organization_id', appUser.organization_id)
+  } else if (input.clear_next_action === true) {
+    await adminClient
+      .from('crm_deals')
+      .update({
+        next_action_status: 'done',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('organization_id', appUser.organization_id)
+  }
 
   const kpiNames = ACTIVITY_KPI_MAP[type]
   if (kpiNames.length > 0) {

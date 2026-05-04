@@ -23,6 +23,7 @@ export function DealActivitySheet({ dealId, onSaved }: { dealId: string; onSaved
   const [type, setType] = useState<ActivityType>('call')
   const [outcome, setOutcome] = useState('')
   const [nextStep, setNextStep] = useState('')
+  const [nextStepDueAt, setNextStepDueAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,7 +36,9 @@ export function DealActivitySheet({ dealId, onSaved }: { dealId: string; onSaved
       body: JSON.stringify({
         type,
         outcome,
-        notes: nextStep ? `Proximo passo: ${nextStep}` : null,
+        notes: nextStep ? `Próximo passo: ${nextStep}` : null,
+        next_action_title: nextStep || null,
+        next_action_due_at: nextStepDueAt || null,
       }),
     })
     setSaving(false)
@@ -46,6 +49,7 @@ export function DealActivitySheet({ dealId, onSaved }: { dealId: string; onSaved
     }
     setOutcome('')
     setNextStep('')
+    setNextStepDueAt('')
     setOpen(false)
     onSaved?.()
   }
@@ -89,12 +93,21 @@ export function DealActivitySheet({ dealId, onSaved }: { dealId: string; onSaved
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="next-step">Proximo passo</Label>
+            <Label htmlFor="next-step">Próximo passo</Label>
             <Input
               id="next-step"
               value={nextStep}
               onChange={(event) => setNextStep(event.target.value)}
-              placeholder="Ex.: Enviar nova versao ate sexta"
+              placeholder="Ex.: Enviar nova versão até sexta"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="next-step-due">Quando fazer</Label>
+            <Input
+              id="next-step-due"
+              type="datetime-local"
+              value={nextStepDueAt}
+              onChange={(event) => setNextStepDueAt(event.target.value)}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

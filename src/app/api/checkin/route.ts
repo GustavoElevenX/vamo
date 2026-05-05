@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createRecommendation } from '@/lib/services/action-recommendation.service'
-import { createEventWithImpacts } from '@/lib/services/performance-os.service'
+import { calibrateHealthFromCheckin } from '@/lib/services/health-calibration.service'
 
 export async function GET() {
   const supabase = await createClient()
@@ -84,85 +83,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erro ao salvar check-in' }, { status: 500 })
   }
 
-  const energy = Number(energy_level)
-  const isLowEnergy = energy <= 2
-  const { event } = await createEventWithImpacts(
-    adminClient,
-    {
+  try {
+    const calibrationResult = await calibrateHealthFromCheckin(adminClient, {
       organizationId: appUser.organization_id,
+      userId: appUser.id,
       actorUserId: appUser.id,
-      targetUserId: appUser.id,
-      eventType: isLowEnergy ? 'health.risk_detected' : 'checkin.created',
-      sourceModule: 'health',
-      entityType: 'daily_checkin',
-      entityId: checkin.id,
-      title: isLowEnergy ? 'Check-in com energia baixa' : 'Check-in diario registrado',
-      description: isLowEnergy
-        ? 'Saude deve calibrar missao, nudge e postura do gestor.'
-        : 'Check-in alimenta prioridades do dia e calibragem de rotina.',
-      impactScore: 35,
-      priorityScore: isLowEnergy ? 85 : 35,
-      riskScore: isLowEnergy ? 80 : 15,
-      metadata: { energy_level: energy, intention, obstacle },
-    },
-    [
-      { impactedModule: 'health', impactedEntityType: 'daily_checkin', impactedEntityId: checkin.id, impactType: 'checkin_recorded' },
-      { impactedModule: 'hoje', impactedEntityType: 'user', impactedEntityId: appUser.id, impactType: 'seller_focus_calibrated' },
-      { impactedModule: 'mission', impactedEntityType: 'user', impactedEntityId: appUser.id, impactType: isLowEnergy ? 'reduce_intensity' : 'maintain_intensity' },
-      { impactedModule: 'ai', impactedEntityType: 'daily_checkin', impactedEntityId: checkin.id, impactType: 'health_calibration_context' },
-      { impactedModule: 'hoje_gestor', impactedEntityType: 'user', impactedEntityId: appUser.id, impactType: isLowEnergy ? 'human_attention' : 'health_signal' },
-    ],
-  )
-
-  let calibration = null
-  if (isLowEnergy) {
-    const { data } = await adminClient
-      .from('health_calibrations')
-      .insert({
-        organization_id: appUser.organization_id,
-        user_id: appUser.id,
-        checkin_id: checkin.id,
-        energy_level: energy,
-        risk_level: 'high',
-        calibration_type: 'support',
-        recommended_manager_action: 'Conversa de apoio, foco em poucas acoes controlaveis e tom nao punitivo.',
-        seller_focus: 'Escolha duas acoes controlaveis para hoje e peca apoio se houver bloqueio.',
-        mission_intensity_modifier: 0.6,
-        one_on_one_agenda: [
-          'Como esta sua energia hoje?',
-          'Qual pequena acao voce consegue concluir com seguranca?',
-          'Que apoio do gestor removeria atrito agora?',
-        ],
-        metadata: { eventId: event.id, obstacle, intention },
-      })
-      .select('*')
-      .single()
-
-    calibration = data
-    const { data: manager } = await adminClient
-      .from('users')
-      .select('id')
-      .eq('organization_id', appUser.organization_id)
-      .in('role', ['manager', 'admin'])
-      .eq('active', true)
-      .limit(1)
-      .maybeSingle()
-
-    await createRecommendation(adminClient, {
-      organizationId: appUser.organization_id,
-      eventId: event.id,
-      targetUserId: manager?.id ?? appUser.id,
-      createdByUserId: appUser.id,
-      sourceModule: 'health',
-      recommendationType: 'health_1on1',
-      title: 'Foco leve e controlavel hoje',
-      description: 'Energia baixa recorrente deve reduzir a intensidade da missao e priorizar apoio humano.',
-      suggestedActionLabel: 'Ver foco de hoje',
-      suggestedActionHref: '/hoje',
-      priority: 'high',
-      metadata: { calibrationId: data?.id ?? null },
+      checkinId: checkin.id,
     })
-  }
 
-  return NextResponse.json({ checkin, event, calibration })
+    return NextResponse.json({ checkin, ...calibrationResult })
+  } catch (calibrationError) {
+    console.error('Health calibration error:', calibrationError)
+    return NextResponse.json({ checkin, calibration: null })
+  }
 }

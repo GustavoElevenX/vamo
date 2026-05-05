@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import {
   AlertCircle,
@@ -17,23 +17,28 @@ import {
   Download,
   Eye,
   FileText,
-  ListChecks,
-  ReceiptText,
-  Trophy,
+  RefreshCw,
+  Search,
+  ShieldCheck,
   Users,
 } from 'lucide-react'
 import {
-  calculateCommission,
-  daysUntilCutoff,
+  buildCommissionEntries,
   formatCurrency,
+  formatD1Message,
+  formatDatePtBr,
   getCurrentPeriodReference,
+  getD1Date,
   getPeriodLabel,
-  normalizeConfig,
   statusLabel,
-  type CommissionCalculation,
-  type CommissionConfig,
-  type CommissionLineItem,
-  type CommissionPeriod,
+  summarizeCommissionEntries,
+  type CommissionDispute,
+  type CommissionDisputeStatus,
+  type CommissionEntryDraft,
+  type CommissionEntryStatus,
+  type CommissionRule,
+  type CommissionSaleInput,
+  type CommissionSellerSummary,
 } from '@/lib/commission'
 
 interface Seller {
@@ -42,47 +47,37 @@ interface Seller {
 }
 
 interface DealRow {
+  id: string
   owner_id: string
+  title: string
   value: number | string
-  stage: string
+  received_amount?: number | string | null
   expected_close: string | null
   updated_at: string | null
+  account_id: string | null
+  product_id?: string | null
+  product_name?: string | null
+  category_id?: string | null
+  category_name?: string | null
+  commercial_table_id?: string | null
+  commercial_table_name?: string | null
+  crm_accounts?: { name?: string | null } | null
 }
 
-interface GoalRow {
-  individual_goals?: { user_id: string; commission_bonus?: number }[]
+const statusTone: Record<CommissionEntryStatus | string, string> = {
+  confirmed: 'bg-emerald-500/10 text-emerald-700',
+  pending: 'bg-amber-500/10 text-amber-700',
+  disputed: 'bg-red-500/10 text-red-700',
+  cancelled: 'bg-muted text-muted-foreground',
+  adjusted: 'bg-blue-500/10 text-blue-700',
+  paid: 'bg-green-500/10 text-green-700',
 }
 
-interface CalculationRow {
-  id: string
-  period_id: string
-  organization_id: string
-  user_id: string
-  base_salary: number | string
-  sales_revenue: number | string
-  sales_commission: number | string
-  mission_bonus: number | string
-  kpi_bonus: number | string
-  accelerator_mult: number | string
-  total: number | string
-  goal_pct: number | string
-  missions_completed: number
-  status: CommissionCalculation['status']
-  approved_by: string | null
-  approved_at: string | null
-  notes: string | null
-  calculated_at: string | null
-}
-
-const statusTone: Record<string, string> = {
-  open: 'bg-blue-500/10 text-blue-600',
-  calculating: 'bg-sky-500/10 text-sky-600',
-  pending_approval: 'bg-amber-500/10 text-amber-600',
-  approved: 'bg-emerald-500/10 text-emerald-600',
-  paid: 'bg-green-500/10 text-green-600',
-  calculated: 'bg-blue-500/10 text-blue-600',
-  disputed: 'bg-red-500/10 text-red-600',
-  draft: 'bg-muted text-muted-foreground',
+const disputeTone: Record<CommissionDisputeStatus, string> = {
+  under_review: 'bg-amber-500/10 text-amber-700',
+  approved: 'bg-emerald-500/10 text-emerald-700',
+  rejected: 'bg-muted text-muted-foreground',
+  corrected: 'bg-blue-500/10 text-blue-700',
 }
 
 function toNumber(value: number | string | null | undefined) {
@@ -90,17 +85,18 @@ function toNumber(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function getMonthRange(reference: string) {
+function monthBounds(reference: string) {
   const [year, month] = reference.split('-').map(Number)
   const start = new Date(year, month - 1, 1)
-  const end = new Date(year, month, 0, 23, 59, 59)
+  const end = new Date(year, month, 0)
   return { start, end }
 }
 
-function withinReference(dateValue: string | null | undefined, reference: string) {
+function inReference(dateValue: string | null | undefined, reference: string) {
   if (!dateValue) return true
-  const { start, end } = getMonthRange(reference)
   const date = new Date(dateValue)
+  const { start, end } = monthBounds(reference)
+  end.setHours(23, 59, 59, 999)
   return date >= start && date <= end
 }
 
@@ -108,253 +104,217 @@ export default function ComissionamentoPage() {
   const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [closing, setClosing] = useState(false)
-  const [approving, setApproving] = useState<string | null>(null)
-  const [config, setConfig] = useState<CommissionConfig>(normalizeConfig(null))
-  const [period, setPeriod] = useState<CommissionPeriod>({
-    reference: getCurrentPeriodReference(),
-    label: getPeriodLabel(),
-    status: 'open',
-    total_bonus: 0,
-    total_payroll: 0,
-  })
-  const [calculations, setCalculations] = useState<CommissionCalculation[]>([])
-  const [history, setHistory] = useState<CommissionPeriod[]>([])
+  const [tab, setTab] = useState<'resumo' | 'extrato' | 'contestacoes'>('resumo')
+  const [sellerFilter, setSellerFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | CommissionEntryStatus>('all')
+  const [search, setSearch] = useState('')
+  const [entries, setEntries] = useState<CommissionEntryDraft[]>([])
+  const [previewEntries, setPreviewEntries] = useState<CommissionEntryDraft[]>([])
+  const [rules, setRules] = useState<CommissionRule[]>([])
+  const [sellers, setSellers] = useState<Seller[]>([])
+  const [disputes, setDisputes] = useState<CommissionDispute[]>([])
+  const [managerResponse, setManagerResponse] = useState<Record<string, string>>({})
+  const reference = getCurrentPeriodReference()
 
-  const buildPreview = useCallback(async (activeConfig: CommissionConfig, sellers: Seller[], reference: string) => {
-    const memberIds = sellers.map((seller) => seller.id)
-    const [{ data: missionRows }, { data: dealRows }, { data: goalsRow }] = await Promise.all([
-      memberIds.length
-        ? supabase.from('ai_missions').select('user_id').in('user_id', memberIds).eq('status', 'completed')
-        : Promise.resolve({ data: [] }),
-      supabase
-        .from('crm_deals')
-        .select('owner_id, value, stage, expected_close, updated_at')
-        .eq('organization_id', user?.organization_id)
-        .eq('stage', 'closed_won'),
-      supabase
-        .from('program_goals')
-        .select('individual_goals')
-        .eq('organization_id', user?.organization_id)
-        .maybeSingle(),
-    ])
-
-    const missionsByUser = new Map<string, number>()
-    for (const row of missionRows ?? []) {
-      const userId = (row as { user_id: string }).user_id
-      missionsByUser.set(userId, (missionsByUser.get(userId) ?? 0) + 1)
-    }
-
-    const revenueByUser = new Map<string, number>()
-    for (const deal of (dealRows ?? []) as DealRow[]) {
-      const referenceDate = deal.expected_close ?? deal.updated_at
-      if (!withinReference(referenceDate, reference)) continue
-      revenueByUser.set(deal.owner_id, (revenueByUser.get(deal.owner_id) ?? 0) + toNumber(deal.value))
-    }
-
-    const goals = (goalsRow as GoalRow | null)?.individual_goals ?? []
-    const targetByUser = new Map<string, number>()
-    for (const goal of goals) {
-      if (goal.commission_bonus && goal.commission_bonus > 0) targetByUser.set(goal.user_id, goal.commission_bonus)
-    }
-
-    return sellers.map((seller) => {
-      const salesRevenue = revenueByUser.get(seller.id) ?? 0
-      return calculateCommission({
-        user_id: seller.id,
-        name: seller.name,
-        sales_revenue: salesRevenue,
-        goal_target: targetByUser.get(seller.id) ?? Math.max(50000, salesRevenue || 0),
-        missions_completed: missionsByUser.get(seller.id) ?? 0,
-        config: activeConfig,
-      })
-    }).sort((a, b) => b.total - a.total)
-  }, [supabase, user?.organization_id])
+  const buildSales = useCallback((deals: DealRow[], sellerName: Map<string, string>) => (
+    deals
+      .filter((deal) => inReference(deal.expected_close ?? deal.updated_at, reference))
+      .map((deal): CommissionSaleInput => ({
+        id: deal.id,
+        organization_id: user?.organization_id ?? '',
+        seller_id: deal.owner_id,
+        seller_name: sellerName.get(deal.owner_id) ?? 'Vendedor',
+        customer_id: deal.account_id,
+        customer_name: deal.crm_accounts?.name ?? 'Cliente sem nome',
+        product_id: deal.product_id ?? deal.product_name ?? null,
+        product_name: deal.product_name ?? deal.title,
+        category_id: deal.category_id ?? deal.category_name ?? null,
+        category_name: deal.category_name ?? 'Sem categoria',
+        commercial_table_id: deal.commercial_table_id ?? deal.commercial_table_name ?? null,
+        commercial_table_name: deal.commercial_table_name ?? 'Tabela padrao',
+        sale_amount: toNumber(deal.value),
+        received_amount: toNumber(deal.received_amount),
+        sale_date: deal.expected_close ?? deal.updated_at ?? new Date().toISOString(),
+        title: deal.title,
+      }))
+  ), [reference, user?.organization_id])
 
   const fetchData = useCallback(async () => {
     if (!user) return
     setLoading(true)
     try {
-      const reference = getCurrentPeriodReference()
       const sellersRes = await fetch('/api/team/sellers', { credentials: 'same-origin' })
       const sellersJson = sellersRes.ok ? await sellersRes.json() : { sellers: [] }
-      const sellers = (sellersJson.sellers ?? []) as Seller[]
-      const sellerName = new Map(sellers.map((seller) => [seller.id, seller.name]))
+      const sellerRows = (sellersJson.sellers ?? []) as Seller[]
+      const sellerName = new Map(sellerRows.map((seller) => [seller.id, seller.name]))
+      setSellers(sellerRows)
 
-      const [{ data: configRow }, { data: currentPeriod }, { data: periodRows }] = await Promise.all([
-        supabase.from('commission_configs').select('*').eq('organization_id', user.organization_id).maybeSingle(),
+      const [{ data: ruleRows }, { data: dealRows }, { data: entryRows }, { data: disputeRows }] = await Promise.all([
         supabase
-          .from('commission_periods')
+          .from('commission_rules')
           .select('*')
           .eq('organization_id', user.organization_id)
-          .eq('reference', reference)
-          .maybeSingle(),
+          .eq('active', true)
+          .order('priority', { ascending: true }),
         supabase
-          .from('commission_periods')
+          .from('crm_deals')
+          .select('id, owner_id, title, value, received_amount, expected_close, updated_at, account_id, product_id, product_name, category_id, category_name, commercial_table_id, commercial_table_name, crm_accounts(name)')
+          .eq('organization_id', user.organization_id)
+          .eq('stage', 'closed_won'),
+        supabase
+          .from('commission_entries')
           .select('*')
           .eq('organization_id', user.organization_id)
-          .order('reference', { ascending: false })
-          .limit(6),
+          .eq('period_reference', reference)
+          .order('competence_date', { ascending: false }),
+        supabase
+          .from('commission_disputes')
+          .select('*')
+          .eq('organization_id', user.organization_id)
+          .order('created_at', { ascending: false }),
       ])
 
-      const activeConfig = normalizeConfig(configRow as Record<string, unknown> | null)
-      setConfig(activeConfig)
+      const activeRules = (ruleRows ?? []) as CommissionRule[]
+      setRules(activeRules)
+      const preview = buildCommissionEntries(buildSales((dealRows ?? []) as DealRow[], sellerName), activeRules, getD1Date())
+      setPreviewEntries(preview)
 
-      if (currentPeriod) {
-        const activePeriod = currentPeriod as CommissionPeriod
-        const { data: calculationRows } = await supabase
-          .from('commission_calculations')
-          .select('*')
-          .eq('period_id', activePeriod.id)
-          .order('total', { ascending: false })
-
-        const rows = (calculationRows ?? []) as CalculationRow[]
-        const ids = rows.map((row) => row.id)
-        const { data: itemRows } = ids.length
-          ? await supabase.from('commission_line_items').select('*').in('calculation_id', ids)
-          : { data: [] }
-
-        const itemsByCalc = new Map<string, CommissionLineItem[]>()
-        for (const item of (itemRows ?? []) as (CommissionLineItem & { calculation_id: string })[]) {
-          itemsByCalc.set(item.calculation_id, [...(itemsByCalc.get(item.calculation_id) ?? []), item])
-        }
-
-        setPeriod(activePeriod)
-        setCalculations(rows.map((row) => ({
-          id: row.id,
-          period_id: row.period_id,
-          organization_id: row.organization_id,
-          user_id: row.user_id,
-          name: sellerName.get(row.user_id) ?? 'Vendedor',
-          base_salary: toNumber(row.base_salary),
-          sales_revenue: toNumber(row.sales_revenue),
-          sales_commission: toNumber(row.sales_commission),
-          mission_bonus: toNumber(row.mission_bonus),
-          kpi_bonus: toNumber(row.kpi_bonus),
-          accelerator_mult: toNumber(row.accelerator_mult),
-          total: toNumber(row.total),
-          goal_pct: toNumber(row.goal_pct),
-          missions_completed: row.missions_completed,
-          status: row.status,
-          approved_by: row.approved_by,
-          approved_at: row.approved_at,
-          notes: row.notes,
-          calculated_at: row.calculated_at,
-          line_items: itemsByCalc.get(row.id) ?? [],
-        })))
-      } else {
-        const preview = await buildPreview(activeConfig, sellers, reference)
-        setCalculations(preview)
-        setPeriod({
-          reference,
-          label: getPeriodLabel(reference),
-          status: 'open',
-          total_payroll: preview.reduce((sum, item) => sum + item.total, 0),
-          total_bonus: preview.reduce((sum, item) => sum + item.sales_commission + item.mission_bonus + item.kpi_bonus, 0),
-        })
-      }
-
-      setHistory(((periodRows ?? []) as CommissionPeriod[]).filter((item) => item.reference !== reference))
+      const persisted = ((entryRows ?? []) as CommissionEntryDraft[]).map((entry) => ({
+        ...entry,
+        seller_name: sellerName.get(entry.seller_id) ?? entry.seller_name ?? 'Vendedor',
+      }))
+      setEntries(persisted.length > 0 ? persisted : preview)
+      setDisputes((disputeRows ?? []) as CommissionDispute[])
     } catch {
       toast.error('Nao foi possivel carregar o comissionamento')
     } finally {
       setLoading(false)
     }
-  }, [buildPreview, supabase, user])
+  }, [buildSales, reference, supabase, user])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
+  const visibleEntries = useMemo(() => entries.filter((entry) => {
+    const matchesSeller = sellerFilter === 'all' || entry.seller_id === sellerFilter
+    const matchesStatus = statusFilter === 'all' || entry.status === statusFilter
+    const haystack = `${entry.seller_name} ${entry.customer_name} ${entry.product_name} ${entry.rule_name}`.toLowerCase()
+    return matchesSeller && matchesStatus && haystack.includes(search.toLowerCase())
+  }), [entries, search, sellerFilter, statusFilter])
+
   const summary = useMemo(() => {
-    const totalPayroll = calculations.reduce((sum, item) => sum + item.total, 0)
-    const totalBonus = calculations.reduce((sum, item) => sum + item.sales_commission + item.mission_bonus + item.kpi_bonus, 0)
-    const pending = calculations.filter((item) => item.status === 'pending_approval' || item.status === 'calculated').length
-    return { totalPayroll, totalBonus, pending }
-  }, [calculations])
+    const confirmed = entries.filter((entry) => ['confirmed', 'adjusted', 'paid'].includes(entry.status)).reduce((sum, entry) => sum + entry.commission_amount, 0)
+    const pending = entries.filter((entry) => entry.status === 'pending').reduce((sum, entry) => sum + entry.commission_amount, 0)
+    const disputed = entries.filter((entry) => entry.status === 'disputed').reduce((sum, entry) => sum + entry.commission_amount, 0)
+    const estimated = entries.reduce((sum, entry) => sum + entry.commission_amount, 0)
+    const sales = new Set(entries.map((entry) => entry.sale_id)).size
+    return { confirmed, pending, disputed, estimated, sales }
+  }, [entries])
 
-  const handleClosePeriod = async () => {
-    if (!user || calculations.length === 0) return
-    setClosing(true)
+  const sellerSummaries = useMemo(() => summarizeCommissionEntries(entries), [entries])
+  const openDisputes = useMemo(() => disputes.filter((dispute) => dispute.status === 'under_review'), [disputes])
+
+  const persistPreview = async () => {
+    if (!user) return
+    setSyncing(true)
     try {
-      const periodPayload = {
-        id: period.id,
-        organization_id: user.organization_id,
-        reference: period.reference,
-        label: period.label,
-        status: 'pending_approval',
-        closed_at: new Date().toISOString(),
-        total_payroll: summary.totalPayroll,
-        total_bonus: summary.totalBonus,
-      }
-
-      const { data: savedPeriod, error: periodError } = await supabase
+      const { start, end } = monthBounds(reference)
+      const { data: period, error: periodError } = await supabase
         .from('commission_periods')
-        .upsert(periodPayload, { onConflict: 'organization_id,reference' })
-        .select('*')
+        .upsert({
+          organization_id: user.organization_id,
+          company_id: user.organization_id,
+          reference,
+          label: getPeriodLabel(reference),
+          name: getPeriodLabel(reference),
+          status: 'open',
+          start_date: start.toISOString().slice(0, 10),
+          end_date: end.toISOString().slice(0, 10),
+          last_d1_update_at: getD1Date().toISOString(),
+          total_bonus: summary.confirmed,
+          total_payroll: summary.confirmed,
+        }, { onConflict: 'organization_id,reference' })
+        .select('id')
         .single()
 
       if (periodError) throw periodError
 
-      const calculationPayload = calculations.map((item) => ({
-        id: item.id,
-        period_id: savedPeriod.id,
-        organization_id: user.organization_id,
-        user_id: item.user_id,
-        base_salary: item.base_salary,
-        sales_revenue: item.sales_revenue,
-        sales_commission: item.sales_commission,
-        mission_bonus: item.mission_bonus,
-        kpi_bonus: item.kpi_bonus,
-        accelerator_mult: item.accelerator_mult,
-        total: item.total,
-        goal_pct: item.goal_pct,
-        missions_completed: item.missions_completed,
-        status: 'pending_approval',
-        calculated_at: new Date().toISOString(),
+      await supabase
+        .from('commission_entries')
+        .delete()
+        .eq('organization_id', user.organization_id)
+        .eq('period_reference', reference)
+        .neq('status', 'disputed')
+
+      const payload = previewEntries.map((entry) => ({
+        ...entry,
+        period_id: period.id,
+        company_id: user.organization_id,
       }))
 
-      const { data: savedCalculations, error: calculationError } = await supabase
-        .from('commission_calculations')
-        .upsert(calculationPayload, { onConflict: 'period_id,user_id' })
-        .select('id, user_id')
-
-      if (calculationError) throw calculationError
-
-      const savedByUser = new Map((savedCalculations ?? []).map((item: { id: string; user_id: string }) => [item.user_id, item.id]))
-      const calculationIds = [...savedByUser.values()]
-      if (calculationIds.length) {
-        await supabase.from('commission_line_items').delete().in('calculation_id', calculationIds)
-      }
-
-      const lineItems = calculations.flatMap((calculation) => {
-        const calculationId = savedByUser.get(calculation.user_id)
-        if (!calculationId) return []
-        return calculation.line_items.map((item) => ({
-          calculation_id: calculationId,
-          user_id: calculation.user_id,
-          tipo: item.tipo,
-          descricao: item.descricao,
-          valor: item.valor,
-          data_referencia: item.data_referencia,
-          referencia_id: item.referencia_id,
-        }))
-      })
-
-      if (lineItems.length) {
-        const { error: lineItemsError } = await supabase.from('commission_line_items').insert(lineItems)
-        if (lineItemsError) throw lineItemsError
+      if (payload.length) {
+        const { error } = await supabase.from('commission_entries').upsert(payload, {
+          onConflict: 'organization_id,period_reference,sale_id,status',
+        })
+        if (error) throw error
       }
 
       await supabase.from('commission_audit_logs').insert({
         organization_id: user.organization_id,
-        period_id: savedPeriod.id,
+        company_id: user.organization_id,
+        period_id: period.id,
         actor_id: user.id,
-        action: 'period_closed',
-        details: { reference: period.reference, calculations: calculations.length },
+        created_by: user.id,
+        entity_type: 'commission_period',
+        entity_id: period.id,
+        action: 'd1_recalculated',
+        details: { reference, entries: payload.length },
       })
 
-      toast.success('Periodo fechado e enviado para aprovacao')
+      toast.success('Parcial D-1 recalculada')
+      fetchData()
+    } catch {
+      toast.error('Erro ao recalcular a parcial')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const closePeriod = async () => {
+    if (!user) return
+    setClosing(true)
+    try {
+      await persistPreview()
+      const { data: period, error } = await supabase
+        .from('commission_periods')
+        .update({
+          status: 'closed',
+          closed_at: new Date().toISOString(),
+          total_bonus: summary.confirmed,
+          total_payroll: summary.confirmed,
+          notes: 'Fechamento considera apenas comissoes confirmadas, salvo ajustes manuais.',
+        })
+        .eq('organization_id', user.organization_id)
+        .eq('reference', reference)
+        .select('id')
+        .single()
+
+      if (error) throw error
+      await supabase.from('commission_audit_logs').insert({
+        organization_id: user.organization_id,
+        company_id: user.organization_id,
+        period_id: period.id,
+        actor_id: user.id,
+        created_by: user.id,
+        entity_type: 'commission_period',
+        entity_id: period.id,
+        action: 'period_closed_confirmed_only',
+        details: { reference, confirmed_total: summary.confirmed },
+      })
+      toast.success('Fechamento aberto com comissoes confirmadas')
       fetchData()
     } catch {
       toast.error('Erro ao fechar periodo')
@@ -363,51 +323,63 @@ export default function ComissionamentoPage() {
     }
   }
 
-  const handleApprove = async (calculationId: string) => {
+  const resolveDispute = async (dispute: CommissionDispute, status: CommissionDisputeStatus) => {
     if (!user) return
-    setApproving(calculationId)
+    const entryStatus: CommissionEntryStatus = status === 'rejected' ? 'confirmed' : 'adjusted'
     try {
       const { error } = await supabase
-        .from('commission_calculations')
-        .update({ status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() })
-        .eq('id', calculationId)
+        .from('commission_disputes')
+        .update({
+          status,
+          manager_response: managerResponse[dispute.id] ?? null,
+          resolved_by: user.id,
+          resolved_at: new Date().toISOString(),
+        })
+        .eq('id', dispute.id)
 
       if (error) throw error
 
+      await supabase
+        .from('commission_entries')
+        .update({ status: entryStatus, status_reason: status === 'rejected' ? 'Contestacao recusada pelo gestor.' : 'Contestacao analisada e ajustada pelo gestor.' })
+        .eq('id', dispute.commission_entry_id)
+
       await supabase.from('commission_audit_logs').insert({
         organization_id: user.organization_id,
-        period_id: period.id,
-        calculation_id: calculationId,
+        company_id: user.organization_id,
         actor_id: user.id,
-        action: 'calculation_approved',
+        created_by: user.id,
+        entity_type: 'commission_dispute',
+        entity_id: dispute.id,
+        action: `dispute_${status}`,
+        details: { commission_entry_id: dispute.commission_entry_id },
       })
 
-      toast.success('Comissao aprovada')
+      toast.success('Contestacao atualizada')
       fetchData()
     } catch {
-      toast.error('Erro ao aprovar calculo')
-    } finally {
-      setApproving(null)
+      toast.error('Erro ao analisar contestacao')
     }
   }
 
   const exportCsv = () => {
-    const header = ['Nome', 'Base', 'Comissao vendas', 'Bonus missao', 'Bonus KPI', 'Total', 'Meta %', 'Status']
-    const rows = calculations.map((item) => [
-      item.name,
-      item.base_salary,
-      item.sales_commission,
-      item.mission_bonus,
-      item.kpi_bonus,
-      item.total,
-      item.goal_pct,
-      statusLabel(item.status),
+    const header = ['Data', 'Vendedor', 'Cliente', 'Produto/Tabela', 'Valor base', 'Percentual', 'Comissao', 'Status', 'Regra']
+    const rows = visibleEntries.map((entry) => [
+      formatDatePtBr(entry.competence_date),
+      entry.seller_name ?? '',
+      entry.customer_name ?? '',
+      entry.product_name ?? entry.commercial_table_name ?? '',
+      entry.base_amount,
+      `${entry.commission_percentage}%`,
+      entry.commission_amount,
+      statusLabel(entry.status),
+      entry.rule_name,
     ])
     const csv = [header, ...rows].map((row) => row.join(';')).join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a')
     link.href = url
-    link.download = `comissionamento-${period.reference}.csv`
+    link.download = `extrato-comissoes-${reference}.csv`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -420,165 +392,147 @@ export default function ComissionamentoPage() {
     )
   }
 
-  const daysLeft = daysUntilCutoff(config.dia_corte)
-  const periodProgress = Math.min(100, Math.max(8, ((31 - daysLeft) / 31) * 100))
-  const topSellers = [...calculations].sort((a, b) => b.total - a.total).slice(0, 3)
-  const approvalQueue = calculations.filter((item) => ['calculated', 'pending_approval'].includes(item.status))
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Comissionamento</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {period.label} · {statusLabel(period.status)}
-          </p>
+          <h2 className="text-xl font-semibold tracking-tight">Gestao de Comissoes</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{formatD1Message()} Valores podem mudar ate o fechamento.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <Download className="mr-1 h-3.5 w-3.5" />
-            CSV
+            Extrato
           </Button>
-          <Button size="sm" onClick={handleClosePeriod} disabled={closing || period.status !== 'open'}>
+          <Button variant="outline" size="sm" onClick={persistPreview} disabled={syncing}>
+            <RefreshCw className="mr-1 h-3.5 w-3.5" />
+            {syncing ? 'Recalculando...' : 'Recalcular'}
+          </Button>
+          <Button size="sm" onClick={closePeriod} disabled={closing}>
             <CalendarCheck className="mr-1 h-3.5 w-3.5" />
-            {closing ? 'Fechando...' : 'Fechar periodo'}
+            {closing ? 'Fechando...' : 'Abrir fechamento'}
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="geral" className="space-y-4">
-        <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="geral">Visao geral</TabsTrigger>
-          <TabsTrigger value="vendedores">Por vendedor</TabsTrigger>
-          <TabsTrigger value="aprovacoes">Aprovacoes</TabsTrigger>
-          <TabsTrigger value="historico">Historico</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 sm:grid-cols-4 xl:grid-cols-7">
+        <Summary icon={CheckCircle2} label="Comissao confirmada" value={formatCurrency(summary.confirmed)} tone="text-emerald-700 bg-emerald-500/10" />
+        <Summary icon={Clock} label="Comissao pendente" value={formatCurrency(summary.pending)} tone="text-amber-700 bg-amber-500/10" />
+        <Summary icon={AlertCircle} label="Contestada" value={formatCurrency(summary.disputed)} tone="text-red-700 bg-red-500/10" />
+        <Summary icon={FileText} label="Total estimado" value={formatCurrency(summary.estimated)} tone="text-blue-700 bg-blue-500/10" />
+        <Summary icon={Users} label="Vendedores" value={String(sellerSummaries.length)} tone="text-violet-700 bg-violet-500/10" />
+        <Summary icon={ShieldCheck} label="Vendas" value={String(summary.sales)} tone="text-cyan-700 bg-cyan-500/10" />
+        <Summary icon={RefreshCw} label="D-1" value={formatDatePtBr(getD1Date())} tone="text-primary bg-primary/10" />
+      </div>
 
-        <TabsContent value="geral" className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-4">
-            <SummaryCard icon={ReceiptText} label="Folha total" value={formatCurrency(summary.totalPayroll)} tone="text-emerald-600 bg-emerald-500/10" />
-            <SummaryCard icon={Trophy} label="Bonus gerados" value={formatCurrency(summary.totalBonus)} tone="text-amber-600 bg-amber-500/10" />
-            <SummaryCard icon={Users} label="Vendedores" value={String(calculations.length)} tone="text-violet-600 bg-violet-500/10" />
-            <SummaryCard icon={Clock} label="Status" value={statusLabel(period.status)} tone="text-blue-600 bg-blue-500/10" />
-          </div>
+      {rules.length === 0 && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="pt-5 text-sm text-amber-800">
+            Nenhuma regra ativa encontrada. Cadastre uma regra em Configuracao de Comissionamento para gerar comissoes automaticamente.
+          </CardContent>
+        </Card>
+      )}
 
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Progresso do periodo</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Dia de corte {config.dia_corte}</span>
-                <span className="font-medium">{daysLeft} dias restantes</span>
+      <div className="flex gap-2 overflow-x-auto">
+        {[
+          ['resumo', 'Por vendedor'],
+          ['extrato', 'Extrato detalhado'],
+          ['contestacoes', `Contestacoes (${openDisputes.length})`],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setTab(value as typeof tab)}
+            className={`h-8 rounded-lg px-3 text-sm ${tab === value ? 'bg-primary text-primary-foreground' : 'border border-border/60 hover:bg-accent/40'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'resumo' && <SellerTable summaries={sellerSummaries} entries={entries} />}
+
+      {tab === 'extrato' && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Extrato de Comissao</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-8" placeholder="Buscar por vendedor, cliente, produto ou regra" />
               </div>
-              <Progress value={periodProgress} />
-            </CardContent>
-          </Card>
+              <select value={sellerFilter} onChange={(event) => setSellerFilter(event.target.value)} className="h-9 rounded-lg border border-input bg-background px-2.5 text-sm">
+                <option value="all">Todos vendedores</option>
+                {sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
+              </select>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | CommissionEntryStatus)} className="h-9 rounded-lg border border-input bg-background px-2.5 text-sm">
+                <option value="all">Todos status</option>
+                {(['confirmed', 'pending', 'disputed', 'adjusted', 'paid', 'cancelled'] as CommissionEntryStatus[]).map((status) => (
+                  <option key={status} value={status}>{statusLabel(status)}</option>
+                ))}
+              </select>
+            </div>
+            <EntryTable entries={visibleEntries} />
+          </CardContent>
+        </Card>
+      )}
 
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Top vendedores do mes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {topSellers.map((seller, index) => (
-                <div key={seller.user_id} className="flex items-center justify-between rounded-lg border border-border/40 p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{seller.name}</p>
-                      <p className="text-xs text-muted-foreground">{seller.goal_pct}% da meta</p>
+      {tab === 'contestacoes' && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Analise de Contestacoes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {disputes.length === 0 ? (
+              <Empty text="Nenhuma contestacao aberta. As solicitacoes dos vendedores aparecerem aqui quando houver divergencias." />
+            ) : (
+              disputes.map((dispute) => {
+                const entry = entries.find((item) => item.id === dispute.commission_entry_id)
+                return (
+                  <div key={dispute.id} className="rounded-lg border border-border/50 p-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium">{entry?.seller_name ?? 'Vendedor'}</p>
+                          <Badge className={`border-0 text-[10px] ${disputeTone[dispute.status]}`}>{statusLabel(dispute.status)}</Badge>
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">{dispute.reason}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{dispute.description || 'Sem observacao adicional.'}</p>
+                        {entry && (
+                          <p className="mt-2 text-xs">
+                            {entry.customer_name} - {entry.product_name} - {formatCurrency(entry.commission_amount)} pela regra {entry.rule_name}
+                          </p>
+                        )}
+                      </div>
+                      {dispute.status === 'under_review' && (
+                        <div className="w-full space-y-2 lg:w-[360px]">
+                          <Textarea
+                            value={managerResponse[dispute.id] ?? ''}
+                            onChange={(event) => setManagerResponse((prev) => ({ ...prev, [dispute.id]: event.target.value }))}
+                            placeholder="Resposta do gestor"
+                          />
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button size="sm" variant="outline" onClick={() => resolveDispute(dispute, 'rejected')}>Recusar</Button>
+                            <Button size="sm" variant="outline" onClick={() => resolveDispute(dispute, 'corrected')}>Corrigir</Button>
+                            <Button size="sm" onClick={() => resolveDispute(dispute, 'approved')}>Aprovar</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <span className="text-sm font-semibold">{formatCurrency(seller.total)}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="vendedores">
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Detalhamento por vendedor</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CommissionTable calculations={calculations} onApprove={handleApprove} approving={approving} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="aprovacoes">
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <ListChecks className="h-4 w-4 text-amber-600" />
-                Fila de aprovacao
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {approvalQueue.length === 0 ? (
-                <Empty icon={CheckCircle2} text="Nenhum calculo aguardando aprovacao." />
-              ) : (
-                approvalQueue.map((item) => (
-                  <div key={item.user_id} className="flex flex-col gap-3 rounded-lg border border-border/40 p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatCurrency(item.total)} · vendas {formatCurrency(item.sales_revenue)} · {item.goal_pct}% da meta
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={() => item.id && handleApprove(item.id)} disabled={!item.id || approving === item.id}>
-                      <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                      Aprovar
-                    </Button>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="historico">
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Periodos anteriores</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {history.length === 0 ? (
-                <Empty icon={FileText} text="Nenhum periodo fechado ainda." />
-              ) : (
-                history.map((item) => (
-                  <div key={item.reference} className="grid gap-2 rounded-lg border border-border/40 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
-                    <div>
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{statusLabel(item.status)}</p>
-                    </div>
-                    <span className="text-sm">{formatCurrency(item.total_bonus)} em bonus</span>
-                    <span className="text-sm font-semibold">{formatCurrency(item.total_payroll)}</span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                )
+              })
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
 
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: typeof ReceiptText
-  label: string
-  value: string
-  tone: string
-}) {
+function Summary({ icon: Icon, label, value, tone }: { icon: typeof CheckCircle2; label: string; value: string; tone: string }) {
   return (
     <Card className="border-border/50">
       <CardContent className="pt-5">
@@ -596,64 +550,96 @@ function SummaryCard({
   )
 }
 
-function CommissionTable({
-  calculations,
-  onApprove,
-  approving,
-}: {
-  calculations: CommissionCalculation[]
-  onApprove: (id: string) => void
-  approving: string | null
-}) {
-  if (calculations.length === 0) return <Empty icon={Users} text="Nenhum vendedor na equipe." />
+function SellerTable({ summaries, entries }: { summaries: CommissionSellerSummary[]; entries: CommissionEntryDraft[] }) {
+  if (summaries.length === 0) return <Empty text="Nenhuma comissao encontrada para este periodo. Assim que houver vendas ou recebimentos elegiveis, os valores aparecem aqui." />
+
+  return (
+    <Card className="border-border/50">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium">Tabela por vendedor</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/50">
+                {['Vendedor', 'Vendas', 'Confirmada', 'Pendente', 'Contestada', 'Total estimado', 'Status'].map((head) => (
+                  <th key={head} className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{head}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {summaries.map((item) => (
+                <tr key={item.seller_id} className="border-b border-border/30 align-top last:border-0">
+                  <td className="px-3 py-3">
+                    <p className="font-medium">{item.seller_name}</p>
+                    <details className="mt-2">
+                      <summary className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground">
+                        <Eye className="h-3 w-3" />
+                        Ver extrato
+                      </summary>
+                      <div className="mt-2 max-w-[720px] space-y-1 rounded-md bg-muted/30 p-2">
+                        {entries.filter((entry) => entry.seller_id === item.seller_id).slice(0, 8).map((entry) => (
+                          <div key={`${entry.sale_id}-${entry.status}-${entry.id}`} className="flex justify-between gap-3 text-xs">
+                            <span className="text-muted-foreground">{entry.customer_name} - {entry.rule_name} - {statusLabel(entry.status)}</span>
+                            <span className="font-medium">{formatCurrency(entry.commission_amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  </td>
+                  <td className="px-3 py-3 text-right">{item.sales_count}</td>
+                  <td className="px-3 py-3 text-right">{formatCurrency(item.confirmed)}</td>
+                  <td className="px-3 py-3 text-right">{formatCurrency(item.pending)}</td>
+                  <td className="px-3 py-3 text-right">{formatCurrency(item.disputed)}</td>
+                  <td className="px-3 py-3 text-right font-bold">{formatCurrency(item.estimated)}</td>
+                  <td className="px-3 py-3">
+                    <Badge className={`border-0 text-[10px] ${item.status === 'with_dispute' ? 'bg-red-500/10 text-red-700' : 'bg-blue-500/10 text-blue-700'}`}>
+                      {item.status === 'with_dispute' ? 'Com contestacao' : 'Em andamento'}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function EntryTable({ entries }: { entries: CommissionEntryDraft[] }) {
+  if (entries.length === 0) return <Empty text="Nenhuma comissao encontrada para os filtros selecionados." />
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border/50">
-            {['Nome', 'Base', 'Comissao vendas', 'Bonus missao', 'Bonus KPI', 'Total', 'Meta%', 'Status', ''].map((head) => (
-              <th key={head} className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                {head}
-              </th>
+            {['Data', 'Vendedor', 'Cliente', 'Produto/Tabela', 'Valor base', '%', 'Comissao', 'Status', 'Regra aplicada'].map((head) => (
+              <th key={head} className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{head}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {calculations.map((item) => (
-            <tr key={item.user_id} className="border-b border-border/30 align-top last:border-0">
+          {entries.map((entry) => (
+            <tr key={`${entry.sale_id}-${entry.status}-${entry.id}`} className="border-b border-border/30 last:border-0">
+              <td className="px-3 py-3">{formatDatePtBr(entry.competence_date)}</td>
+              <td className="px-3 py-3 font-medium">{entry.seller_name}</td>
+              <td className="px-3 py-3">{entry.customer_name}</td>
               <td className="px-3 py-3">
-                <p className="font-medium">{item.name}</p>
-                <details className="mt-2">
-                  <summary className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground">
-                    <Eye className="h-3 w-3" />
-                    Ver extrato
-                  </summary>
-                  <div className="mt-2 space-y-1 rounded-md bg-muted/30 p-2">
-                    {item.line_items.map((line, index) => (
-                      <div key={`${line.tipo}-${index}`} className="flex justify-between gap-3 text-xs">
-                        <span className="text-muted-foreground">{line.descricao}</span>
-                        <span className="font-medium">{formatCurrency(line.valor)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </details>
+                <p>{entry.product_name ?? 'Venda'}</p>
+                <p className="text-xs text-muted-foreground">{entry.commercial_table_name}</p>
               </td>
-              <td className="px-3 py-3 text-right">{formatCurrency(item.base_salary)}</td>
-              <td className="px-3 py-3 text-right">{formatCurrency(item.sales_commission)}</td>
-              <td className="px-3 py-3 text-right">{formatCurrency(item.mission_bonus)}</td>
-              <td className="px-3 py-3 text-right">{formatCurrency(item.kpi_bonus)}</td>
-              <td className="px-3 py-3 text-right font-bold">{formatCurrency(item.total)}</td>
-              <td className="px-3 py-3 text-center">{item.goal_pct}%</td>
-              <td className="px-3 py-3 text-center">
-                <Badge className={`border-0 text-[10px] ${statusTone[item.status] ?? 'bg-muted text-muted-foreground'}`}>
-                  {statusLabel(item.status)}
-                </Badge>
+              <td className="px-3 py-3 text-right">{formatCurrency(entry.base_amount)}</td>
+              <td className="px-3 py-3 text-right">{entry.commission_percentage}%</td>
+              <td className="px-3 py-3 text-right font-semibold">{formatCurrency(entry.commission_amount)}</td>
+              <td className="px-3 py-3">
+                <Badge className={`border-0 text-[10px] ${statusTone[entry.status]}`}>{statusLabel(entry.status)}</Badge>
               </td>
-              <td className="px-3 py-3 text-right">
-                <Button size="sm" variant="outline" disabled={!item.id || item.status === 'approved' || approving === item.id} onClick={() => item.id && onApprove(item.id)}>
-                  Aprovar
-                </Button>
+              <td className="px-3 py-3">
+                <p>{entry.rule_name}</p>
+                <p className="text-xs text-muted-foreground">{entry.status_reason}</p>
               </td>
             </tr>
           ))}
@@ -663,11 +649,8 @@ function CommissionTable({
   )
 }
 
-function Empty({ icon: Icon, text }: { icon: typeof AlertCircle; text: string }) {
+function Empty({ text }: { text: string }) {
   return (
-    <div className="flex flex-col items-center py-8 text-center">
-      <Icon className="mb-2 h-8 w-8 text-muted-foreground/40" />
-      <p className="text-sm text-muted-foreground">{text}</p>
-    </div>
+    <div className="py-10 text-center text-sm text-muted-foreground">{text}</div>
   )
 }

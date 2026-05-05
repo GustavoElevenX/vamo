@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAppUser } from '@/lib/server/auth'
-import { createRecommendation } from '@/lib/services/action-recommendation.service'
-import { createEntityRelationship, createEventWithImpacts, type JsonObject } from '@/lib/services/performance-os.service'
+import { approvePdiPlan, recommendPdiPlan } from '@/lib/services/pdi.service'
+import type { JsonObject } from '@/lib/services/performance-os.service'
 
 export const runtime = 'nodejs'
 
@@ -41,101 +41,59 @@ export async function POST(request: Request) {
   const title = asString(body.title)
   if (!title) return NextResponse.json({ error: 'title obrigatorio' }, { status: 400 })
 
-  const { data: plan, error } = await adminClient
-    .from('pdi_plans')
-    .insert({
-      organization_id: appUser.organization_id,
-      user_id: targetUserId,
-      manager_id: appUser.role === 'seller' ? null : appUser.id,
-      gap_id: asString(body.gapId) || null,
-      title,
-      description: asString(body.description) || null,
-      status: asString(body.status, appUser.role === 'seller' ? 'recommended' : 'approved'),
-      recommended_by: appUser.role === 'seller' ? 'ai' : 'manager',
-      start_date: asString(body.startDate) || null,
-      due_date: asString(body.dueDate) || null,
-      target_kpi_key: asString(body.targetKpiKey) || null,
-      baseline_value: typeof body.baselineValue === 'number' ? body.baselineValue : null,
-      target_value: typeof body.targetValue === 'number' ? body.targetValue : null,
-      current_value: typeof body.currentValue === 'number' ? body.currentValue : null,
-      metadata: asObject(body.metadata),
-    })
-    .select('*')
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  if (plan.gap_id) {
-    await adminClient.from('pdi_gaps').update({ status: 'in_pdi' }).eq('id', plan.gap_id)
-    await createEntityRelationship(adminClient, {
-      organizationId: appUser.organization_id,
-      fromEntityType: 'pdi_gap',
-      fromEntityId: plan.gap_id,
-      toEntityType: 'pdi_plan',
-      toEntityId: plan.id,
-      relationshipType: 'converted_to_plan',
-    })
-  }
-
-  const { event } = await createEventWithImpacts(
-    adminClient,
-    {
+  try {
+    const result = await recommendPdiPlan(adminClient, {
       organizationId: appUser.organization_id,
       actorUserId: appUser.id,
       targetUserId,
-      eventType: plan.status === 'approved' ? 'pdi.plan_approved' : 'pdi.plan_created',
-      sourceModule: 'pdi',
-      entityType: 'pdi_plan',
-      entityId: plan.id,
-      title: `PDI criado: ${title}`,
+      managerId: appUser.role === 'seller' ? null : appUser.id,
+      gapId: asString(body.gapId) || null,
+      title,
       description: asString(body.description) || null,
-      impactScore: 55,
-      priorityScore: 65,
-      metadata: { gapId: plan.gap_id, targetKpiKey: plan.target_kpi_key },
-    },
-    [
-      { impactedModule: 'pdi', impactedEntityType: 'pdi_plan', impactedEntityId: plan.id, impactType: 'plan_created' },
-      { impactedModule: 'hoje', impactedEntityType: 'user', impactedEntityId: targetUserId, impactType: 'development_priority' },
-      { impactedModule: 'mission', impactedEntityType: 'pdi_plan', impactedEntityId: plan.id, impactType: 'practice_required' },
-      { impactedModule: 'xp', impactedEntityType: 'pdi_plan', impactedEntityId: plan.id, impactType: 'evidence_required' },
-    ],
-  )
+      skillArea: asString(body.skillArea, title),
+      targetKpiKey: asString(body.targetKpiKey) || null,
+      baselineValue: typeof body.baselineValue === 'number' ? body.baselineValue : null,
+      targetValue: typeof body.targetValue === 'number' ? body.targetValue : null,
+      status: asString(body.status, appUser.role === 'seller' ? 'recommended' : 'approved') as any,
+      recommendedBy: appUser.role === 'seller' ? 'ai' : 'manager',
+      metadata: asObject(body.metadata),
+    })
 
-  await createRecommendation(adminClient, {
-    organizationId: appUser.organization_id,
-    eventId: event.id,
-    targetUserId,
-    createdByUserId: appUser.id,
-    sourceModule: 'pdi',
-    recommendationType: 'pdi_training',
-    title: `Aplicar PDI em caso real: ${title}`,
-    description: 'Conclua o treino curto e registre uma aplicacao em deal, proposta, follow-up ou simulacao.',
-    suggestedActionLabel: 'Abrir Meu PDI',
-    suggestedActionHref: '/desenvolvimento/pdi',
-    priority: 'high',
-    metadata: { planId: plan.id },
-  })
-
-  return NextResponse.json({ plan, event }, { status: 201 })
+    return NextResponse.json(result, { status: 201 })
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro interno' }, { status: 500 })
+  }
 }
 
 export async function PATCH(request: Request) {
   const auth = await getAppUser()
   if (auth.error) return auth.error
   const { adminClient, appUser } = auth
+  if (!['manager', 'admin'].includes(appUser.role)) {
+    return NextResponse.json({ error: 'Apenas gestores podem aprovar ou ajustar PDI' }, { status: 403 })
+  }
+
   const body = await request.json() as Record<string, unknown>
   const id = asString(body.id)
   const status = asString(body.status)
   if (!id || !status) return NextResponse.json({ error: 'id e status obrigatorios' }, { status: 400 })
 
-  const { data: plan, error } = await adminClient
-    .from('pdi_plans')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('organization_id', appUser.organization_id)
-    .select('*')
-    .single()
+  try {
+    const result = await approvePdiPlan(adminClient, {
+      organizationId: appUser.organization_id,
+      managerId: appUser.id,
+      planId: id,
+      title: asString(body.title) || undefined,
+      description: body.description === undefined ? undefined : asString(body.description),
+      status: status as any,
+      dueDate: body.dueDate === undefined ? undefined : asString(body.dueDate) || null,
+      targetValue: typeof body.targetValue === 'number' ? body.targetValue : undefined,
+      currentValue: typeof body.currentValue === 'number' ? body.currentValue : undefined,
+      metadata: body.metadata ? asObject(body.metadata) : undefined,
+    })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ plan })
+    return NextResponse.json(result)
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro interno' }, { status: 500 })
+  }
 }

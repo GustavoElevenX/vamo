@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
@@ -8,160 +8,192 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
+import { Calculator, CheckCircle2, ListChecks, Pencil, Plus, Save, SlidersHorizontal, ToggleLeft, ToggleRight } from 'lucide-react'
 import {
-  BarChart3,
-  Calculator,
-  DollarSign,
-  Plus,
-  Save,
-  SlidersHorizontal,
-  Target,
-  Trash2,
-  Zap,
-} from 'lucide-react'
-import {
-  calculateCommission,
-  DEFAULT_COMMISSION_CONFIG,
   formatCurrency,
-  normalizeConfig,
-  type CommissionConfig,
-  type CommissionModel,
-  type CommissionTier,
-  type KpiRule,
+  statusLabel,
+  type CommissionCalculationBase,
+  type CommissionRule,
+  type CommissionRuleType,
 } from '@/lib/commission'
 
-const models: { value: CommissionModel; label: string }[] = [
-  { value: 'fixo_mais_percentual', label: 'Fixo + percentual' },
-  { value: 'apenas_percentual', label: 'Apenas percentual' },
-  { value: 'apenas_fixo', label: 'Apenas fixo' },
+interface Seller {
+  id: string
+  name: string
+}
+
+type RuleForm = {
+  name: string
+  description: string
+  rule_type: CommissionRuleType
+  seller_id: string
+  product_id: string
+  category_id: string
+  commercial_table_id: string
+  percentage: string
+  calculation_base: CommissionCalculationBase
+  priority: string
+  active: boolean
+}
+
+const ruleTypes: { value: CommissionRuleType; label: string; hint: string; priority: number }[] = [
+  { value: 'seller_product', label: 'Vendedor + produto', hint: 'Regra mais especifica para uma venda.', priority: 1 },
+  { value: 'seller_commercial_table', label: 'Vendedor + tabela', hint: 'Percentual por vendedor em uma tabela.', priority: 2 },
+  { value: 'product', label: 'Produto', hint: 'Comissao por produto ou servico.', priority: 3 },
+  { value: 'category', label: 'Categoria', hint: 'Comissao por categoria de produto.', priority: 4 },
+  { value: 'commercial_table', label: 'Tabela comercial', hint: 'Comissao por tabela de preco/margem.', priority: 5 },
+  { value: 'seller', label: 'Vendedor', hint: 'Percentual geral do vendedor.', priority: 6 },
+  { value: 'company_default', label: 'Padrao da empresa', hint: 'Fallback quando nenhuma regra especifica se aplica.', priority: 7 },
 ]
+
+const emptyForm: RuleForm = {
+  name: '',
+  description: '',
+  rule_type: 'company_default',
+  seller_id: '',
+  product_id: '',
+  category_id: '',
+  commercial_table_id: '',
+  percentage: '5',
+  calculation_base: 'sale_amount',
+  priority: '7',
+  active: true,
+}
+
+const baseLabels: Record<CommissionCalculationBase, string> = {
+  sale_amount: 'Venda realizada',
+  received_amount: 'Valor recebido',
+}
+
+function toRuleForm(rule: CommissionRule): RuleForm {
+  return {
+    name: rule.name,
+    description: rule.description ?? '',
+    rule_type: rule.rule_type,
+    seller_id: rule.seller_id ?? '',
+    product_id: rule.product_id ?? '',
+    category_id: rule.category_id ?? '',
+    commercial_table_id: rule.commercial_table_id ?? '',
+    percentage: String(rule.percentage),
+    calculation_base: rule.calculation_base,
+    priority: String(rule.priority),
+    active: rule.active,
+  }
+}
+
+function clean(value: string) {
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
 
 export default function ComissionamentoConfigPage() {
   const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [commission, setCommission] = useState<CommissionConfig>(DEFAULT_COMMISSION_CONFIG)
-  const [scenario, setScenario] = useState({ revenue: '65000', target: '50000', missions: '4' })
+  const [rules, setRules] = useState<CommissionRule[]>([])
+  const [sellers, setSellers] = useState<Seller[]>([])
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<RuleForm>(emptyForm)
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!user) return
+    setLoading(true)
+    try {
+      const sellersRes = await fetch('/api/team/sellers', { credentials: 'same-origin' })
+      const sellersJson = sellersRes.ok ? await sellersRes.json() : { sellers: [] }
+      setSellers((sellersJson.sellers ?? []) as Seller[])
 
-    const fetchConfig = async () => {
-      setLoading(true)
-      try {
-        const { data } = await supabase
-          .from('commission_configs')
-          .select('*')
-          .eq('organization_id', user.organization_id)
-          .maybeSingle()
+      const { data, error } = await supabase
+        .from('commission_rules')
+        .select('*')
+        .eq('organization_id', user.organization_id)
+        .order('priority', { ascending: true })
+        .order('created_at', { ascending: false })
 
-        setCommission(normalizeConfig(data as Record<string, unknown> | null))
-      } finally {
-        setLoading(false)
-      }
+      if (error) throw error
+      setRules((data ?? []) as CommissionRule[])
+    } catch {
+      toast.error('Nao foi possivel carregar as regras de comissao')
+    } finally {
+      setLoading(false)
     }
-
-    fetchConfig()
   }, [supabase, user])
 
-  const preview = useMemo(() => calculateCommission({
-    user_id: user?.id ?? 'preview',
-    name: 'Cenario',
-    sales_revenue: Number(scenario.revenue) || 0,
-    goal_target: Number(scenario.target) || 1,
-    missions_completed: Number(scenario.missions) || 0,
-    config: commission,
-  }), [commission, scenario, user?.id])
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
-  const updateNumber = (field: keyof CommissionConfig, value: string) => {
-    const parsed = value === '' ? 0 : Number(value)
-    setCommission((prev) => ({ ...prev, [field]: Number.isFinite(parsed) ? parsed : 0 }))
+  const activeRules = useMemo(() => rules.filter((rule) => rule.active), [rules])
+  const sellerName = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller.name])), [sellers])
+
+  const setRuleType = (ruleType: CommissionRuleType) => {
+    const defaultPriority = ruleTypes.find((item) => item.value === ruleType)?.priority ?? 99
+    setForm((prev) => ({ ...prev, rule_type: ruleType, priority: String(defaultPriority) }))
   }
 
-  const updateTier = (index: number, field: keyof CommissionTier, value: string) => {
-    setCommission((prev) => ({
-      ...prev,
-      faixas: prev.faixas.map((tier, currentIndex) => (
-        currentIndex === index ? { ...tier, [field]: value === '' ? undefined : Number(value) } : tier
-      )),
-    }))
+  const startEdit = (rule: CommissionRule) => {
+    setEditingId(rule.id ?? null)
+    setForm(toRuleForm(rule))
   }
 
-  const addTier = () => {
-    setCommission((prev) => ({
-      ...prev,
-      faixas: [...prev.faixas, { acima: prev.faixas[prev.faixas.length - 1]?.ate ?? 110, aliquota: prev.aliquota_base }],
-    }))
-  }
-
-  const removeTier = (index: number) => {
-    setCommission((prev) => ({ ...prev, faixas: prev.faixas.filter((_, currentIndex) => currentIndex !== index) }))
-  }
-
-  const updateKpi = (index: number, field: keyof KpiRule, value: string) => {
-    setCommission((prev) => ({
-      ...prev,
-      regras_kpi: prev.regras_kpi.map((rule, currentIndex) => (
-        currentIndex === index
-          ? { ...rule, [field]: field === 'nome' ? value : Number(value) || 0 }
-          : rule
-      )),
-    }))
-  }
-
-  const addKpi = () => {
-    setCommission((prev) => ({
-      ...prev,
-      regras_kpi: [...prev.regras_kpi, { nome: 'Novo KPI', meta_pct: 80, bonus: 100 }],
-    }))
-  }
-
-  const removeKpi = (index: number) => {
-    setCommission((prev) => ({ ...prev, regras_kpi: prev.regras_kpi.filter((_, currentIndex) => currentIndex !== index) }))
+  const resetForm = () => {
+    setEditingId(null)
+    setForm(emptyForm)
   }
 
   const handleSave = async () => {
     if (!user) return
+    const percentage = Number(form.percentage)
+    if (!form.name.trim() || !Number.isFinite(percentage) || percentage < 0) {
+      toast.error('Informe nome e percentual valido para a regra')
+      return
+    }
+
     setSaving(true)
     try {
-      const primaryTier = commission.faixas[0]
-      const lastTier = commission.faixas[commission.faixas.length - 1]
       const payload = {
         organization_id: user.organization_id,
-        aliquota_base: primaryTier?.aliquota ?? commission.aliquota_base,
-        acelerador_threshold: commission.acelerador_threshold,
-        acelerador_rate: lastTier?.aliquota ?? commission.acelerador_rate,
-        bonus_missao: commission.bonus_missao,
-        salario_base: commission.salario_base,
-        periodo: commission.periodo,
-        elegibilidade: commission.elegibilidade,
-        piso_comissao: commission.piso_comissao,
-        teto_comissao: commission.teto_comissao || null,
-        bonus_kpi: commission.bonus_kpi,
-        modelo: commission.modelo,
-        faixas: commission.faixas,
-        regras_kpi: commission.regras_kpi,
-        acelerador_ativo: commission.acelerador_ativo,
-        acelerador_multiplicador: commission.acelerador_multiplicador,
-        dia_corte: commission.dia_corte,
-        fechamento_automatico: commission.fechamento_automatico,
-        updated_at: new Date().toISOString(),
+        company_id: user.organization_id,
+        name: form.name.trim(),
+        description: clean(form.description),
+        rule_type: form.rule_type,
+        seller_id: clean(form.seller_id),
+        product_id: clean(form.product_id),
+        category_id: clean(form.category_id),
+        commercial_table_id: clean(form.commercial_table_id),
+        percentage,
+        calculation_base: form.calculation_base,
+        priority: Number(form.priority) || 99,
+        active: form.active,
       }
 
-      const { error } = await supabase
-        .from('commission_configs')
-        .upsert(payload, { onConflict: 'organization_id' })
+      const result = editingId
+        ? await supabase.from('commission_rules').update(payload).eq('id', editingId)
+        : await supabase.from('commission_rules').insert(payload)
 
-      if (error) throw error
-      toast.success('Comissionamento V2 salvo')
+      if (result.error) throw result.error
+      toast.success(editingId ? 'Regra atualizada' : 'Regra criada')
+      resetForm()
+      fetchData()
     } catch {
-      toast.error('Erro ao salvar configuracao')
+      toast.error('Erro ao salvar regra')
     } finally {
       setSaving(false)
     }
+  }
+
+  const toggleRule = async (rule: CommissionRule) => {
+    if (!rule.id) return
+    const { error } = await supabase.from('commission_rules').update({ active: !rule.active }).eq('id', rule.id)
+    if (error) {
+      toast.error('Nao foi possivel alterar o status')
+      return
+    }
+    toast.success(!rule.active ? 'Regra ativada' : 'Regra desativada')
+    fetchData()
   }
 
   if (loading) {
@@ -180,209 +212,202 @@ export default function ComissionamentoConfigPage() {
             <SlidersHorizontal className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold tracking-tight">Configuracao de Comissionamento</h2>
-              <Badge variant="outline" className="h-5 px-2 text-[10px]">V2</Badge>
-            </div>
-            <p className="mt-0.5 text-sm text-muted-foreground">Modelo, faixas, acelerador, KPIs e fechamento.</p>
+            <h2 className="text-xl font-semibold tracking-tight">Configuracao de Comissionamento</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Regras por vendedor, produto, categoria, tabela comercial e base de calculo.
+            </p>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="mr-1 h-4 w-4" />
-          {saving ? 'Salvando...' : 'Salvar'}
-        </Button>
+        <Badge className="w-fit border-0 bg-primary/10 text-primary">{activeRules.length} regras ativas</Badge>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-5">
-          <Section icon={DollarSign} title="Modelo base">
-            <div className="grid gap-3 md:grid-cols-3">
-              {models.map((model) => (
-                <button
-                  key={model.value}
-                  type="button"
-                  onClick={() => setCommission((prev) => ({ ...prev, modelo: model.value }))}
-                  className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                    commission.modelo === model.value ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:bg-accent/50'
-                  }`}
-                >
-                  {model.label}
-                </button>
-              ))}
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Salario base (R$)" value={commission.salario_base} onChange={(value) => updateNumber('salario_base', value)} />
-              <Field label="Bonus por missao (R$)" value={commission.bonus_missao} onChange={(value) => updateNumber('bonus_missao', value)} />
-              <Field label="Bonus KPI fixo (R$)" value={commission.bonus_kpi} onChange={(value) => updateNumber('bonus_kpi', value)} />
-            </div>
-          </Section>
-
-          <Section icon={BarChart3} title="Faixas de comissao">
-            <div className="space-y-3">
-              {commission.faixas.map((tier, index) => (
-                <div key={index} className="grid gap-2 rounded-lg border border-border/40 p-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
-                  <Field label="Ate % da meta" value={tier.ate ?? ''} onChange={(value) => updateTier(index, 'ate', value)} />
-                  <Field label="Acima de %" value={tier.acima ?? ''} onChange={(value) => updateTier(index, 'acima', value)} />
-                  <Field label="Aliquota %" value={tier.aliquota} onChange={(value) => updateTier(index, 'aliquota', value)} />
-                  <Button variant="ghost" size="sm" onClick={() => removeTier(index)} disabled={commission.faixas.length <= 1}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={addTier}>
-              <Plus className="mr-1 h-4 w-4" />
-              Adicionar faixa
-            </Button>
-          </Section>
-
-          <Section icon={Zap} title="Acelerador">
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr]">
-              <button
-                type="button"
-                onClick={() => setCommission((prev) => ({ ...prev, acelerador_ativo: !prev.acelerador_ativo }))}
-                className={`rounded-lg border px-3 py-2 text-left text-sm ${
-                  commission.acelerador_ativo ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600' : 'border-border/50 text-muted-foreground'
-                }`}
-              >
-                {commission.acelerador_ativo ? 'Ativo' : 'Inativo'}
-              </button>
-              <Field label="Threshold % da meta" value={commission.acelerador_threshold} onChange={(value) => updateNumber('acelerador_threshold', value)} />
-              <Field label="Multiplicador" value={commission.acelerador_multiplicador} onChange={(value) => updateNumber('acelerador_multiplicador', value)} />
-            </div>
-          </Section>
-
-          <Section icon={Target} title="Bonus por KPI">
-            <div className="space-y-3">
-              {commission.regras_kpi.map((rule, index) => (
-                <div key={index} className="grid gap-2 rounded-lg border border-border/40 p-3 md:grid-cols-[1fr_120px_120px_auto] md:items-end">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">KPI</Label>
-                    <Input value={rule.nome} onChange={(event) => updateKpi(index, 'nome', event.target.value)} className="h-8" />
-                  </div>
-                  <Field label="Meta %" value={rule.meta_pct} onChange={(value) => updateKpi(index, 'meta_pct', value)} />
-                  <Field label="Bonus R$" value={rule.bonus} onChange={(value) => updateKpi(index, 'bonus', value)} />
-                  <Button variant="ghost" size="sm" onClick={() => removeKpi(index)} disabled={commission.regras_kpi.length <= 1}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={addKpi}>
-              <Plus className="mr-1 h-4 w-4" />
-              Adicionar KPI
-            </Button>
-          </Section>
-
-          <Section icon={Calculator} title="Elegibilidade e periodo">
-            <div className="grid gap-3 md:grid-cols-4">
-              <Field label="Elegibilidade %" value={commission.elegibilidade} onChange={(value) => updateNumber('elegibilidade', value)} />
-              <Field label="Piso comissao (R$)" value={commission.piso_comissao} onChange={(value) => updateNumber('piso_comissao', value)} />
-              <Field label="Teto comissao (R$)" value={commission.teto_comissao ?? ''} onChange={(value) => setCommission((prev) => ({ ...prev, teto_comissao: value ? Number(value) : null }))} />
-              <Field label="Dia de corte" value={commission.dia_corte} onChange={(value) => updateNumber('dia_corte', value)} />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(['mensal', 'quinzenal', 'semanal'] as const).map((period) => (
-                <button
-                  key={period}
-                  type="button"
-                  onClick={() => setCommission((prev) => ({ ...prev, periodo: period }))}
-                  className={`rounded-md border px-3 py-1.5 text-xs capitalize ${
-                    commission.periodo === period ? 'border-primary bg-primary text-primary-foreground' : 'border-border hover:bg-accent/40'
-                  }`}
-                >
-                  {period}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => setCommission((prev) => ({ ...prev, fechamento_automatico: !prev.fechamento_automatico }))}
-              className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                commission.fechamento_automatico
-                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700'
-                  : 'border-border/50 text-muted-foreground hover:bg-accent/50'
-              }`}
-            >
-              Fechamento automatico {commission.fechamento_automatico ? 'ativo' : 'inativo'}
-              <span className="mt-0.5 block text-xs opacity-75">
-                No dia de corte, o sistema calcula o mes anterior e envia para aprovacao.
-              </span>
-            </button>
-          </Section>
-        </div>
-
-        <Card className="h-fit border-primary/20 bg-primary/5">
+      <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
+        <Card className="h-fit border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Preview ao vivo</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Plus className="h-4 w-4 text-primary" />
+              {editingId ? 'Editar regra' : 'Criar regra'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3">
-              <Field label="Vendas no periodo (R$)" value={scenario.revenue} onChange={(value) => setScenario((prev) => ({ ...prev, revenue: value }))} />
-              <Field label="Meta do periodo (R$)" value={scenario.target} onChange={(value) => setScenario((prev) => ({ ...prev, target: value }))} />
-              <Field label="Missoes concluidas" value={scenario.missions} onChange={(value) => setScenario((prev) => ({ ...prev, missions: value }))} />
+            <Field label="Nome da regra">
+              <Input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="Ex.: Tabela B paga 5%" />
+            </Field>
+
+            <Field label="Tipo da regra">
+              <select value={form.rule_type} onChange={(event) => setRuleType(event.target.value as CommissionRuleType)} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
+                {ruleTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+              </select>
+              <p className="text-xs text-muted-foreground">{ruleTypes.find((item) => item.value === form.rule_type)?.hint}</p>
+            </Field>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Percentual">
+                <Input type="number" min="0" step="0.01" value={form.percentage} onChange={(event) => setForm((prev) => ({ ...prev, percentage: event.target.value }))} />
+              </Field>
+              <Field label="Prioridade">
+                <Input type="number" min="1" value={form.priority} onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))} />
+              </Field>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">Atingimento</span>
-                <span className="font-medium">{preview.goal_pct}%</span>
+            <Field label="Base de calculo">
+              <div className="grid grid-cols-2 gap-2">
+                {(['sale_amount', 'received_amount'] as CommissionCalculationBase[]).map((base) => (
+                  <button
+                    key={base}
+                    type="button"
+                    onClick={() => setForm((prev) => ({ ...prev, calculation_base: base }))}
+                    className={`rounded-lg border px-3 py-2 text-left text-xs ${form.calculation_base === base ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 hover:bg-accent/40'}`}
+                  >
+                    {baseLabels[base]}
+                  </button>
+                ))}
               </div>
-              <Progress value={Math.min(preview.goal_pct, 100)} />
+            </Field>
+
+            <Field label="Vendedor, se aplicavel">
+              <select value={form.seller_id} onChange={(event) => setForm((prev) => ({ ...prev, seller_id: event.target.value }))} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
+                <option value="">Todos</option>
+                {sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
+              </select>
+            </Field>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Produto">
+                <Input value={form.product_id} onChange={(event) => setForm((prev) => ({ ...prev, product_id: event.target.value }))} placeholder="ID ou nome" />
+              </Field>
+              <Field label="Categoria">
+                <Input value={form.category_id} onChange={(event) => setForm((prev) => ({ ...prev, category_id: event.target.value }))} placeholder="ID ou nome" />
+              </Field>
+              <Field label="Tabela">
+                <Input value={form.commercial_table_id} onChange={(event) => setForm((prev) => ({ ...prev, commercial_table_id: event.target.value }))} placeholder="ID ou nome" />
+              </Field>
             </div>
 
-            <div className="space-y-2 rounded-lg border border-border/40 bg-background/70 p-3 text-sm">
-              <Row label="Salario base" value={formatCurrency(preview.base_salary)} />
-              <Row label="Comissao vendas" value={formatCurrency(preview.sales_commission)} />
-              <Row label="Bonus missoes" value={formatCurrency(preview.mission_bonus)} />
-              <Row label="Bonus KPI" value={formatCurrency(preview.kpi_bonus)} />
-              <div className="border-t border-border/40 pt-2">
-                <Row label="Total" value={formatCurrency(preview.total)} strong />
-              </div>
+            <Field label="Descricao">
+              <Textarea value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} placeholder="Quando a regra deve ser aplicada." />
+            </Field>
+
+            <button
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, active: !prev.active }))}
+              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm ${form.active ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700' : 'border-border/50 text-muted-foreground'}`}
+            >
+              <span>{form.active ? 'Regra ativa' : 'Regra inativa'}</span>
+              {form.active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+            </button>
+
+            <div className="flex gap-2">
+              <Button onClick={handleSave} disabled={saving} className="flex-1">
+                <Save className="mr-1 h-4 w-4" />
+                {saving ? 'Salvando...' : 'Salvar regra'}
+              </Button>
+              {editingId && <Button variant="outline" onClick={resetForm}>Cancelar</Button>}
             </div>
           </CardContent>
         </Card>
+
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Summary icon={ListChecks} label="Regras cadastradas" value={String(rules.length)} />
+            <Summary icon={CheckCircle2} label="Regras ativas" value={String(activeRules.length)} />
+            <Summary icon={Calculator} label="Maior percentual" value={`${Math.max(0, ...rules.map((rule) => Number(rule.percentage) || 0))}%`} />
+          </div>
+
+          <Card className="border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Lista de regras ativas e inativas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rules.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-sm font-medium">Nenhuma regra de comissao cadastrada ainda.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Crie a primeira regra para comecar a calcular comissoes automaticamente.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/50">
+                        {['Regra', 'Tipo', 'Vendedor', 'Base', 'Percentual', 'Prioridade', 'Status', ''].map((head) => (
+                          <th key={head} className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{head}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rules.map((rule) => (
+                        <tr key={rule.id} className="border-b border-border/30 last:border-0">
+                          <td className="px-3 py-3">
+                            <p className="font-medium">{rule.name}</p>
+                            <p className="text-xs text-muted-foreground">{rule.description || 'Sem descricao'}</p>
+                          </td>
+                          <td className="px-3 py-3">{ruleTypes.find((type) => type.value === rule.rule_type)?.label ?? rule.rule_type}</td>
+                          <td className="px-3 py-3">{rule.seller_id ? sellerName.get(rule.seller_id) ?? 'Vendedor' : 'Todos'}</td>
+                          <td className="px-3 py-3">{baseLabels[rule.calculation_base]}</td>
+                          <td className="px-3 py-3 font-semibold">{rule.percentage}%</td>
+                          <td className="px-3 py-3">{rule.priority}</td>
+                          <td className="px-3 py-3">
+                            <Badge className={`border-0 text-[10px] ${rule.active ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
+                              {rule.active ? 'Ativa' : 'Inativa'}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="icon-sm" onClick={() => startEdit(rule)} title="Editar regra">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon-sm" onClick={() => toggleRule(rule)} title={rule.active ? 'Desativar' : 'Ativar'}>
+                                {rule.active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="pt-5 text-sm">
+              <p className="font-medium">Preview de regra aplicada</p>
+              <p className="mt-1 text-muted-foreground">
+                Uma venda de {formatCurrency(10000)} com regra de 5% gera {formatCurrency(500)}. Se a base for valor recebido e apenas {formatCurrency(6000)} entrou no caixa, a Vamo separa {formatCurrency(300)} como confirmada e {formatCurrency(200)} como pendente.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">Status de disputa aparecem como {statusLabel('under_review')} para o gestor analisar.</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
 }
 
-function Section({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: typeof DollarSign
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <Card className="border-border/50">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Icon className="h-4 w-4 text-primary" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
-    </Card>
-  )
-}
-
-function Field({ label, value, onChange }: { label: string; value: string | number; onChange: (value: string) => void }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
-      <Input type="number" value={value} onChange={(event) => onChange(event.target.value)} className="h-8 text-sm" />
+      {children}
     </div>
   )
 }
 
-function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Summary({ icon: Icon, label, value }: { icon: typeof ListChecks; label: string; value: string }) {
   return (
-    <div className={`flex justify-between gap-3 ${strong ? 'font-bold' : ''}`}>
-      <span className="text-muted-foreground">{label}</span>
-      <span>{value}</span>
-    </div>
+    <Card className="border-border/50">
+      <CardContent className="pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="mt-1 text-xl font-bold">{value}</p>
+          </div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

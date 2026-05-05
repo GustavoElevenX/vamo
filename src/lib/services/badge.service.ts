@@ -10,7 +10,11 @@ interface BadgeCriteria {
 export async function checkAndAwardBadges(
   supabase: SupabaseClient,
   userId: string,
-  organizationId: string
+  organizationId: string,
+  context?: {
+    performanceEventId?: string
+    evidence?: Record<string, unknown>
+  }
 ) {
   try {
     // Get all badges for this org
@@ -122,12 +126,27 @@ export async function checkAndAwardBadges(
               amount: badge.xp_reward,
               sourceType: 'badge',
               sourceId: badge.id,
+              performanceEventId: context?.performanceEventId,
+              evidence: {
+                badgeId: badge.id,
+                criteria: badge.criteria,
+                ...(context?.evidence ?? {}),
+              },
+              impactExpected: 'Badge concedido por evidencia operacional real',
               description: `Badge conquistado: ${badge.name}`,
             })
           } catch (xpErr) {
             console.error(`Error awarding XP for badge ${badge.id}:`, xpErr)
           }
         }
+
+        await supabase.from('feed_posts').insert({
+          organization_id: organizationId,
+          type: 'achievement',
+          author_id: null,
+          target_user_id: userId,
+          content: `conquistou o badge "${badge.name}" por evidencia real de performance.`,
+        })
 
         newBadges.push(badge)
       }

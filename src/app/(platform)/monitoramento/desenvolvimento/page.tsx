@@ -10,7 +10,10 @@ import { PdiGapCard, type PdiGap } from '@/components/pdi/PdiGapCard'
 import { PdiPlanCard, type PdiPlan } from '@/components/pdi/PdiPlanCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Brain, ChartNoAxesCombined } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Brain, ChartNoAxesCombined, CheckCircle2, XCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface RoiRow {
   user_id: string
@@ -22,36 +25,106 @@ interface RoiRow {
   completed_plans: number
 }
 
+interface PdiApplication {
+  id: string
+  plan_id: string
+  description: string
+  status: string
+  created_at: string
+  plan?: { title?: string }
+  user?: { name?: string }
+  deal?: { title?: string; value?: number }
+}
+
 export default function ManagerDevelopmentPage() {
-  const { user } = useRequiredAuth()
+  useRequiredAuth()
   const [gaps, setGaps] = useState<PdiGap[]>([])
   const [plans, setPlans] = useState<PdiPlan[]>([])
+  const [applications, setApplications] = useState<PdiApplication[]>([])
   const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
   const [roi, setRoi] = useState<RoiRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [reviewNotes, setReviewNotes] = useState('')
+  const [planAdjustments, setPlanAdjustments] = useState<Record<string, string>>({})
+  const [kpiValues, setKpiValues] = useState<Record<string, string>>({})
+  const [savingId, setSavingId] = useState<string | null>(null)
+
+  async function load() {
+    const [gapsRes, plansRes, appRes, recRes, roiRes] = await Promise.all([
+      fetch('/api/pdi/gaps'),
+      fetch('/api/pdi/plans'),
+      fetch('/api/pdi/applications'),
+      fetch('/api/action-recommendations'),
+      fetch('/api/roi/calculate').catch(() => null),
+    ])
+    const [gapsBody, plansBody, appBody, recBody] = await Promise.all([
+      gapsRes.json().catch(() => ({ gaps: [] })),
+      plansRes.json().catch(() => ({ plans: [] })),
+      appRes.json().catch(() => ({ applications: [] })),
+      recRes.json().catch(() => ({ recommendations: [] })),
+    ])
+    const roiBody = roiRes && roiRes.ok ? await roiRes.json().catch(() => ({})) : {}
+    setGaps((gapsBody.gaps ?? []) as PdiGap[])
+    setPlans((plansBody.plans ?? []) as PdiPlan[])
+    setApplications((appBody.applications ?? []) as PdiApplication[])
+    setRecommendations(((recBody.recommendations ?? []) as ContextualRecommendation[]).filter((item) => ['pdi', 'health'].includes(item.source_module)))
+    setRoi((roiBody.pdi_roi ?? roiBody.rows ?? []) as RoiRow[])
+    setLoading(false)
+  }
 
   useEffect(() => {
-    async function load() {
-      const [gapsRes, plansRes, recRes, roiRes] = await Promise.all([
-        fetch('/api/pdi/gaps'),
-        fetch('/api/pdi/plans'),
-        fetch('/api/action-recommendations'),
-        fetch('/api/roi/calculate').catch(() => null),
-      ])
-      const [gapsBody, plansBody, recBody] = await Promise.all([
-        gapsRes.json().catch(() => ({ gaps: [] })),
-        plansRes.json().catch(() => ({ plans: [] })),
-        recRes.json().catch(() => ({ recommendations: [] })),
-      ])
-      const roiBody = roiRes && roiRes.ok ? await roiRes.json().catch(() => ({})) : {}
-      setGaps((gapsBody.gaps ?? []) as PdiGap[])
-      setPlans((plansBody.plans ?? []) as PdiPlan[])
-      setRecommendations(((recBody.recommendations ?? []) as ContextualRecommendation[]).filter((item) => ['pdi', 'health'].includes(item.source_module)))
-      setRoi((roiBody.pdi_roi ?? roiBody.rows ?? []) as RoiRow[])
-      setLoading(false)
-    }
     load().catch(() => setLoading(false))
   }, [])
+
+  const updatePlanStatus = async (plan: PdiPlan, status: string) => {
+    setSavingId(plan.id)
+    try {
+      const res = await fetch('/api/pdi/plans', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: plan.id,
+          status,
+          description: planAdjustments[plan.id]?.trim() || undefined,
+        }),
+      })
+      if (!res.ok) throw new Error('Erro ao atualizar PDI')
+      toast.success(status === 'approved' ? 'PDI aprovado.' : 'PDI atualizado.')
+      await load()
+    } catch {
+      toast.error('Nao foi possivel atualizar o PDI.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const reviewApplication = async (application: PdiApplication, status: 'validated' | 'needs_adjustment') => {
+    setSavingId(application.id)
+    try {
+      const rawKpiValue = (kpiValues[application.id] ?? '').trim()
+      const parsedKpiValue = Number(rawKpiValue)
+      const hasKpiValue = rawKpiValue.length > 0 && Number.isFinite(parsedKpiValue)
+      const res = await fetch('/api/pdi/applications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicationId: application.id,
+          status,
+          reviewNotes,
+          currentValue: hasKpiValue ? parsedKpiValue : null,
+          kpiEntryValue: hasKpiValue ? parsedKpiValue : null,
+        }),
+      })
+      if (!res.ok) throw new Error('Erro ao validar evidencia')
+      toast.success(status === 'validated' ? 'Evidencia validada e ciclo atualizado.' : 'Ajuste solicitado.')
+      setReviewNotes('')
+      await load()
+    } catch {
+      toast.error('Nao foi possivel revisar a evidencia.')
+    } finally {
+      setSavingId(null)
+    }
+  }
 
   const activePlans = plans.filter((plan) => ['recommended', 'approved', 'active'].includes(plan.status)).length
   const completedPlans = plans.filter((plan) => plan.status === 'completed').length
@@ -117,12 +190,77 @@ export default function ManagerDevelopmentPage() {
         <Card>
           <CardHeader><CardTitle>Planos para aprovar ou acompanhar</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {plans.length ? plans.slice(0, 8).map((plan) => <PdiPlanCard key={plan.id} plan={plan} />) : (
+            {plans.length ? plans.slice(0, 8).map((plan) => (
+              <div key={plan.id} className="space-y-2">
+                <PdiPlanCard plan={plan} />
+                {plan.status === 'recommended' && (
+                  <div className="flex justify-end gap-2">
+                    <Textarea
+                      value={planAdjustments[plan.id] ?? ''}
+                      onChange={(event) => setPlanAdjustments((prev) => ({ ...prev, [plan.id]: event.target.value }))}
+                      placeholder="Ajuste opcional do gestor antes da aprovacao"
+                      className="min-h-9 flex-1 text-xs"
+                    />
+                    <Button size="sm" variant="outline" onClick={() => updatePlanStatus(plan, 'rejected')} disabled={savingId === plan.id}>
+                      <XCircle className="h-3.5 w-3.5" />
+                      Rejeitar
+                    </Button>
+                    <Button size="sm" onClick={() => updatePlanStatus(plan, 'approved')} disabled={savingId === plan.id}>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Aprovar PDI
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )) : (
               <p className="text-sm text-muted-foreground">Nenhum PDI recomendado no momento.</p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader><CardTitle>Aplicacoes aguardando validacao</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={reviewNotes}
+            onChange={(event) => setReviewNotes(event.target.value)}
+            placeholder="Observacao da validacao para o vendedor"
+          />
+          {applications.filter((item) => item.status === 'submitted').length ? (
+            applications.filter((item) => item.status === 'submitted').slice(0, 8).map((application) => (
+              <div key={application.id} className="rounded-lg border border-border/60 p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-bold">{application.plan?.title ?? 'Aplicacao de PDI'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{application.description}</p>
+                    {application.deal?.title && (
+                      <p className="mt-1 text-xs text-muted-foreground">Deal: {application.deal.title}</p>
+                    )}
+                    <Input
+                      value={kpiValues[application.id] ?? ''}
+                      onChange={(event) => setKpiValues((prev) => ({ ...prev, [application.id]: event.target.value }))}
+                      placeholder="Valor de KPI comprovado opcional"
+                      inputMode="decimal"
+                      className="mt-3 max-w-xs text-xs"
+                    />
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button size="sm" variant="outline" onClick={() => reviewApplication(application, 'needs_adjustment')} disabled={savingId === application.id}>
+                      Pedir ajuste
+                    </Button>
+                    <Button size="sm" onClick={() => reviewApplication(application, 'validated')} disabled={savingId === application.id}>
+                      Validar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhuma aplicacao pendente de validacao.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

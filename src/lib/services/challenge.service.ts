@@ -6,7 +6,11 @@ export async function updateChallengeProgress(
   userId: string,
   organizationId: string,
   challengeId: string,
-  progress: number
+  progress: number,
+  context?: {
+    performanceEventId?: string
+    evidence?: Record<string, unknown>
+  }
 ) {
   const { data: challenge, error: challengeError } = await supabase
     .from('challenges')
@@ -50,7 +54,23 @@ export async function updateChallengeProgress(
       amount: challenge.xp_reward,
       sourceType: 'challenge',
       sourceId: challengeId,
+      performanceEventId: context?.performanceEventId,
+      evidence: {
+        challengeId,
+        progress,
+        target,
+        ...(context?.evidence ?? {}),
+      },
+      impactExpected: 'Desafio concluido com progresso rastreavel',
       description: `Desafio completado: ${challenge.title}`,
+    })
+
+    await supabase.from('feed_posts').insert({
+      organization_id: organizationId,
+      type: 'milestone',
+      author_id: null,
+      target_user_id: userId,
+      content: `concluiu o desafio "${challenge.title}" com progresso rastreavel.`,
     })
   }
 

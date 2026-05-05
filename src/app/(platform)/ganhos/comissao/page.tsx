@@ -4,59 +4,64 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import {
-  AlertCircle,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  DollarSign,
-  History,
-  ReceiptText,
-  TrendingUp,
-} from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { toast } from 'sonner'
+import { AlertCircle, CheckCircle2, Clock, Download, Eye, FileText, ReceiptText, Send, ShieldAlert, TrendingUp } from 'lucide-react'
 import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
+import { ContextualRecommendationCard, type ContextualRecommendation } from '@/components/performance-os/ContextualRecommendationCard'
 import {
-  calculateCommission,
+  buildCommissionEntries,
   formatCurrency,
+  formatD1Message,
+  formatDatePtBr,
   getCurrentPeriodReference,
-  getPeriodLabel,
-  normalizeConfig,
+  getD1Date,
   statusLabel,
-  type CommissionCalculation,
-  type CommissionLineItem,
-  type CommissionPeriod,
+  type CommissionDispute,
+  type CommissionEntryDraft,
+  type CommissionEntryStatus,
+  type CommissionRule,
+  type CommissionSaleInput,
 } from '@/lib/commission'
 
-interface CompletedMission {
-  id: string
-  title: string
-  completed_at: string | null
-}
-
 interface DealRow {
+  id: string
+  owner_id: string
+  title: string
   value: number | string
+  received_amount?: number | string | null
   expected_close: string | null
   updated_at: string | null
+  account_id: string | null
+  product_id?: string | null
+  product_name?: string | null
+  category_id?: string | null
+  category_name?: string | null
+  commercial_table_id?: string | null
+  commercial_table_name?: string | null
+  crm_accounts?: { name?: string | null } | null
 }
 
-interface CalculationRow {
-  id: string
-  period_id: string
-  user_id: string
-  base_salary: number | string
-  sales_revenue: number | string
-  sales_commission: number | string
-  mission_bonus: number | string
-  kpi_bonus: number | string
-  accelerator_mult: number | string
-  total: number | string
-  goal_pct: number | string
-  missions_completed: number
-  status: CommissionCalculation['status']
-  calculated_at: string | null
-  notes: string | null
+const reasons = [
+  'venda nao apareceu no extrato',
+  'valor da venda esta errado',
+  'percentual de comissao esta errado',
+  'venda esta atribuida ao vendedor errado',
+  'venda aparece como pendente, mas ja foi recebida',
+  'produto/tabela foi classificado de forma errada',
+  'outro motivo',
+]
+
+const statusTone: Record<CommissionEntryStatus, string> = {
+  confirmed: 'bg-emerald-500/10 text-emerald-700',
+  pending: 'bg-amber-500/10 text-amber-700',
+  disputed: 'bg-red-500/10 text-red-700',
+  cancelled: 'bg-muted text-muted-foreground',
+  adjusted: 'bg-blue-500/10 text-blue-700',
+  paid: 'bg-green-500/10 text-green-700',
 }
 
 function toNumber(value: number | string | null | undefined) {
@@ -64,161 +69,212 @@ function toNumber(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function isCurrentReference(dateValue: string | null | undefined, reference: string) {
+function inCurrentReference(dateValue: string | null | undefined, reference: string) {
   if (!dateValue) return true
   const [year, month] = reference.split('-').map(Number)
   const date = new Date(dateValue)
   return date.getFullYear() === year && date.getMonth() === month - 1
 }
 
-function nextPaymentDate(day: number) {
-  const now = new Date()
-  const date = new Date(now.getFullYear(), now.getMonth(), Math.min(Math.max(day, 1), 28))
-  if (date <= now) date.setMonth(date.getMonth() + 1)
-  return date
-}
-
 export default function ComissaoPage() {
   const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState<CommissionPeriod | null>(null)
-  const [calculation, setCalculation] = useState<CommissionCalculation | null>(null)
-  const [history, setHistory] = useState<CommissionCalculation[]>([])
-  const [cutoffDay, setCutoffDay] = useState(5)
+  const [entries, setEntries] = useState<CommissionEntryDraft[]>([])
+  const [disputes, setDisputes] = useState<CommissionDispute[]>([])
+  const [statusFilter, setStatusFilter] = useState<'all' | CommissionEntryStatus>('all')
+  const [search, setSearch] = useState('')
+  const [contestReason, setContestReason] = useState<Record<string, string>>({})
+  const [contestDescription, setContestDescription] = useState<Record<string, string>>({})
+  const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
+  const [sending, setSending] = useState<string | null>(null)
+  const reference = getCurrentPeriodReference()
+
+  const buildSales = useCallback((deals: DealRow[]): CommissionSaleInput[] => {
+    if (!user) return []
+    return deals
+      .filter((deal) => inCurrentReference(deal.expected_close ?? deal.updated_at, reference))
+      .map((deal) => ({
+        id: deal.id,
+        organization_id: user.organization_id,
+        seller_id: user.id,
+        seller_name: user.name,
+        customer_id: deal.account_id,
+        customer_name: deal.crm_accounts?.name ?? 'Cliente sem nome',
+        product_id: deal.product_id ?? deal.product_name ?? null,
+        product_name: deal.product_name ?? deal.title,
+        category_id: deal.category_id ?? deal.category_name ?? null,
+        category_name: deal.category_name ?? 'Sem categoria',
+        commercial_table_id: deal.commercial_table_id ?? deal.commercial_table_name ?? null,
+        commercial_table_name: deal.commercial_table_name ?? 'Tabela padrao',
+        sale_amount: toNumber(deal.value),
+        received_amount: toNumber(deal.received_amount),
+        sale_date: deal.expected_close ?? deal.updated_at ?? new Date().toISOString(),
+        title: deal.title,
+      }))
+  }, [reference, user])
 
   const fetchData = useCallback(async () => {
     if (!user) return
     setLoading(true)
     try {
-      const reference = getCurrentPeriodReference()
-      const [{ data: configRow }, { data: currentPeriod }] = await Promise.all([
-        supabase.from('commission_configs').select('*').eq('organization_id', user.organization_id).maybeSingle(),
+      const [{ data: persistedEntries }, { data: disputeRows }, { data: ruleRows }, { data: dealRows }, recommendationsRes] = await Promise.all([
         supabase
-          .from('commission_periods')
+          .from('commission_entries')
           .select('*')
           .eq('organization_id', user.organization_id)
-          .eq('reference', reference)
-          .maybeSingle(),
+          .eq('seller_id', user.id)
+          .eq('period_reference', reference)
+          .order('competence_date', { ascending: false }),
+        supabase
+          .from('commission_disputes')
+          .select('*')
+          .eq('organization_id', user.organization_id)
+          .eq('seller_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('commission_rules')
+          .select('*')
+          .eq('organization_id', user.organization_id)
+          .eq('active', true)
+          .order('priority', { ascending: true }),
+        supabase
+          .from('crm_deals')
+          .select('id, owner_id, title, value, received_amount, expected_close, updated_at, account_id, product_id, product_name, category_id, category_name, commercial_table_id, commercial_table_name, crm_accounts(name)')
+          .eq('organization_id', user.organization_id)
+          .eq('owner_id', user.id)
+          .eq('stage', 'closed_won'),
+        fetch('/api/action-recommendations'),
       ])
 
-      const config = normalizeConfig(configRow as Record<string, unknown> | null)
-      setCutoffDay(config.dia_corte)
-
-      if (currentPeriod) {
-        const activePeriod = currentPeriod as CommissionPeriod
-        setPeriod(activePeriod)
-        const { data: row } = await supabase
-          .from('commission_calculations')
-          .select('*')
-          .eq('period_id', activePeriod.id)
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (row) {
-          const calcRow = row as CalculationRow
-          const { data: lineItems } = await supabase
-            .from('commission_line_items')
-            .select('*')
-            .eq('calculation_id', calcRow.id)
-
-          setCalculation({
-            id: calcRow.id,
-            period_id: calcRow.period_id,
-            user_id: calcRow.user_id,
-            name: user.name,
-            base_salary: toNumber(calcRow.base_salary),
-            sales_revenue: toNumber(calcRow.sales_revenue),
-            sales_commission: toNumber(calcRow.sales_commission),
-            mission_bonus: toNumber(calcRow.mission_bonus),
-            kpi_bonus: toNumber(calcRow.kpi_bonus),
-            accelerator_mult: toNumber(calcRow.accelerator_mult),
-            total: toNumber(calcRow.total),
-            goal_pct: toNumber(calcRow.goal_pct),
-            missions_completed: calcRow.missions_completed,
-            status: calcRow.status,
-            calculated_at: calcRow.calculated_at,
-            notes: calcRow.notes,
-            line_items: (lineItems ?? []) as CommissionLineItem[],
-          })
-        }
+      const rows = ((persistedEntries ?? []) as CommissionEntryDraft[]).map((entry) => ({
+        ...entry,
+        seller_name: user.name,
+      }))
+      if (rows.length > 0) {
+        setEntries(rows)
       } else {
-        setPeriod({
-          reference,
-          label: getPeriodLabel(reference),
-          status: 'open',
-          total_bonus: 0,
-          total_payroll: 0,
-        })
-
-        const [{ data: missions }, { data: deals }] = await Promise.all([
-          supabase
-            .from('ai_missions')
-            .select('id, title, completed_at')
-            .eq('user_id', user.id)
-            .eq('status', 'completed'),
-          supabase
-            .from('crm_deals')
-            .select('value, expected_close, updated_at')
-            .eq('organization_id', user.organization_id)
-            .eq('owner_id', user.id)
-            .eq('stage', 'closed_won'),
-        ])
-
-        const currentMissions = ((missions ?? []) as CompletedMission[])
-          .filter((mission) => isCurrentReference(mission.completed_at, reference))
-        const salesRevenue = ((deals ?? []) as DealRow[])
-          .filter((deal) => isCurrentReference(deal.expected_close ?? deal.updated_at, reference))
-          .reduce((sum, deal) => sum + toNumber(deal.value), 0)
-
-        setCalculation(calculateCommission({
-          user_id: user.id,
-          name: user.name,
-          sales_revenue: salesRevenue,
-          goal_target: Math.max(50000, salesRevenue || 0),
-          missions_completed: currentMissions.length,
-          config,
-        }))
+        setEntries(buildCommissionEntries(buildSales((dealRows ?? []) as DealRow[]), (ruleRows ?? []) as CommissionRule[], getD1Date()))
       }
-
-      const { data: historyRows } = await supabase
-        .from('commission_calculations')
-        .select('*, commission_periods!inner(reference, label, status)')
-        .eq('organization_id', user.organization_id)
-        .eq('user_id', user.id)
-        .order('calculated_at', { ascending: false })
-        .limit(6)
-
-      setHistory(((historyRows ?? []) as (CalculationRow & { commission_periods?: { label?: string } })[]).map((row) => ({
-        id: row.id,
-        period_id: row.period_id,
-        user_id: row.user_id,
-        name: row.commission_periods?.label ?? 'Periodo',
-        base_salary: toNumber(row.base_salary),
-        sales_revenue: toNumber(row.sales_revenue),
-        sales_commission: toNumber(row.sales_commission),
-        mission_bonus: toNumber(row.mission_bonus),
-        kpi_bonus: toNumber(row.kpi_bonus),
-        accelerator_mult: toNumber(row.accelerator_mult),
-        total: toNumber(row.total),
-        goal_pct: toNumber(row.goal_pct),
-        missions_completed: row.missions_completed,
-        status: row.status,
-        calculated_at: row.calculated_at,
-        notes: row.notes,
-        line_items: [],
-      })))
+      setDisputes((disputeRows ?? []) as CommissionDispute[])
+      if (recommendationsRes.ok) {
+        const body = await recommendationsRes.json().catch(() => ({ recommendations: [] }))
+        setRecommendations(((body.recommendations ?? []) as ContextualRecommendation[])
+          .filter((item) => ['commission', 'crm'].includes(item.source_module))
+          .slice(0, 2))
+      }
+    } catch {
+      toast.error('Nao foi possivel carregar seus ganhos')
     } finally {
       setLoading(false)
     }
-  }, [supabase, user])
+  }, [buildSales, reference, supabase, user])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  const paymentDate = useMemo(() => nextPaymentDate(cutoffDay), [cutoffDay])
-  const daysToPay = Math.max(0, Math.ceil((paymentDate.getTime() - Date.now()) / 86400000))
+  const visibleEntries = useMemo(() => entries.filter((entry) => {
+    const matchesStatus = statusFilter === 'all' || entry.status === statusFilter
+    const haystack = `${entry.customer_name} ${entry.product_name} ${entry.commercial_table_name} ${entry.rule_name}`.toLowerCase()
+    return matchesStatus && haystack.includes(search.toLowerCase())
+  }), [entries, search, statusFilter])
+
+  const summary = useMemo(() => {
+    const confirmed = entries.filter((entry) => ['confirmed', 'adjusted', 'paid'].includes(entry.status)).reduce((sum, entry) => sum + entry.commission_amount, 0)
+    const pending = entries.filter((entry) => entry.status === 'pending').reduce((sum, entry) => sum + entry.commission_amount, 0)
+    const disputed = entries.filter((entry) => entry.status === 'disputed').reduce((sum, entry) => sum + entry.commission_amount, 0)
+    const estimated = entries.reduce((sum, entry) => sum + entry.commission_amount, 0)
+    return { confirmed, pending, disputed, estimated, accumulated: confirmed + pending + disputed }
+  }, [entries])
+
+  const disputeByEntry = useMemo(() => new Map(disputes.map((dispute) => [dispute.commission_entry_id, dispute])), [disputes])
+
+  const commissionRecommendation = useMemo<ContextualRecommendation | null>(() => {
+    if (recommendations[0]) return recommendations[0]
+    if (summary.disputed > 0) {
+      return {
+        id: 'commission-disputed',
+        title: 'Acompanhar contestacoes abertas',
+        description: 'Existe valor em disputa. Revise os detalhes do extrato e acompanhe a resposta do gestor para destravar o pagamento correto.',
+        priority: 'high',
+        status: 'open',
+        suggested_action_label: 'Filtrar contestadas',
+        suggested_action_href: '/ganhos/comissao',
+        recommendation_type: 'commission_follow_up',
+        source_module: 'commission',
+      }
+    }
+    if (summary.pending > 0) {
+      return {
+        id: 'commission-pending',
+        title: 'Transformar comissao pendente em recebida',
+        description: 'Ha comissao aguardando entrada no caixa. Priorize deals com parcela pendente antes de considerar esse valor como ganho liberado.',
+        priority: 'medium',
+        status: 'open',
+        suggested_action_label: 'Ver pipeline',
+        suggested_action_href: '/crm',
+        recommendation_type: 'cash_collection',
+        source_module: 'commission',
+      }
+    }
+    return null
+  }, [recommendations, summary.disputed, summary.pending])
+
+  const contestEntry = async (entry: CommissionEntryDraft) => {
+    if (!user || !entry.id) {
+      toast.error('Esta linha ainda precisa ser recalculada pelo gestor antes de ser contestada')
+      return
+    }
+    const reason = contestReason[entry.id] ?? reasons[0]
+    const description = contestDescription[entry.id] ?? ''
+    setSending(entry.id)
+    try {
+      const { error } = await supabase.from('commission_disputes').insert({
+        organization_id: user.organization_id,
+        company_id: user.organization_id,
+        commission_entry_id: entry.id,
+        seller_id: user.id,
+        reason,
+        description,
+        status: 'under_review',
+      })
+      if (error) throw error
+
+      await supabase
+        .from('commission_entries')
+        .update({ status: 'disputed', status_reason: 'Contestada pelo vendedor e enviada para analise do gestor.' })
+        .eq('id', entry.id)
+
+      toast.success('Contestacao enviada para analise')
+      fetchData()
+    } catch {
+      toast.error('Erro ao enviar contestacao')
+    } finally {
+      setSending(null)
+    }
+  }
+
+  const exportCsv = () => {
+    const header = ['Data', 'Cliente', 'Produto/Tabela', 'Valor base', 'Percentual', 'Comissao', 'Status', 'Regra']
+    const rows = visibleEntries.map((entry) => [
+      formatDatePtBr(entry.competence_date),
+      entry.customer_name ?? '',
+      entry.product_name ?? entry.commercial_table_name ?? '',
+      entry.base_amount,
+      `${entry.commission_percentage}%`,
+      entry.commission_amount,
+      statusLabel(entry.status),
+      entry.rule_name,
+    ])
+    const csv = [header, ...rows].map((row) => row.join(';')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `meus-ganhos-${reference}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   if (loading) {
     return (
@@ -228,153 +284,159 @@ export default function ComissaoPage() {
     )
   }
 
-  if (!calculation || !period) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          label="Ganhos"
-          title={<>Minha <TitleHighlight>Comissao</TitleHighlight></>}
-          description="Detalhamento de ganhos e bonus do periodo"
-        />
-        <Card className="border-border/50">
-          <CardContent className="flex flex-col items-center py-10 text-center">
-            <AlertCircle className="mb-2 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">Ainda nao ha comissionamento para este periodo.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const variableTotal = calculation.sales_commission + calculation.mission_bonus + calculation.kpi_bonus
-  const nextTierRevenue = calculation.goal_pct >= 110 ? 0 : Math.max(0, Math.ceil((110 - calculation.goal_pct) / 100 * Math.max(calculation.sales_revenue, 50000)))
-
   return (
     <div className="space-y-6">
       <PageHeader
         label="Ganhos"
-        title={<>Minha <TitleHighlight>Comissao</TitleHighlight></>}
-        description="Holerite digital com composicao rastreavel"
-        actions={<Badge className="border-0 bg-primary/10 text-primary">{period.label}</Badge>}
+        title={<>Meus <TitleHighlight>Ganhos</TitleHighlight></>}
+        description={formatD1Message()}
+        actions={<Badge className="border-0 bg-primary/10 text-primary">Atualizacao D-1</Badge>}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-emerald-500/20 bg-emerald-500/5">
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
-                <DollarSign className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total previsto</p>
-                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(calculation.total)}</p>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-3 text-[10px]">
-              <span className="flex items-center gap-1 text-emerald-600">
-                <CheckCircle2 className="h-3 w-3" />
-                Base: {formatCurrency(calculation.base_salary)}
-              </span>
-              <span className="flex items-center gap-1 text-amber-600">
-                <Clock className="h-3 w-3" />
-                Variavel: {formatCurrency(variableTotal)}
-              </span>
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <AlertCircle className="h-3 w-3" />
-                {statusLabel(calculation.status)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-blue-500/20 bg-blue-500/5">
-          <CardContent className="pt-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
-                <Calendar className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Proximo pagamento</p>
-                <p className="text-xl font-bold text-blue-600">
-                  {paymentDate.toLocaleDateString('pt-BR')}
-                </p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">Faltam {daysToPay} dias</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <Summary icon={TrendingUp} label="Comissao acumulada ate ontem" value={formatCurrency(summary.accumulated)} tone="text-primary bg-primary/10" />
+        <Summary icon={CheckCircle2} label="Comissao confirmada" value={formatCurrency(summary.confirmed)} tone="text-emerald-700 bg-emerald-500/10" />
+        <Summary icon={Clock} label="Comissao pendente" value={formatCurrency(summary.pending)} tone="text-amber-700 bg-amber-500/10" />
+        <Summary icon={ShieldAlert} label="Em contestacao" value={formatCurrency(summary.disputed)} tone="text-red-700 bg-red-500/10" />
+        <Summary icon={ReceiptText} label="Total estimado do mes" value={formatCurrency(summary.estimated)} tone="text-blue-700 bg-blue-500/10" />
       </div>
 
       <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            Meta do mes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{formatCurrency(calculation.sales_revenue)} em vendas</span>
-            <span className="font-medium">{calculation.goal_pct}%</span>
-          </div>
-          <Progress value={Math.min(calculation.goal_pct, 100)} />
-          <p className="text-xs text-muted-foreground">
-            {nextTierRevenue > 0
-              ? `Se fechar mais ${formatCurrency(nextTierRevenue)}, voce entra na faixa acelerada.`
-              : 'Voce ja esta na faixa acelerada deste periodo.'}
-          </p>
+        <CardContent className="pt-5 text-sm text-muted-foreground">
+          Os valores exibidos representam uma parcial e podem mudar ate o fechamento do periodo.
         </CardContent>
       </Card>
 
+      {commissionRecommendation && (
+        <ContextualRecommendationCard recommendation={commissionRecommendation} />
+      )}
+
       <Card className="border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <ReceiptText className="h-4 w-4 text-primary" />
-            Extrato rastreavel
-          </CardTitle>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <FileText className="h-4 w-4 text-primary" />
+              Extrato do vendedor
+            </CardTitle>
+            <Button size="sm" variant="outline" onClick={exportCsv}>
+              <Download className="mr-1 h-3.5 w-3.5" />
+              Baixar extrato
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {calculation.line_items.map((item, index) => (
-            <div key={`${item.tipo}-${index}`} className="flex items-start justify-between gap-3 border-b border-border/30 py-2 last:border-0">
-              <div>
-                <p className="text-sm font-medium capitalize">{item.tipo}</p>
-                <p className="text-xs text-muted-foreground">{item.descricao}</p>
-              </div>
-              <span className="text-sm font-semibold">{formatCurrency(item.valor)}</span>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_180px]">
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar cliente, produto, tabela ou regra" />
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | CommissionEntryStatus)} className="h-9 rounded-lg border border-input bg-background px-2.5 text-sm">
+              <option value="all">Todos status</option>
+              {(['confirmed', 'pending', 'disputed', 'adjusted', 'paid', 'cancelled'] as CommissionEntryStatus[]).map((status) => (
+                <option key={status} value={status}>{statusLabel(status)}</option>
+              ))}
+            </select>
+          </div>
+
+          {visibleEntries.length === 0 ? (
+            <div className="py-10 text-center">
+              <AlertCircle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">Nenhuma comissao encontrada para este periodo.</p>
             </div>
-          ))}
-          <div className="flex justify-between border-t border-border/40 pt-3 text-sm font-bold">
-            <span>Total</span>
-            <span>{formatCurrency(calculation.total)}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium">
-            <History className="h-4 w-4 text-primary" />
-            Historico
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {history.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Sem periodos anteriores fechados.</p>
           ) : (
-            history.map((item) => (
-              <div key={item.id ?? item.name} className="flex items-center justify-between rounded-lg border border-border/40 p-3">
-                <div>
-                  <p className="text-sm font-medium">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Vendas {formatCurrency(item.sales_revenue)} · {item.goal_pct}% da meta
-                  </p>
-                </div>
-                <span className="text-sm font-semibold">{formatCurrency(item.total)}</span>
-              </div>
-            ))
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    {['Data', 'Cliente', 'Produto/Tabela', 'Valor base', '%', 'Comissao', 'Status', ''].map((head) => (
+                      <th key={head} className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{head}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleEntries.map((entry) => {
+                    const dispute = entry.id ? disputeByEntry.get(entry.id) : null
+                    return (
+                      <tr key={`${entry.sale_id}-${entry.status}-${entry.id}`} className="border-b border-border/30 align-top last:border-0">
+                        <td className="px-3 py-3">{formatDatePtBr(entry.competence_date)}</td>
+                        <td className="px-3 py-3">{entry.customer_name}</td>
+                        <td className="px-3 py-3">
+                          <p className="font-medium">{entry.product_name}</p>
+                          <p className="text-xs text-muted-foreground">{entry.commercial_table_name}</p>
+                        </td>
+                        <td className="px-3 py-3 text-right">{formatCurrency(entry.base_amount)}</td>
+                        <td className="px-3 py-3 text-right">{entry.commission_percentage}%</td>
+                        <td className="px-3 py-3 text-right font-semibold">{formatCurrency(entry.commission_amount)}</td>
+                        <td className="px-3 py-3">
+                          <Badge className={`border-0 text-[10px] ${statusTone[entry.status]}`}>{statusLabel(entry.status)}</Badge>
+                        </td>
+                        <td className="px-3 py-3">
+                          <details>
+                            <summary className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground">
+                              <Eye className="h-3 w-3" />
+                              Detalhes
+                            </summary>
+                            <div className="mt-3 w-[320px] max-w-[75vw] space-y-3 rounded-lg border border-border/40 bg-background p-3">
+                              <div className="space-y-1 text-xs">
+                                <p><span className="text-muted-foreground">Regra aplicada:</span> {entry.rule_name}</p>
+                                <p><span className="text-muted-foreground">Motivo do status:</span> {entry.status_reason}</p>
+                                <p><span className="text-muted-foreground">Valor da venda:</span> {formatCurrency(entry.sale_amount)}</p>
+                                <p><span className="text-muted-foreground">Valor recebido:</span> {formatCurrency(entry.received_amount)}</p>
+                              </div>
+                              {dispute ? (
+                                <div className="rounded-md bg-muted/40 p-2 text-xs">
+                                  <p className="font-medium">Contestacao: {statusLabel(dispute.status)}</p>
+                                  <p className="mt-1 text-muted-foreground">{dispute.manager_response || dispute.description || dispute.reason}</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <select
+                                    value={entry.id ? contestReason[entry.id] ?? reasons[0] : reasons[0]}
+                                    onChange={(event) => entry.id && setContestReason((prev) => ({ ...prev, [entry.id as string]: event.target.value }))}
+                                    className="h-8 w-full rounded-lg border border-input bg-background px-2 text-xs"
+                                  >
+                                    {reasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+                                  </select>
+                                  <Textarea
+                                    value={entry.id ? contestDescription[entry.id] ?? '' : ''}
+                                    onChange={(event) => entry.id && setContestDescription((prev) => ({ ...prev, [entry.id as string]: event.target.value }))}
+                                    placeholder="Observacao para o gestor"
+                                    className="text-xs"
+                                  />
+                                  <Button size="sm" onClick={() => contestEntry(entry)} disabled={!entry.id || sending === entry.id} className="w-full">
+                                    <Send className="mr-1 h-3.5 w-3.5" />
+                                    {sending === entry.id ? 'Enviando...' : 'Contestar comissao'}
+                                  </Button>
+                                  {!entry.id && <p className="text-xs text-muted-foreground">A contestacao fica disponivel depois que o gestor recalcula a parcial.</p>}
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function Summary({ icon: Icon, label, value, tone }: { icon: typeof TrendingUp; label: string; value: string; tone: string }) {
+  return (
+    <Card className="border-border/50">
+      <CardContent className="pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="mt-1 text-xl font-bold">{value}</p>
+          </div>
+          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${tone}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

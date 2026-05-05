@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
+import { ContextualRecommendationCard, type ContextualRecommendation } from '@/components/performance-os/ContextualRecommendationCard'
 import type { CrmDeal } from '@/types/crm'
 import { ArrowRight, Brain, CheckCircle2, Sparkles, TrendingUp } from 'lucide-react'
 
@@ -120,6 +121,22 @@ export default function ProjecaoPage() {
     }))
   }, [activeMissions, commissionRate, projection.openLeads])
 
+  const projectionRecommendation = useMemo<ContextualRecommendation | null>(() => {
+    const bestAction = actions[0]
+    if (!bestAction) return null
+    return {
+      id: 'projection-next-best-action',
+      title: 'Proxima melhor acao para aumentar ganhos',
+      description: `${bestAction.action}. Impacto projetado: ${money(bestAction.gain)}.`,
+      priority: bestAction.gain > 500 ? 'high' : 'medium',
+      status: 'open',
+      suggested_action_label: 'Executar agora',
+      suggested_action_href: bestAction.href,
+      recommendation_type: 'earnings_projection',
+      source_module: 'projection',
+    }
+  }, [actions])
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -204,6 +221,10 @@ export default function ProjecaoPage() {
           </Card>
         ))}
       </div>
+
+      {projectionRecommendation && (
+        <ContextualRecommendationCard recommendation={projectionRecommendation} />
+      )}
 
       <Card className="border-border/50">
         <CardHeader className="pb-3">

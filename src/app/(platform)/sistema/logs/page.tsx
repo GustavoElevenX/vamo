@@ -1,236 +1,195 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
-import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Activity, CheckCircle2, Clock, AlertTriangle, XCircle,
-  Search, Download, RefreshCw, Server, Shield, Cpu, Webhook,
-} from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, Cpu, RefreshCw, Search, Server, XCircle } from 'lucide-react'
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug'
-type LogSource = 'api' | 'auth' | 'sync' | 'ai' | 'webhook'
 
 interface LogEntry {
-  id: number
-  timestamp: string
+  id: string
+  created_at: string
   level: LogLevel
-  source: LogSource
+  source: string
   message: string
+  metadata: Record<string, unknown>
 }
 
-const STATIC_LOGS: LogEntry[] = [
-  { id: 1, timestamp: '14:32:07', level: 'error', source: 'auth', message: 'Failed login attempt from IP 192.168.1.45 - invalid credentials' },
-  { id: 2, timestamp: '14:31:54', level: 'warn', source: 'sync', message: 'HubSpot sync delayed - retrying in 30s' },
-  { id: 3, timestamp: '14:31:42', level: 'info', source: 'ai', message: 'Mission generation completed for org_abc - 7 missions created' },
-  { id: 4, timestamp: '14:31:30', level: 'info', source: 'api', message: 'POST /api/ai/diagnostic - 200 OK (234ms)' },
-  { id: 5, timestamp: '14:31:18', level: 'warn', source: 'webhook', message: 'Webhook delivery failed to https://example.com/hook - timeout' },
-  { id: 6, timestamp: '14:30:55', level: 'error', source: 'sync', message: 'Pipedrive API rate limit exceeded - backing off 60s' },
-  { id: 7, timestamp: '14:30:41', level: 'info', source: 'auth', message: 'User maria@empresa.com logged in successfully' },
-  { id: 8, timestamp: '14:30:22', level: 'debug', source: 'api', message: 'Cache hit for leaderboard query - org_abc' },
-  { id: 9, timestamp: '14:29:58', level: 'info', source: 'ai', message: 'Diagnostic report generated - session_id: ds_7f3k2m' },
-  { id: 10, timestamp: '14:29:45', level: 'info', source: 'api', message: 'GET /api/missions/active - 200 OK (89ms)' },
-  { id: 11, timestamp: '14:29:30', level: 'warn', source: 'sync', message: 'RD Station webhook payload validation warning - missing field "deal_value"' },
-  { id: 12, timestamp: '14:29:12', level: 'debug', source: 'api', message: 'Rate limiter check passed - org_abc: 847/1000 req/min' },
-  { id: 13, timestamp: '14:28:55', level: 'info', source: 'webhook', message: 'Webhook delivered to https://hooks.slack.com/xxx - 200 OK' },
-  { id: 14, timestamp: '14:28:33', level: 'error', source: 'ai', message: 'OpenRouter API timeout - fallback to Llama 3.1 70B' },
-  { id: 15, timestamp: '14:28:10', level: 'info', source: 'auth', message: 'Token refreshed for user carlos@empresa.com' },
-]
-
-const LEVEL_CONFIG: Record<LogLevel, { color: string; icon: React.ElementType }> = {
-  error: { color: 'bg-red-500/10 text-red-600', icon: XCircle },
-  warn: { color: 'bg-amber-500/10 text-amber-600', icon: AlertTriangle },
-  info: { color: 'bg-blue-500/10 text-blue-600', icon: CheckCircle2 },
-  debug: { color: 'bg-muted text-muted-foreground', icon: Cpu },
+interface LogsResponse {
+  logs: LogEntry[]
+  summary: Record<'total' | LogLevel, number>
+  sources: string[]
 }
 
-const SOURCE_LABELS: Record<LogSource, string> = {
-  api: 'API',
-  auth: 'Auth',
-  sync: 'Sync',
-  ai: 'AI',
-  webhook: 'Webhook',
+const LEVEL_CONFIG: Record<LogLevel, { color: string; icon: React.ElementType; label: string }> = {
+  error: { color: 'bg-red-500/10 text-red-600', icon: XCircle, label: 'Erro' },
+  warn: { color: 'bg-amber-500/10 text-amber-600', icon: AlertTriangle, label: 'Aviso' },
+  info: { color: 'bg-blue-500/10 text-blue-600', icon: CheckCircle2, label: 'Info' },
+  debug: { color: 'bg-muted text-muted-foreground', icon: Cpu, label: 'Debug' },
 }
 
 export default function SystemLogsPage() {
   const { user } = useRequiredAuth()
-  const supabase = createClient()
-
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [summary, setSummary] = useState<LogsResponse['summary']>({ total: 0, error: 0, warn: 0, info: 0, debug: 0 })
+  const [sources, setSources] = useState<string[]>([])
   const [filterLevel, setFilterLevel] = useState<'all' | LogLevel>('all')
-  const [filterSource, setFilterSource] = useState<'all' | LogSource>('all')
+  const [filterSource, setFilterSource] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(true)
 
+  const loadLogs = async () => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    params.set('level', filterLevel)
+    params.set('source', filterSource)
+    if (searchQuery.trim()) params.set('search', searchQuery.trim())
 
-  const filteredLogs = STATIC_LOGS.filter((log) => {
-    if (filterLevel !== 'all' && log.level !== filterLevel) return false
-    if (filterSource !== 'all' && log.source !== filterSource) return false
-    if (searchQuery && !log.message.toLowerCase().includes(searchQuery.toLowerCase())) return false
-    return true
-  })
+    try {
+      const res = await fetch(`/api/system/logs?${params.toString()}`, { credentials: 'same-origin' })
+      if (!res.ok) throw new Error('Erro ao carregar logs')
+      const data = await res.json() as LogsResponse
+      setLogs(data.logs)
+      setSummary(data.summary)
+      setSources(data.sources)
+    } catch {
+      setLogs([])
+      setSummary({ total: 0, error: 0, warn: 0, info: 0, debug: 0 })
+      setSources([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!user) return
+    loadLogs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, filterLevel, filterSource])
+
+  const levelOptions = useMemo(() => ['all', 'error', 'warn', 'info', 'debug'] as const, [])
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Logs do Sistema</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Monitoramento em tempo real</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Logs do Sistema</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Eventos reais gravados pela plataforma para auditoria operacional.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={loadLogs} disabled={loading}>
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Atualizar
+        </Button>
       </div>
 
-      {/* API Health Summary */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground leading-none">Status</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Badge className="text-[10px] border-0 bg-emerald-500/10 text-emerald-600">Operacional</Badge>
+          <CardContent className="flex items-center gap-3 pt-4 pb-3">
+            <Activity className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-[10px] text-muted-foreground">Total filtrado</p>
+              <p className="text-lg font-bold">{summary.total}</p>
+            </div>
+          </CardContent>
+        </Card>
+        {(['error', 'warn', 'info'] as LogLevel[]).map((level) => {
+          const Icon = LEVEL_CONFIG[level].icon
+          return (
+            <Card key={level} className="border-border/50">
+              <CardContent className="flex items-center gap-3 pt-4 pb-3">
+                <Icon className={`h-5 w-5 ${LEVEL_CONFIG[level].color.split(' ').at(-1)}`} />
+                <div>
+                  <p className="text-[10px] text-muted-foreground">{LEVEL_CONFIG[level].label}</p>
+                  <p className="text-lg font-bold">{summary[level]}</p>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Activity className="h-4.5 w-4.5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground leading-none">Uptime</p>
-                <p className="text-lg font-bold leading-tight mt-0.5">99.8%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <Server className="h-4.5 w-4.5 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground leading-none">Requests/hora</p>
-                <p className="text-lg font-bold leading-tight mt-0.5">1,247</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50">
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-lg bg-red-500/10 flex items-center justify-center">
-                <AlertTriangle className="h-4.5 w-4.5 text-red-500" />
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground leading-none">Taxa de erro</p>
-                <p className="text-lg font-bold leading-tight mt-0.5">0.3%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
-      {/* Filters */}
       <Card className="border-border/50">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2 flex-1">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-              <Input
-                placeholder="Buscar nos logs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={filterLevel}
-                onChange={(e) => setFilterLevel(e.target.value as any)}
-                className="h-8 text-sm rounded-md border border-input bg-background px-3"
-              >
-                <option value="all">Todos os Níveis</option>
-                <option value="error">Error</option>
-                <option value="warn">Warn</option>
-                <option value="info">Info</option>
-                <option value="debug">Debug</option>
-              </select>
-              <select
-                value={filterSource}
-                onChange={(e) => setFilterSource(e.target.value as any)}
-                className="h-8 text-sm rounded-md border border-input bg-background px-3"
-              >
-                <option value="all">Todas as Fontes</option>
-                <option value="api">API</option>
-                <option value="auth">Auth</option>
-                <option value="sync">Sync</option>
-                <option value="ai">AI</option>
-                <option value="webhook">Webhook</option>
-              </select>
-              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-                <Download className="h-3.5 w-3.5" />
-                Exportar CSV
-              </Button>
-            </div>
+        <CardContent className="flex flex-col gap-3 py-4 md:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') loadLogs()
+              }}
+              className="pl-8"
+              placeholder="Buscar nos logs"
+            />
           </div>
+          <select
+            value={filterLevel}
+            onChange={(event) => setFilterLevel(event.target.value as 'all' | LogLevel)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            {levelOptions.map((level) => (
+              <option key={level} value={level}>{level === 'all' ? 'Todos os niveis' : LEVEL_CONFIG[level].label}</option>
+            ))}
+          </select>
+          <select
+            value={filterSource}
+            onChange={(event) => setFilterSource(event.target.value)}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="all">Todas as fontes</option>
+            {sources.map((source) => (
+              <option key={source} value={source}>{source}</option>
+            ))}
+          </select>
+          <Button variant="outline" onClick={loadLogs}>Filtrar</Button>
         </CardContent>
       </Card>
 
-      {/* Log Feed */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Log Feed</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] text-muted-foreground">Atualizado há 5s</span>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          {filteredLogs.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-muted-foreground">Nenhum log encontrado com os filtros selecionados.</p>
-            </div>
-          ) : (
-            filteredLogs.map((log) => {
-              const levelConfig = LEVEL_CONFIG[log.level]
-              const LevelIcon = levelConfig.icon
-              return (
-                <div
-                  key={log.id}
-                  className="flex items-start gap-3 rounded-lg border border-border/30 px-3 py-2.5 hover:bg-accent/20 transition-colors"
-                >
-                  <span className="text-[11px] font-mono text-muted-foreground shrink-0 mt-0.5 w-14">
-                    {log.timestamp}
-                  </span>
-                  <Badge className={`text-[9px] border-0 shrink-0 ${levelConfig.color}`}>
-                    <LevelIcon className="h-2.5 w-2.5 mr-1" />
-                    {log.level.toUpperCase()}
-                  </Badge>
-                  <Badge variant="outline" className="text-[9px] shrink-0">
-                    {SOURCE_LABELS[log.source]}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground leading-relaxed">
-                    {log.message}
-                  </span>
-                </div>
-              )
-            })
-          )}
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        {loading ? (
+          <Card className="border-border/50">
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">Carregando logs...</CardContent>
+          </Card>
+        ) : logs.length === 0 ? (
+          <Card className="border-border/50">
+            <CardContent className="py-8 text-center">
+              <Server className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm font-medium">Nenhum log encontrado.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Acoes como salvar criterios, configurar sistema e publicar no feed passam a aparecer aqui.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          logs.map((log) => {
+            const Icon = LEVEL_CONFIG[log.level].icon
+            return (
+              <Card key={log.id} className="border-border/50">
+                <CardContent className="flex items-start gap-3 py-3">
+                  <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${LEVEL_CONFIG[log.level].color}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">{log.source}</Badge>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm">{log.message}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
+      </div>
     </div>
   )
 }

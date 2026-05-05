@@ -1,119 +1,110 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Target,
-  Rocket,
-  Star,
-  ArrowRight,
-  CheckCircle,
-  Clock,
-} from 'lucide-react'
+import { ArrowRight, CheckCircle, Clock, Rocket, Star, Target } from 'lucide-react'
 import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 
-interface StepCard {
+interface StepStatus {
+  id: string
   title: string
-  description: string
-  icon: React.ElementType
   href: string
-  status: 'pendente' | 'concluido'
+  completed: boolean
+  evidence: string
+  updatedAt: string | null
+}
+
+interface ProgramStatus {
+  steps: StepStatus[]
+  completed: number
+  total: number
+  progress: number
+}
+
+const iconByStep: Record<string, React.ElementType> = {
+  goals: Target,
+  action_plan: Rocket,
+  rewards: Star,
+  launch: Rocket,
 }
 
 export default function ObjetivosPage() {
   const { user } = useRequiredAuth()
   const router = useRouter()
+  const [status, setStatus] = useState<ProgramStatus | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // In a real app, status would come from the backend
-  const [steps] = useState<StepCard[]>([
-    {
-      title: 'Definir Metas',
-      description: 'Estabeleça metas da empresa, do time e individuais alinhadas ao diagnóstico.',
-      icon: Target,
-      href: '/objetivos/metas',
-      status: 'pendente',
-    },
-    {
-      title: 'Plano de Ação',
-      description: 'Configure missões gamificadas com XP, bônus e prazos para a equipe.',
-      icon: Rocket,
-      href: '/objetivos/plano-acao',
-      status: 'pendente',
-    },
-    {
-      title: 'Recompensas',
-      description: 'Defina recompensas financeiras, badges, day off e reconhecimento público.',
-      icon: Star,
-      href: '/objetivos/recompensas',
-      status: 'pendente',
-    },
-    {
-      title: 'Lançamento',
-      description: 'Revise o checklist, configure a mensagem de kick-off e lance para a equipe.',
-      icon: Rocket,
-      href: '/objetivos/lancamento',
-      status: 'pendente',
-    },
-  ])
+  useEffect(() => {
+    if (!user) return
 
+    fetch('/api/program/status', { credentials: 'same-origin' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Erro ao carregar status')
+        return res.json() as Promise<ProgramStatus>
+      })
+      .then(setStatus)
+      .catch(() => setStatus({ steps: [], completed: 0, total: 4, progress: 0 }))
+      .finally(() => setLoading(false))
+  }, [user])
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" />
+      </div>
+    )
+  }
+
+  const steps = status?.steps ?? []
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
       <PageHeader
-        label="Programa · Etapa 2 de 4"
+        label="Programa"
         title={<><TitleHighlight>Objetivos</TitleHighlight> do Programa</>}
-        description="Do diagnóstico ao plano gamificado — configure metas, recompensas e plano de ação"
+        description="Status real da configuracao: metas, missoes, recompensas e lancamento."
       />
 
-      {/* Status Cards Grid */}
       <div className="grid gap-4 sm:grid-cols-2">
         {steps.map((step, index) => {
-          const Icon = step.icon
-          const isCompleted = step.status === 'concluido'
+          const Icon = iconByStep[step.id] ?? Target
 
           return (
             <Card
-              key={step.title}
-              className={`border-border/50 transition-all hover:border-border/80 hover:shadow-sm cursor-pointer ${
-                isCompleted ? 'border-emerald-500/30 bg-emerald-500/5' : ''
+              key={step.id}
+              className={`cursor-pointer border-border/50 transition-all hover:border-border/80 hover:shadow-sm ${
+                step.completed ? 'border-emerald-500/30 bg-emerald-500/5' : ''
               }`}
               onClick={() => router.push(step.href)}
             >
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <div
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center ${
-                        isCompleted
-                          ? 'bg-emerald-500/10 text-emerald-500'
-                          : 'bg-violet-500/10 text-violet-500'
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                        step.completed ? 'bg-emerald-500/10 text-emerald-500' : 'bg-violet-500/10 text-violet-500'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
                     </div>
-                    <div>
-                      <CardTitle className="text-sm font-medium">
-                        {index + 1}. {step.title}
-                      </CardTitle>
-                    </div>
+                    <CardTitle className="text-sm font-medium">
+                      {index + 1}. {step.title}
+                    </CardTitle>
                   </div>
                   <Badge
                     variant="outline"
                     className={`text-[9px] ${
-                      isCompleted
-                        ? 'text-emerald-500 border-emerald-500/30'
-                        : 'text-muted-foreground border-border/50'
+                      step.completed ? 'border-emerald-500/30 text-emerald-500' : 'border-border/50 text-muted-foreground'
                     }`}
                   >
-                    {isCompleted ? (
+                    {step.completed ? (
                       <span className="flex items-center gap-1">
                         <CheckCircle className="h-2.5 w-2.5" />
-                        Conclu&iacute;do
+                        Concluido
                       </span>
                     ) : (
                       <span className="flex items-center gap-1">
@@ -125,9 +116,14 @@ export default function ObjetivosPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-xs text-muted-foreground mb-3">{step.description}</p>
-                <Button variant="ghost" size="sm" className="text-xs px-0 hover:bg-transparent hover:text-violet-500">
-                  Acessar <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                <p className="mb-3 text-xs text-muted-foreground">{step.evidence}</p>
+                {step.updatedAt && (
+                  <p className="mb-3 text-[10px] text-muted-foreground">
+                    Atualizado em {new Date(step.updatedAt).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
+                <Button variant="ghost" size="sm" className="px-0 text-xs hover:bg-transparent hover:text-violet-500">
+                  Acessar <ArrowRight className="ml-1 h-3.5 w-3.5" />
                 </Button>
               </CardContent>
             </Card>
@@ -135,36 +131,26 @@ export default function ObjetivosPage() {
         })}
       </div>
 
-      {/* Progress summary */}
       <Card className="border-border/50">
         <CardContent className="py-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Progresso da Etapa 2
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Progresso real da configuracao
               </p>
-              <p className="text-sm mt-0.5">
-                <strong className="text-emerald-500">
-                  {steps.filter((s) => s.status === 'concluido').length}
-                </strong>{' '}
-                de <strong>{steps.length}</strong> passos conclu&iacute;dos
+              <p className="mt-0.5 text-sm">
+                <strong className="text-emerald-500">{status?.completed ?? 0}</strong> de{' '}
+                <strong>{status?.total ?? 4}</strong> passos concluidos
               </p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-violet-500/10 flex items-center justify-center">
-              <span className="text-sm font-bold text-violet-500">
-                {Math.round(
-                  (steps.filter((s) => s.status === 'concluido').length / steps.length) * 100
-                )}
-                %
-              </span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/10">
+              <span className="text-sm font-bold text-violet-500">{status?.progress ?? 0}%</span>
             </div>
           </div>
           <div className="mt-3 h-1.5 w-full rounded-full bg-muted/50">
             <div
               className="h-1.5 rounded-full bg-violet-500 transition-all duration-500"
-              style={{
-                width: `${(steps.filter((s) => s.status === 'concluido').length / steps.length) * 100}%`,
-              }}
+              style={{ width: `${status?.progress ?? 0}%` }}
             />
           </div>
         </CardContent>

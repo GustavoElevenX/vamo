@@ -7,139 +7,141 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Gift,
-  Star,
-  Utensils,
-  BookOpen,
-  Sun,
-  Monitor,
-  DollarSign,
-  ShoppingBag,
-  Wallet,
-  ArrowRight,
-  Settings2,
-  ToggleLeft,
-  ToggleRight,
-  Pencil,
-  Save,
-  Zap,
-} from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { ArrowRight, Gift, Plus, Save, ShoppingBag, ToggleLeft, ToggleRight, Trash2, Wallet, Zap } from 'lucide-react'
+import { toast } from 'sonner'
 
-interface ManagerReward {
-  id: string
-  title: string
-  cost_xp: number
-  icon: React.ElementType
-  category: 'tempo' | 'financeiro' | 'desenvolvimento' | 'reconhecimento'
-  badge_color: string
+interface RewardRow {
+  id?: string
+  name: string
+  description: string
+  cost_xp: string
+  quantity: string
   active: boolean
 }
-
-const CATEGORY_LABELS: Record<string, string> = {
-  tempo: 'Tempo',
-  financeiro: 'Financeiro',
-  desenvolvimento: 'Desenvolvimento',
-  reconhecimento: 'Reconhecimento',
-}
-
-const INITIAL_REWARDS: ManagerReward[] = [
-  {
-    id: 'reconhecimento-publico',
-    title: 'Reconhecimento Público',
-    cost_xp: 1000,
-    icon: Star,
-    category: 'reconhecimento',
-    badge_color: 'bg-amber-500/10 text-amber-600',
-    active: true,
-  },
-  {
-    id: 'almoco-lider',
-    title: 'Almoço com Liderança',
-    cost_xp: 2000,
-    icon: Utensils,
-    category: 'reconhecimento',
-    badge_color: 'bg-violet-500/10 text-violet-600',
-    active: true,
-  },
-  {
-    id: 'vale-presente',
-    title: 'Vale-Presente R$100',
-    cost_xp: 3000,
-    icon: Gift,
-    category: 'financeiro',
-    badge_color: 'bg-emerald-500/10 text-emerald-600',
-    active: true,
-  },
-  {
-    id: 'capacitacao',
-    title: 'Capacitação Externa',
-    cost_xp: 4000,
-    icon: BookOpen,
-    category: 'desenvolvimento',
-    badge_color: 'bg-blue-500/10 text-blue-600',
-    active: true,
-  },
-  {
-    id: 'folga-extra',
-    title: 'Folga Extra',
-    cost_xp: 5000,
-    icon: Sun,
-    category: 'tempo',
-    badge_color: 'bg-orange-500/10 text-orange-600',
-    active: true,
-  },
-  {
-    id: 'upgrade-equipamento',
-    title: 'Upgrade Equipamento',
-    cost_xp: 8000,
-    icon: Monitor,
-    category: 'desenvolvimento',
-    badge_color: 'bg-primary/10 text-primary',
-    active: false,
-  },
-]
 
 export default function RecompensasPage() {
   const { user } = useRequiredAuth()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
-  const [rewards, setRewards] = useState<ManagerReward[]>(INITIAL_REWARDS)
-  const [resgatesNoMes, setResgatesNoMes] = useState(0)
-  const [orcamentoUsado, setOrcamentoUsado] = useState(0)
-  const [missionBonus, setMissionBonus] = useState(75)
-  const [kpiMultiplier, setKpiMultiplier] = useState(1.5)
-  const [acceleratorRule, setAcceleratorRule] = useState('Após 3 missões seguidas, bônus sobe 20%')
   const [saving, setSaving] = useState(false)
+  const [rewards, setRewards] = useState<RewardRow[]>([])
+  const [removedIds, setRemovedIds] = useState<string[]>([])
+  const [redemptionsCount, setRedemptionsCount] = useState(0)
+  const [xpCommitted, setXpCommitted] = useState(0)
 
-  const orcamentoTotal = 15000
-
-  useEffect(() => {
+  const load = async () => {
     if (!user) return
+    setLoading(true)
+    const now = new Date()
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-    const fetchData = async () => {
-      // Fetch redemption count for the current month
-      const now = new Date()
-      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-
-      const { count } = await supabase
-        .from('reward_redemptions')
-        .select('*', { count: 'exact', head: true })
+    const [catalogResult, redemptionsResult] = await Promise.all([
+      supabase
+        .from('rewards_catalog')
+        .select('*')
         .eq('organization_id', user.organization_id)
-        .gte('created_at', firstOfMonth)
+        .order('cost_xp', { ascending: true }),
+      supabase
+        .from('reward_redemptions')
+        .select('xp_spent')
+        .eq('organization_id', user.organization_id)
+        .gte('created_at', firstOfMonth),
+    ])
 
-      setResgatesNoMes(count ?? 0)
-
-      // Estimate budget used (count * avg reward value)
-      const estimatedUsed = (count ?? 0) * 150
-      setOrcamentoUsado(estimatedUsed)
-
-      setLoading(false)
+    if (catalogResult.error) {
+      toast.error('Nao foi possivel carregar recompensas.')
+    } else {
+      setRewards((catalogResult.data ?? []).map((reward: any) => ({
+        id: reward.id,
+        name: reward.name,
+        description: reward.description,
+        cost_xp: String(reward.cost_xp),
+        quantity: reward.quantity == null ? '' : String(reward.quantity),
+        active: Boolean(reward.active),
+      })))
     }
 
-    fetchData().catch(() => setLoading(false))
+    const redemptions = redemptionsResult.data ?? []
+    setRedemptionsCount(redemptions.length)
+    setXpCommitted(redemptions.reduce((sum: number, item: any) => sum + Number(item.xp_spent ?? 0), 0))
+    setRemovedIds([])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
+  const patchReward = (index: number, patch: Partial<RewardRow>) => {
+    setRewards((prev) => prev.map((item, i) => i === index ? { ...item, ...patch } : item))
+  }
+
+  const addReward = () => {
+    setRewards((prev) => [
+      ...prev,
+      { name: '', description: '', cost_xp: '1000', quantity: '', active: true },
+    ])
+  }
+
+  const removeReward = (index: number) => {
+    setRewards((prev) => {
+      const item = prev[index]
+      if (item?.id) setRemovedIds((ids) => [...ids, item.id as string])
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const save = async () => {
+    if (!user) return
+    setSaving(true)
+
+    try {
+      for (const id of removedIds) {
+        await supabase
+          .from('rewards_catalog')
+          .update({ active: false })
+          .eq('id', id)
+          .eq('organization_id', user.organization_id)
+      }
+
+      for (const reward of rewards) {
+        const name = reward.name.trim()
+        const cost = Number(reward.cost_xp)
+        if (!name || cost <= 0) continue
+
+        const payload = {
+          organization_id: user.organization_id,
+          name,
+          description: reward.description.trim() || 'Recompensa configurada pelo gestor.',
+          cost_xp: cost,
+          quantity: reward.quantity ? Number(reward.quantity) : null,
+          active: reward.active,
+        }
+
+        if (reward.id) {
+          const { error } = await supabase
+            .from('rewards_catalog')
+            .update(payload)
+            .eq('id', reward.id)
+            .eq('organization_id', user.organization_id)
+          if (error) throw new Error(error.message)
+        } else {
+          const { error } = await supabase.from('rewards_catalog').insert(payload)
+          if (error) throw new Error(error.message)
+        }
+      }
+
+      toast.success('Recompensas salvas na loja.')
+      await load()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar recompensas.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -149,249 +151,115 @@ export default function RecompensasPage() {
     )
   }
 
-  const toggleReward = (id: string) => {
-    setRewards((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r))
-    )
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    await new Promise((r) => setTimeout(r, 800))
-    setSaving(false)
-  }
-
-  const totalRecompensas = rewards.filter((r) => r.active).length
-  const orcamentoPercent = Math.min((orcamentoUsado / orcamentoTotal) * 100, 100)
+  const activeCount = rewards.filter((reward) => reward.active && reward.name.trim()).length
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Recompensas</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Configure a loja de XP e bônus financeiros para sua equipe
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Recompensas</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Catalogo real da loja de XP. O que estiver ativo aparece para vendedores em Loja.
+          </p>
+        </div>
+        <Button onClick={save} disabled={saving}>
+          <Save className="h-4 w-4" />
+          {saving ? 'Salvando...' : 'Salvar'}
+        </Button>
       </div>
 
-      {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/50">
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <ShoppingBag className="h-5 w-5 text-violet-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Recompensas</p>
-                <p className="text-lg font-bold">{totalRecompensas}</p>
-              </div>
+          <CardContent className="flex items-center gap-3 pt-5 pb-4">
+            <ShoppingBag className="h-5 w-5 text-violet-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Ativas na loja</p>
+              <p className="text-lg font-bold">{activeCount}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card className="border-border/50">
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Orçamento Mensal</p>
-                <p className="text-lg font-bold">R$ {orcamentoTotal.toLocaleString('pt-BR')}</p>
-              </div>
+          <CardContent className="flex items-center gap-3 pt-5 pb-4">
+            <Gift className="h-5 w-5 text-amber-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Resgates no mes</p>
+              <p className="text-lg font-bold">{redemptionsCount}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card className="border-border/50">
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <Gift className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Resgates no Mês</p>
-                <p className="text-lg font-bold">{resgatesNoMes}</p>
-              </div>
+          <CardContent className="flex items-center gap-3 pt-5 pb-4">
+            <Wallet className="h-5 w-5 text-emerald-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">XP comprometido</p>
+              <p className="text-lg font-bold">{xpCommitted.toLocaleString('pt-BR')}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Budget panel */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Orçamento</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Usado este mês</span>
-            <span className="font-semibold">
-              R$ {orcamentoUsado.toLocaleString('pt-BR')} / R$ {orcamentoTotal.toLocaleString('pt-BR')}
-            </span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-muted/50">
-            <div
-              className={`h-2 rounded-full transition-all duration-500 ${
-                orcamentoPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'
-              }`}
-              style={{ width: `${orcamentoPercent}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {orcamentoPercent > 80
-              ? 'Atenção: orçamento próximo do limite.'
-              : `${(100 - orcamentoPercent).toFixed(0)}% do orçamento disponível`}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={addReward}>
+          <Plus className="h-3.5 w-3.5" />
+          Nova recompensa
+        </Button>
+      </div>
 
-      {/* Rewards grid (manager editing view) */}
-      <div>
-        <h3 className="text-sm font-medium mb-3">Recompensas da Loja</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rewards.map((reward) => {
-            const Icon = reward.icon
-
-            return (
-              <Card
-                key={reward.id}
-                className={`border-border/50 transition-all duration-200 ${
-                  !reward.active ? 'opacity-60' : ''
-                }`}
-              >
-                <CardContent className="pt-5 pb-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${reward.badge_color}`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">
-                        {CATEGORY_LABELS[reward.category]}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="font-semibold text-sm">{reward.title}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Zap className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-sm font-bold text-primary">
-                        {reward.cost_xp.toLocaleString('pt-BR')} XP
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      onClick={() => toggleReward(reward.id)}
-                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {reward.active ? (
-                        <>
-                          <ToggleRight className="h-5 w-5 text-emerald-500" />
-                          <span>Ativa</span>
-                        </>
-                      ) : (
-                        <>
-                          <ToggleLeft className="h-5 w-5 text-muted-foreground" />
-                          <span>Inativa</span>
-                        </>
-                      )}
+      <div className="space-y-3">
+        {rewards.length === 0 ? (
+          <Card className="border-border/50">
+            <CardContent className="py-10 text-center">
+              <ShoppingBag className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm font-medium">Nenhuma recompensa cadastrada.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Crie a primeira recompensa para liberar a loja.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          rewards.map((reward, index) => (
+            <Card key={reward.id ?? index} className={`border-border/50 ${!reward.active ? 'opacity-60' : ''}`}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-sm">Recompensa {index + 1}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px]">
+                      {reward.active ? 'Ativa' : 'Inativa'}
+                    </Badge>
+                    <button onClick={() => patchReward(index, { active: !reward.active })}>
+                      {reward.active ? <ToggleRight className="h-5 w-5 text-emerald-500" /> : <ToggleLeft className="h-5 w-5 text-muted-foreground" />}
                     </button>
-                    <Button variant="ghost" size="sm" className="h-7 text-xs px-2">
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Editar
+                    <Button variant="ghost" size="icon-sm" onClick={() => removeReward(index)}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-[1fr_0.35fr_0.35fr]">
+                <div className="space-y-1.5">
+                  <Input value={reward.name} onChange={(event) => patchReward(index, { name: event.target.value })} placeholder="Nome da recompensa" />
+                  <Textarea value={reward.description} onChange={(event) => patchReward(index, { description: event.target.value })} placeholder="Descricao e regra de entrega" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Custo XP</label>
+                  <div className="flex items-center gap-1">
+                    <Zap className="h-3.5 w-3.5 text-primary" />
+                    <Input value={reward.cost_xp} onChange={(event) => patchReward(index, { cost_xp: event.target.value })} inputMode="numeric" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Quantidade</label>
+                  <Input value={reward.quantity} onChange={(event) => patchReward(index, { quantity: event.target.value })} placeholder="Ilimitada" inputMode="numeric" />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
-      {/* Financial bonus config */}
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-emerald-500" />
-            </div>
-            <CardTitle className="text-sm font-medium">Bônus Financeiros</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Bônus por Missão Concluída
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">R$</span>
-                <input
-                  type="number"
-                  value={missionBonus}
-                  onChange={(e) => setMissionBonus(Number(e.target.value))}
-                  className="h-9 w-full rounded-md border border-border/50 bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Multiplicador de KPI
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  step="0.1"
-                  value={kpiMultiplier}
-                  onChange={(e) => setKpiMultiplier(Number(e.target.value))}
-                  className="h-9 w-full rounded-md border border-border/50 bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                <span className="text-sm text-muted-foreground">x</span>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Regra de Acelerador
-              </label>
-              <input
-                type="text"
-                value={acceleratorRule}
-                onChange={(e) => setAcceleratorRule(e.target.value)}
-                className="h-9 w-full rounded-md border border-border/50 bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <span className="flex items-center gap-1.5">
-              <div className="h-3 w-3 rounded-full border border-white border-t-transparent animate-spin" />
-              Salvando...
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <Save className="h-4 w-4" />
-              Salvar Configuração
-            </span>
-          )}
+      <div className="flex justify-end">
+        <Button variant="outline" render={<Link href="/objetivos/lancamento" />}>
+          Avancar para Lancamento
+          <ArrowRight className="h-4 w-4" />
         </Button>
-
-        <Link href="/objetivos/lancamento">
-          <Button variant="outline" className="gap-1.5">
-            Avançar para Lançamento
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
       </div>
     </div>
   )

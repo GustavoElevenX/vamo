@@ -7,6 +7,8 @@ import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { AiSuggestionCard } from '@/components/crm/ai-suggestion-card'
 import { DealActivitySheet } from '@/components/crm/deal-activity-sheet'
 import { PlaybookChecklist } from '@/components/crm/playbook-checklist'
+import { CommissionTraceCard } from '@/components/commission/CommissionTraceCard'
+import { PerformanceEventTimeline, type PerformanceEventTimelineItem } from '@/components/performance-os/PerformanceEventTimeline'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,6 +60,14 @@ export default function DealDetailPage() {
   const [editNextActionDueAt, setEditNextActionDueAt] = useState('')
   const [editNextActionType, setEditNextActionType] = useState<NextActionType>('follow_up')
   const [editForecastCategory, setEditForecastCategory] = useState<ForecastCategory>('pipeline')
+  const [timeline, setTimeline] = useState<PerformanceEventTimelineItem[]>([])
+  const [commissionTrace, setCommissionTrace] = useState<{
+    expectedCommission: number
+    releasedCommission: number
+    pendingCommission: number
+    blockedCommission: number
+    reason: string
+  } | null>(null)
 
   const fillForm = (nextDeal: CrmDeal) => {
     setEditTitle(nextDeal.title)
@@ -77,6 +87,16 @@ export default function DealDetailPage() {
     const nextDeal = body.deal ?? null
     setDeal(nextDeal)
     if (nextDeal) fillForm(nextDeal)
+    if (nextDeal) {
+      const [timelineRes, traceRes] = await Promise.all([
+        fetch(`/api/performance-events?entityType=crm_deal&entityId=${nextDeal.id}`),
+        fetch(`/api/commission/trace?dealId=${nextDeal.id}`),
+      ])
+      const timelineBody = await timelineRes.json().catch(() => ({ timeline: [] }))
+      const traceBody = await traceRes.json().catch(() => ({ trace: null }))
+      setTimeline((timelineBody.timeline ?? []) as PerformanceEventTimelineItem[])
+      setCommissionTrace(traceBody.trace ?? null)
+    }
     setLoading(false)
   }, [params.id])
 
@@ -200,6 +220,16 @@ export default function DealDetailPage() {
 
           <PlaybookChecklist dealId={deal.id} stage={deal.stage} currentUserId={user.id} role={user.role} />
 
+          {commissionTrace && (
+            <CommissionTraceCard
+              expected={commissionTrace.expectedCommission}
+              released={commissionTrace.releasedCommission}
+              pending={commissionTrace.pendingCommission}
+              blocked={commissionTrace.blockedCommission}
+              reason={commissionTrace.reason}
+            />
+          )}
+
           <Card>
             <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -215,6 +245,13 @@ export default function DealDetailPage() {
               )) : (
                 <p className="text-sm text-muted-foreground">Nenhuma atividade registrada ainda.</p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Consequencias operacionais</CardTitle></CardHeader>
+            <CardContent>
+              <PerformanceEventTimeline events={timeline} />
             </CardContent>
           </Card>
         </div>

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
+import { ContextualRecommendationCard, type ContextualRecommendation } from '@/components/performance-os/ContextualRecommendationCard'
 import {
   AlertTriangle,
   ArrowRight,
@@ -128,6 +129,7 @@ export default function HojePage() {
   const [hasCheckinToday, setHasCheckinToday] = useState(initialCache?.hasCheckinToday ?? false)
   const [lastRecognition, setLastRecognition] = useState<string | null>(initialCache?.lastRecognition ?? null)
   const [deals, setDeals] = useState<SellerDeal[]>(initialCache?.deals ?? [])
+  const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
 
   useEffect(() => {
     if (!user) return
@@ -184,6 +186,7 @@ export default function HojePage() {
           .limit(1)
           .maybeSingle(),
         fetch('/api/crm/deals').then(async (res) => (res.ok ? res.json() : { deals: [] })),
+        fetch('/api/action-recommendations').then(async (res) => (res.ok ? res.json() : { recommendations: [] })),
       ])
 
       const timeout = new Promise<never>((_, reject) =>
@@ -200,6 +203,7 @@ export default function HojePage() {
       const checkin = results[5].status === 'fulfilled' ? results[5].value.data : null
       const recentXp = results[6].status === 'fulfilled' ? results[6].value.data : null
       const dealBody = results[7].status === 'fulfilled' ? results[7].value : { deals: [] }
+      const recommendationBody = results[8].status === 'fulfilled' ? results[8].value : { recommendations: [] }
 
       if (cancelled) return
 
@@ -234,6 +238,7 @@ export default function HojePage() {
       const newDeals = ((dealBody.deals ?? []) as SellerDeal[]).filter(
         (deal) => deal.stage !== 'closed_won' && deal.stage !== 'closed_lost'
       )
+      const newRecommendations = ((recommendationBody.recommendations ?? []) as ContextualRecommendation[]).slice(0, 3)
 
       setStreak(newStreak)
       setPriorityMission(newPriorityMission)
@@ -244,6 +249,7 @@ export default function HojePage() {
       setHasCheckinToday(newHasCheckin)
       setLastRecognition(newRecognition)
       setDeals(newDeals)
+      setRecommendations(newRecommendations)
       setLoading(false)
 
       setCache<HojeCache>('hoje', {
@@ -454,6 +460,17 @@ export default function HojePage() {
         </Card>
 
         <div className="space-y-4">
+          {recommendations.length > 0 && (
+            <Card>
+              <CardContent className="space-y-3 pt-6">
+                <div className="section-label"><Sparkles className="h-3.5 w-3.5" />Recomendacoes contextuais</div>
+                {recommendations.map((recommendation) => (
+                  <ContextualRecommendationCard key={recommendation.id} recommendation={recommendation} />
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="border-blue-500/20 bg-blue-500/5">
             <CardContent className="space-y-4 pt-6">
               <div className="section-label"><Sparkles className="h-3.5 w-3.5" />Coach IA</div>

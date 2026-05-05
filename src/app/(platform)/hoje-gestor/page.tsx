@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
 import { MeetingAgendaSheet } from '@/components/hoje-gestor/meeting-agenda-sheet'
+import { ContextualRecommendationCard, type ContextualRecommendation } from '@/components/performance-os/ContextualRecommendationCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +30,7 @@ export default function HojeGestorPage() {
   const [kpis, setKpis] = useState<KpiEntry[]>([])
   const [ranking, setRanking] = useState<Ranking[]>([])
   const [team, setTeam] = useState<Seller[]>([])
+  const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export default function HojeGestorPage() {
     async function fetchData() {
       const monthStart = new Date()
       monthStart.setDate(1)
-      const [alertsRes, kpiRes, rankingRes, teamRes] = await Promise.allSettled([
+      const [alertsRes, kpiRes, rankingRes, teamRes, recommendationsRes] = await Promise.allSettled([
         fetch('/api/ai/alerts'),
         supabase
           .from('kpi_entries')
@@ -55,16 +57,21 @@ export default function HojeGestorPage() {
           .eq('organization_id', user.organization_id)
           .eq('role', 'seller')
           .eq('active', true),
+        fetch('/api/action-recommendations'),
       ])
 
       if (cancelled) return
       if (alertsRes.status === 'fulfilled' && alertsRes.value.ok) {
         const body = await alertsRes.value.json()
-        setAlerts((body.alerts ?? []).filter((alert: any) => alert.read === false).slice(0, 4))
+        setAlerts(((body.alerts ?? []) as (Alert & { read?: boolean })[]).filter((alert) => alert.read === false).slice(0, 4))
       }
       if (kpiRes.status === 'fulfilled') setKpis(kpiRes.value.data ?? [])
       if (rankingRes.status === 'fulfilled') setRanking((rankingRes.value.data ?? []) as Ranking[])
       if (teamRes.status === 'fulfilled') setTeam(teamRes.value.data ?? [])
+      if (recommendationsRes.status === 'fulfilled' && recommendationsRes.value.ok) {
+        const body = await recommendationsRes.value.json().catch(() => ({ recommendations: [] }))
+        setRecommendations(((body.recommendations ?? []) as ContextualRecommendation[]).slice(0, 4))
+      }
       setLoading(false)
     }
     fetchData().catch(() => setLoading(false))
@@ -134,6 +141,17 @@ export default function HojeGestorPage() {
             <Link href={alerts.length ? '/monitoramento/alertas' : '/crm'}>
               <Button><ArrowRight className="h-4 w-4" />Agir</Button>
             </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {!!recommendations.length && (
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Decisoes prioritarias</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 lg:grid-cols-2">
+            {recommendations.map((recommendation) => (
+              <ContextualRecommendationCard key={recommendation.id} recommendation={recommendation} />
+            ))}
           </CardContent>
         </Card>
       )}

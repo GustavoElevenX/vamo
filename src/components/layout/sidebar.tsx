@@ -40,6 +40,10 @@ import {
   Newspaper,
   RefreshCw,
   Mail,
+  MessageSquare,
+  Bell,
+  Sun,
+  Swords,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -54,7 +58,7 @@ const iconMap: Record<string, LucideIcon> = {
   DollarSign, HeartPulse, FileSearch, Rocket, Zap, Plug, Search, User,
   ClipboardList, Star, Link: LinkIcon, Gamepad2, TrendingUp, Filter,
   PieChart, CheckSquare, Bot, Megaphone, Terminal, Wrench, Newspaper,
-  RefreshCw, Mail,
+  RefreshCw, Mail, MessageSquare, Bell, Sun, Swords,
 }
 
 interface SidebarProps {
@@ -97,9 +101,9 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
           </div>
           <div className="min-w-0">
             <p className="text-[13px] font-black tracking-tight text-sidebar-foreground leading-none">
-              VAMO
+              Vamo
             </p>
-            <p className="text-[10px] text-sidebar-foreground/40 leading-none mt-0.5 truncate font-medium uppercase tracking-wider">
+            <p className="text-[10px] text-sidebar-foreground/70 leading-none mt-0.5 truncate font-medium uppercase tracking-wider">
               {ROLE_LABELS[role]}{userName ? ` · ${userName}` : ''}
             </p>
           </div>
@@ -122,8 +126,8 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                 className={cn(
                   'w-full flex items-center gap-2 px-2 py-1.5 mb-0.5 rounded-md',
                   'transition-colors duration-150 group',
-                  'hover:bg-black/5 dark:hover:bg-white/5',
-                  groupActive ? 'text-primary' : 'text-foreground/30 dark:text-foreground/25'
+                  'hover:bg-black/5 dark:hover:bg-white/8',
+                  groupActive ? 'text-primary' : 'text-sidebar-foreground/65'
                 )}
               >
                 {group.prefix && (
@@ -132,7 +136,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                       'inline-flex items-center justify-center h-4 w-4 rounded text-[9px] font-bold shrink-0 tabular-nums',
                       groupActive
                         ? 'bg-primary/15 text-primary'
-                        : 'bg-black/8 text-foreground/35 dark:bg-white/8 dark:text-foreground/30'
+                        : 'bg-black/8 text-sidebar-foreground/65 dark:bg-white/10 dark:text-sidebar-foreground/70'
                     )}
                   >
                     {group.prefix}
@@ -141,7 +145,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                 <span
                   className={cn(
                     'text-[10px] font-bold uppercase tracking-widest truncate flex-1 text-left',
-                    groupActive ? 'text-primary' : 'text-foreground/30 dark:text-foreground/25'
+                    groupActive ? 'text-primary' : 'text-sidebar-foreground/65'
                   )}
                 >
                   {group.label}
@@ -177,7 +181,7 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
                           <span className="vamo-chat-nav-icon">
                             <Sparkles className="h-3.5 w-3.5" />
                           </span>
-                          <span className="truncate flex-1 text-[13px]">Converse com VAMO IA</span>
+                          <span className="truncate flex-1 text-[13px]">Converse com Vamo IA</span>
                           <span className="vamo-chat-nav-badge">IA</span>
                         </Link>
                       )
@@ -224,9 +228,9 @@ export function Sidebar({ role, userName, onNavigate }: SidebarProps) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-            <p className="text-[10px] text-sidebar-foreground/35 font-semibold tracking-wide uppercase">Online</p>
+            <p className="text-[10px] text-sidebar-foreground/70 font-semibold tracking-wide uppercase">Online</p>
           </div>
-          <p className="text-[9px] text-sidebar-foreground/20 font-medium">v1.0</p>
+          <p className="text-[9px] text-sidebar-foreground/55 font-medium">v1.0</p>
         </div>
       </div>
     </div>

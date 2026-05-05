@@ -199,6 +199,21 @@ export async function GET() {
           ? 'Últimos 90 dias'
           : `Últimos ${PERIOD_DAYS} dias`
 
+    const { data: pdiRoi } = await admin
+      .from('pdi_roi_summary')
+      .select('*')
+      .eq('organization_id', orgId)
+
+    const pdiPlans = (pdiRoi ?? []).reduce((sum, row) => sum + Number(row.total_plans || 0), 0)
+    const pdiApplications = (pdiRoi ?? []).reduce((sum, row) => sum + Number(row.total_applications || 0), 0)
+    const pdiEvidences = (pdiRoi ?? []).reduce((sum, row) => sum + Number(row.total_evidences || 0), 0)
+    const pdiAvgDeltaRows = (pdiRoi ?? [])
+      .map((row) => Number(row.avg_kpi_delta || 0))
+      .filter((value) => value !== 0)
+    const pdiAvgDelta = pdiAvgDeltaRows.length
+      ? pdiAvgDeltaRows.reduce((sum, value) => sum + value, 0) / pdiAvgDeltaRows.length
+      : 0
+
     return NextResponse.json({
       // Resultados
       receita_missoes:  receitaMissoes,
@@ -225,7 +240,13 @@ export async function GET() {
         badges_earned:         badgesEarned ?? 0,
         period_days:           PERIOD_DAYS,
         platform_monthly_cost: PLATFORM_MONTHLY,
+        pdi_plans:             pdiPlans,
+        pdi_applications:      pdiApplications,
+        pdi_evidences:         pdiEvidences,
+        pdi_avg_kpi_delta:     pdiAvgDelta,
       },
+
+      pdi_roi: pdiRoi ?? [],
 
       // Metodologia legível
       methodology: {

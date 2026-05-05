@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCronSecret } from '@/lib/cron-auth'
 import { sendEmail } from '@/lib/services/email.service'
 import { sendWhatsApp } from '@/lib/services/whatsapp.service'
+import { createRecommendation } from '@/lib/services/action-recommendation.service'
+import { createEventWithImpacts } from '@/lib/services/performance-os.service'
 import { STAGE_LABELS, STAGE_STUCK_DAYS } from '@/types/crm'
 import type { DealStage } from '@/types/crm'
 
@@ -41,7 +43,50 @@ export async function GET(request: Request) {
       .maybeSingle()
     if (recentLog) continue
 
+    const forecastImpact = Number(deal.value || 0)
     const message = `Deal "${deal.title}" esta parado ha ${stuckDays} dias em ${STAGE_LABELS[stage]}.`
+    const { event } = await createEventWithImpacts(
+      admin,
+      {
+        organizationId: deal.organization_id,
+        actorUserId: null,
+        targetUserId: deal.owner_id,
+        eventType: 'crm_deal.stalled',
+        sourceModule: 'crm',
+        entityType: 'crm_deal',
+        entityId: deal.id,
+        title: `Deal parado: ${deal.title}`,
+        description: message,
+        impactScore: 45,
+        priorityScore: 85,
+        riskScore: 80,
+        metadata: { stuckDays, stage, forecastImpact },
+      },
+      [
+        { impactedModule: 'crm', impactedEntityType: 'crm_deal', impactedEntityId: deal.id, impactType: 'stalled' },
+        { impactedModule: 'hoje', impactedEntityType: 'user', impactedEntityId: deal.owner_id, impactType: 'priority_due' },
+        { impactedModule: 'hoje_gestor', impactedEntityType: 'crm_deal', impactedEntityId: deal.id, impactType: 'manager_alert' },
+        { impactedModule: 'forecast', impactedEntityType: 'crm_deal', impactedEntityId: deal.id, impactType: 'risk_increased', impactValue: forecastImpact },
+        { impactedModule: 'commission', impactedEntityType: 'crm_deal', impactedEntityId: deal.id, impactType: 'potential_loss', impactValue: forecastImpact },
+        { impactedModule: 'ai', impactedEntityType: 'crm_deal', impactedEntityId: deal.id, impactType: 'follow_up_script_needed' },
+        { impactedModule: 'pdi', impactedEntityType: 'crm_deal', impactedEntityId: deal.id, impactType: 'recurrence_gap_candidate' },
+      ],
+    )
+
+    await createRecommendation(admin, {
+      organizationId: deal.organization_id,
+      eventId: event.id,
+      targetUserId: deal.owner_id,
+      sourceModule: 'crm',
+      recommendationType: 'forecast_risk',
+      title: `Retomar deal parado: ${deal.title}`,
+      description: 'Use um follow-up objetivo, confirme criterio de decisao e registre a proxima acao no CRM.',
+      suggestedActionLabel: 'Abrir deal',
+      suggestedActionHref: `/crm/${deal.id}`,
+      priority: 'high',
+      metadata: { stuckDays, stage },
+    })
+
     await admin.from('notifications').insert({
       organization_id: deal.organization_id,
       user_id: deal.owner_id,

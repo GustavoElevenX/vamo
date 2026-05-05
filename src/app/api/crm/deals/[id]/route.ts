@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAppUser } from '@/lib/server/auth'
+import { createRecommendation } from '@/lib/services/action-recommendation.service'
+import { createEventWithImpacts } from '@/lib/services/performance-os.service'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import type { DealStage } from '@/types/crm'
 
@@ -51,6 +53,17 @@ export async function PATCH(request: Request, { params }: Params) {
   const { adminClient, appUser } = auth
   const input = await request.json()
 
+  const { data: previousDeal } = await adminClient
+    .from('crm_deals')
+    .select('id,title,owner_id,stage,value,probability,next_action_title,next_action_due_at,forecast_category')
+    .eq('id', id)
+    .eq('organization_id', appUser.organization_id)
+    .maybeSingle()
+
+  if (!previousDeal || (appUser.role === 'seller' && previousDeal.owner_id !== appUser.id)) {
+    return NextResponse.json({ error: 'Deal nao encontrado' }, { status: 404 })
+  }
+
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
   for (const key of ['title', 'account_id', 'expected_close', 'lost_reason', 'notes'] as const) {
     if (key in input) patch[key] = input[key] || null
@@ -82,7 +95,82 @@ export async function PATCH(request: Request, { params }: Params) {
   if (appUser.role === 'seller') query = query.eq('owner_id', appUser.id)
   const { error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+
+  const stageChanged = typeof patch.stage === 'string' && patch.stage !== previousDeal.stage
+  if (stageChanged) {
+    const nextValue = 'value' in patch ? Number(patch.value || 0) : Number(previousDeal.value || 0)
+    const nextProbability = 'probability' in patch ? Number(patch.probability || 0) : Number(previousDeal.probability || 0)
+    const forecastImpact = nextValue * nextProbability / 100
+    const isWon = patch.stage === 'closed_won'
+    const isLost = patch.stage === 'closed_lost'
+
+    const { event } = await createEventWithImpacts(
+      adminClient,
+      {
+        organizationId: appUser.organization_id,
+        actorUserId: appUser.id,
+        targetUserId: previousDeal.owner_id,
+        eventType: 'crm_deal.stage_changed',
+        sourceModule: 'crm',
+        entityType: 'crm_deal',
+        entityId: id,
+        title: `Deal movido: ${previousDeal.title}`,
+        description: `${previousDeal.stage} -> ${patch.stage}`,
+        impactScore: isWon ? 90 : isLost ? 40 : 65,
+        priorityScore: isLost ? 70 : 60,
+        riskScore: isLost ? 90 : 30,
+        metadata: {
+          fromStage: previousDeal.stage,
+          toStage: patch.stage,
+          value: nextValue,
+          probability: nextProbability,
+          forecastImpact,
+        },
+      },
+      [
+        { impactedModule: 'crm', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: 'stage_changed' },
+        { impactedModule: 'forecast', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: 'forecast_recalculated', impactValue: forecastImpact },
+        { impactedModule: 'commission', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: 'commission_projection_recalculated', impactValue: forecastImpact },
+        { impactedModule: 'mission', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: isWon ? 'completion_candidate' : 'progress_candidate' },
+        { impactedModule: 'xp', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: isWon ? 'win_evidence' : 'stage_progress_evidence' },
+        { impactedModule: 'hoje', impactedEntityType: 'user', impactedEntityId: previousDeal.owner_id, impactType: 'seller_priority_updated' },
+        { impactedModule: 'hoje_gestor', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: isLost ? 'loss_review' : 'pipeline_update' },
+      ],
+    )
+
+    await createRecommendation(adminClient, {
+      organizationId: appUser.organization_id,
+      eventId: event.id,
+      targetUserId: previousDeal.owner_id,
+      createdByUserId: appUser.id,
+      sourceModule: 'crm',
+      recommendationType: isLost ? 'pdi_plan' : isWon ? 'recognition' : 'next_action',
+      title: isLost
+        ? 'Revisar perda e detectar gap recorrente'
+        : isWon
+          ? 'Registrar recebimento e reconhecer comportamento'
+          : 'Definir proxima acao da nova etapa',
+      description: isLost
+        ? 'Use a perda como evidencia para PDI se houver padrao recorrente.'
+        : isWon
+          ? 'Fechamento precisa conectar com comissao, feed e reconhecimento.'
+          : 'A mudanca de etapa precisa virar proximo passo, forecast e ganho previsto.',
+      suggestedActionLabel: 'Abrir deal',
+      suggestedActionHref: `/crm/${id}`,
+      priority: isLost ? 'high' : 'medium',
+      metadata: { dealId: id, eventType: 'crm_deal.stage_changed' },
+    })
+  }
+
+  return NextResponse.json({
+    ok: true,
+    feedback: stageChanged
+      ? {
+          forecastImpact: ('value' in patch ? Number(patch.value || 0) : Number(previousDeal.value || 0)) * ('probability' in patch ? Number(patch.probability || 0) : Number(previousDeal.probability || 0)) / 100,
+          nextBestAction: 'Revise proxima acao, forecast e comissao prevista para esta etapa.',
+        }
+      : null,
+  })
 }
 
 export async function DELETE(_request: Request, { params }: Params) {

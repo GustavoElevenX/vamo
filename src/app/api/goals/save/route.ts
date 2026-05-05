@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createRecommendation } from '@/lib/services/action-recommendation.service'
+import { createEventWithImpacts } from '@/lib/services/performance-os.service'
 
 export const runtime = 'nodejs'
 
@@ -66,6 +68,38 @@ export async function POST(req: NextRequest) {
 
     if (goalsError) throw new Error(goalsError.message)
 
+    const { data: savedGoal } = await adminClient
+      .from('program_goals')
+      .select('id')
+      .eq('organization_id', appUser.organization_id)
+      .maybeSingle()
+
+    const { event: goalEvent } = await createEventWithImpacts(
+      adminClient,
+      {
+        organizationId: appUser.organization_id,
+        actorUserId: appUser.id,
+        targetUserId: appUser.id,
+        eventType: 'goal.updated',
+        sourceModule: 'goal',
+        entityType: 'program_goal',
+        entityId: savedGoal?.id ?? null,
+        title: 'Metas comerciais atualizadas',
+        description: 'Meta da empresa, do time e metas individuais foram conectadas a rotina, ganho e forecast.',
+        impactScore: 70,
+        priorityScore: 75,
+        metadata: { company_goal, team_goal, individual_goals },
+      },
+      [
+        { impactedModule: 'hoje', impactedEntityType: 'program_goal', impactedEntityId: savedGoal?.id ?? null, impactType: 'daily_priority_created' },
+        { impactedModule: 'hoje_gestor', impactedEntityType: 'program_goal', impactedEntityId: savedGoal?.id ?? null, impactType: 'manager_decision_context' },
+        { impactedModule: 'goal', impactedEntityType: 'program_goal', impactedEntityId: savedGoal?.id ?? null, impactType: 'goal_updated' },
+        { impactedModule: 'mission', impactedEntityType: 'program_goal', impactedEntityId: savedGoal?.id ?? null, impactType: 'mission_candidate' },
+        { impactedModule: 'commission', impactedEntityType: 'program_goal', impactedEntityId: savedGoal?.id ?? null, impactType: 'bonus_rule_context' },
+        { impactedModule: 'forecast', impactedEntityType: 'program_goal', impactedEntityId: savedGoal?.id ?? null, impactType: 'forecast_target_updated' },
+      ],
+    )
+
     const now = new Date().toISOString()
     const managerName = appUser.name.split(' ')[0]
 
@@ -87,6 +121,21 @@ export async function POST(req: NextRequest) {
       })
 
       // Chat 1:1 — create conversation
+      await createRecommendation(adminClient, {
+        organizationId: appUser.organization_id,
+        eventId: goalEvent.id,
+        targetUserId: ig.user_id,
+        createdByUserId: appUser.id,
+        sourceModule: 'goal',
+        recommendationType: 'next_action',
+        title: `Prioridade da meta: ${ig.goal}`,
+        description: `Transforme esta meta em uma acao no CRM hoje.${rewardStr}`,
+        suggestedActionLabel: 'Abrir Hoje',
+        suggestedActionHref: '/hoje',
+        priority: 'high',
+        metadata: { goal: ig, programGoalId: savedGoal?.id ?? null },
+      })
+
       const { data: conv } = await adminClient
         .from('chat_conversations')
         .insert({

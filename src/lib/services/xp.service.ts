@@ -6,12 +6,37 @@ export async function awardXp(
     userId: string
     organizationId: string
     amount: number
-    sourceType: 'kpi' | 'badge' | 'challenge' | 'checklist' | 'bonus'
+    sourceType:
+      | 'kpi'
+      | 'badge'
+      | 'challenge'
+      | 'checklist'
+      | 'bonus'
+      | 'crm_activity'
+      | 'crm_deal'
+      | 'goal'
+      | 'mission'
+      | 'pdi_application'
+      | 'kpi_improvement'
+      | 'manager_recognition'
     sourceId?: string
+    performanceEventId?: string
+    evidence?: Record<string, unknown>
+    impactExpected?: string
     description: string
   }
 ) {
-  const { userId, organizationId, amount, sourceType, sourceId, description } = params
+  const {
+    userId,
+    organizationId,
+    amount,
+    sourceType,
+    sourceId,
+    performanceEventId,
+    evidence,
+    impactExpected,
+    description,
+  } = params
 
   // Insert XP transaction
   const { error: txError } = await supabase.from('xp_transactions').insert({
@@ -20,6 +45,9 @@ export async function awardXp(
     amount,
     source_type: sourceType,
     source_id: sourceId ?? null,
+    performance_event_id: performanceEventId ?? null,
+    evidence: evidence ?? {},
+    impact_expected: impactExpected ?? null,
     description,
   })
 

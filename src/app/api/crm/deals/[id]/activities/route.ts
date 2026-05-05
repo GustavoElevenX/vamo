@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getAppUser } from '@/lib/server/auth'
-import type { ActivityType } from '@/types/crm'
+import { createRecommendation } from '@/lib/services/action-recommendation.service'
+import { createEntityRelationship, createEventWithImpacts } from '@/lib/services/performance-os.service'
+import { awardXp } from '@/lib/services/xp.service'
+import { ACTIVITY_LABELS, type ActivityType } from '@/types/crm'
 
 export const runtime = 'nodejs'
 
@@ -63,7 +66,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const { data: deal } = await adminClient
     .from('crm_deals')
-    .select('id, organization_id, owner_id')
+    .select('id, organization_id, owner_id, title, value, stage, probability')
     .eq('id', id)
     .eq('organization_id', appUser.organization_id)
     .maybeSingle()
@@ -122,7 +125,7 @@ export async function POST(request: Request, { params }: Params) {
       .maybeSingle()
 
     if (kpi) {
-      await adminClient.from('kpi_entries').insert({
+      const { data: kpiEntry } = await adminClient.from('kpi_entries').insert({
         organization_id: appUser.organization_id,
         user_id: appUser.id,
         kpi_id: kpi.id,
@@ -130,9 +133,127 @@ export async function POST(request: Request, { params }: Params) {
         points_earned: Number(kpi.points_per_unit ?? 0),
         recorded_at: new Date().toISOString().slice(0, 10),
         source: 'api',
+      }).select('id, points_earned').single()
+
+      if (kpiEntry) {
+        await createEntityRelationship(adminClient, {
+          organizationId: appUser.organization_id,
+          fromEntityType: 'crm_activity',
+          fromEntityId: activity.id,
+          toEntityType: 'kpi_entry',
+          toEntityId: kpiEntry.id,
+          relationshipType: 'updates_kpi',
+          metadata: { activityType: type, kpiNames },
+        })
+      }
+    }
+  }
+
+  const forecastImpact = Number(deal.value || 0) * Number(deal.probability || 0) / 100
+  const { event } = await createEventWithImpacts(
+    adminClient,
+    {
+      organizationId: appUser.organization_id,
+      actorUserId: appUser.id,
+      targetUserId: deal.owner_id,
+      eventType: 'crm_activity.created',
+      sourceModule: 'crm',
+      entityType: 'crm_activity',
+      entityId: activity.id,
+      title: `${title} em ${deal.title}`,
+      description: outcome,
+      impactScore: 60,
+      priorityScore: nextActionTitle ? 55 : 45,
+      riskScore: input.clear_next_action === true ? 20 : 35,
+      metadata: {
+        dealId: id,
+        activityType: type,
+        nextActionTitle: nextActionTitle || null,
+        forecastImpact,
+      },
+    },
+    [
+      { impactedModule: 'crm', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: 'activity_registered' },
+      { impactedModule: 'kpi', impactedEntityType: 'crm_activity', impactedEntityId: activity.id, impactType: 'kpi_candidate', impactValue: kpiNames.length ? 1 : 0 },
+      { impactedModule: 'mission', impactedEntityType: 'crm_activity', impactedEntityId: activity.id, impactType: 'progress_candidate' },
+      { impactedModule: 'commission', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: 'forecast_commission_recalculated', impactValue: forecastImpact },
+      { impactedModule: 'forecast', impactedEntityType: 'crm_deal', impactedEntityId: id, impactType: 'forecast_updated', impactValue: forecastImpact },
+      { impactedModule: 'xp', impactedEntityType: 'crm_activity', impactedEntityId: activity.id, impactType: 'eligible_with_evidence', impactValue: kpiNames.length ? 10 : 0 },
+      { impactedModule: 'hoje', impactedEntityType: 'user', impactedEntityId: deal.owner_id, impactType: 'seller_feedback' },
+    ],
+  )
+
+  let xpFeedback = 0
+  if (kpiNames.length > 0) {
+    xpFeedback = 10
+    await awardXp(adminClient, {
+      userId: appUser.id,
+      organizationId: appUser.organization_id,
+      amount: xpFeedback,
+      sourceType: 'crm_activity',
+      sourceId: activity.id,
+      performanceEventId: event.id,
+      evidence: { dealId: id, activityType: type, outcome },
+      impactExpected: 'Atualizar KPI, manter follow-up e proteger forecast.',
+      description: `+${xpFeedback} XP por registrar ${ACTIVITY_LABELS[type].toLowerCase()} com evidencia em deal real`,
+    })
+  }
+
+  if (nextActionTitle) {
+    await createRecommendation(adminClient, {
+      organizationId: appUser.organization_id,
+      eventId: event.id,
+      targetUserId: deal.owner_id,
+      createdByUserId: appUser.id,
+      sourceModule: 'crm',
+      recommendationType: 'next_action',
+      title: nextActionTitle,
+      description: `Proxima melhor acao para ${deal.title}.`,
+      suggestedActionLabel: 'Abrir deal',
+      suggestedActionHref: `/crm/${id}`,
+      priority: 'medium',
+      dueAt: input.next_action_due_at || null,
+      metadata: { dealId: id, activityId: activity.id },
+    })
+  }
+
+  if (typeof input.pdi_plan_id === 'string' && input.pdi_plan_id) {
+    const { data: pdiApplication } = await adminClient
+      .from('pdi_applications')
+      .insert({
+        organization_id: appUser.organization_id,
+        plan_id: input.pdi_plan_id,
+        user_id: appUser.id,
+        deal_id: id,
+        activity_id: activity.id,
+        application_type: type === 'proposal_sent' ? 'proposal' : 'follow_up',
+        description: outcome,
+        evidence: { activityId: activity.id, dealId: id, source: 'crm_activity' },
+      })
+      .select('id')
+      .single()
+
+    if (pdiApplication) {
+      await createEntityRelationship(adminClient, {
+        organizationId: appUser.organization_id,
+        fromEntityType: 'crm_activity',
+        fromEntityId: activity.id,
+        toEntityType: 'pdi_application',
+        toEntityId: pdiApplication.id,
+        relationshipType: 'applies_pdi',
       })
     }
   }
 
-  return NextResponse.json({ activity }, { status: 201 })
+  return NextResponse.json({
+    activity,
+    event,
+    feedback: {
+      goalProgressHint: kpiNames.length ? '+1 KPI relacionado' : 'Atividade registrada',
+      forecastImpact,
+      xp: xpFeedback,
+      missionHint: 'Missao relacionada pode avancar se houver regra ativa.',
+      nextBestAction: nextActionTitle || 'Defina a proxima acao para manter o deal em movimento.',
+    },
+  }, { status: 201 })
 }

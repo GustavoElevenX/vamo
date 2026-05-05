@@ -39,6 +39,12 @@ interface Feedback {
   erro_especifico: string
   frase_ideal: string
   nota: number
+  skill_area?: string
+  next_practice?: string
+  xp_awarded?: number
+  event_id?: string
+  pdi_gap_id?: string | null
+  pdi_plan_id?: string | null
 }
 
 interface Session {
@@ -246,7 +252,7 @@ export default function SimuladorPage() {
             Simulador de Proposta
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Pratique vendas com um cliente fictício gerado por IA
+            Pratique uma proposta, gere feedback, XP e evidencia real para seu PDI
           </p>
         </div>
 
@@ -489,6 +495,27 @@ export default function SimuladorPage() {
           </CardContent>
         </Card>
 
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Habilidade</p>
+              <p className="mt-1 text-lg font-black">{feedback.skill_area || 'negotiation'}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">XP com evidencia</p>
+              <p className="mt-1 text-lg font-black text-primary">+{feedback.xp_awarded || 0}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">PDI</p>
+              <p className="mt-1 text-lg font-black">{feedback.pdi_gap_id ? 'Gap criado' : 'Evolucao provada'}</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Feedback blocks */}
         <div className="space-y-4">
           <Card className="border-emerald-500/20">
@@ -526,6 +553,23 @@ export default function SimuladorPage() {
               <p className="text-sm italic text-foreground">&quot;{feedback.frase_ideal}&quot;</p>
             </CardContent>
           </Card>
+
+          {feedback.next_practice && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-primary">
+                  <Lightbulb className="h-4 w-4" />
+                  Proxima pratica conectada
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{feedback.next_practice}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Esta simulacao foi registrada como evento central, evidencia de PDI e recomendacao contextual.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Actions */}

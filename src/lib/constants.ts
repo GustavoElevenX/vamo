@@ -134,7 +134,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       items: [
         { label: 'Pipeline de ações', href: '/crm', icon: 'Filter' },
         { label: 'Clientes', href: '/crm/clientes', icon: 'Users' },
-        { label: 'Registrar KPI', href: '/kpis/registrar', icon: 'BarChart3' },
+        { label: 'Registrar acao', href: '/kpis/registrar', icon: 'BarChart3' },
       ],
     },
     {

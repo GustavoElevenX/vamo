@@ -56,7 +56,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const { data: previousDeal } = await adminClient
     .from('crm_deals')
-    .select('id,title,account_id,owner_id,stage,value,probability,next_action_title,next_action_due_at,forecast_category')
+    .select('id,title,account_id,owner_id,stage,value,probability,next_action_title,next_action_due_at,next_action_status,forecast_category')
     .eq('id', id)
     .eq('organization_id', appUser.organization_id)
     .maybeSingle()
@@ -112,6 +112,8 @@ export async function PATCH(request: Request, { params }: Params) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const stageChanged = typeof patch.stage === 'string' && patch.stage !== previousDeal.stage
+  const nextActionCreated = typeof patch.next_action_title === 'string' && patch.next_action_title.trim() && patch.next_action_title !== previousDeal.next_action_title
+  const overdueActionResolved = patch.next_action_status === 'done' && previousDeal.next_action_status === 'open' && previousDeal.next_action_due_at && new Date(previousDeal.next_action_due_at).getTime() < Date.now()
   if (stageChanged) {
     const nextValue = 'value' in patch ? Number(patch.value || 0) : Number(previousDeal.value || 0)
     const nextProbability = 'probability' in patch ? Number(patch.probability || 0) : Number(previousDeal.probability || 0)
@@ -196,6 +198,29 @@ export async function PATCH(request: Request, { params }: Params) {
         probability: nextProbability,
         forecastImpact,
         description: `${previousDeal.title}: ${previousDeal.stage} -> ${patch.stage}`,
+      },
+    })
+  }
+
+  if (nextActionCreated || overdueActionResolved) {
+    await registerExecutionEvent(adminClient, {
+      organizationId: appUser.organization_id,
+      userId: previousDeal.owner_id,
+      actorUserId: appUser.id,
+      type: overdueActionResolved ? 'pipeline_overdue_action_resolved' : 'pipeline_next_action_created',
+      value: 1,
+      source: 'crm',
+      sourceEntityType: 'crm_deal',
+      sourceEntityId: id,
+      metadata: {
+        dealId: id,
+        title: previousDeal.title,
+        nextActionTitle: patch.next_action_title ?? previousDeal.next_action_title,
+        nextActionDueAt: patch.next_action_due_at ?? previousDeal.next_action_due_at,
+        value: 'value' in patch ? Number(patch.value || 0) : Number(previousDeal.value || 0),
+        description: overdueActionResolved
+          ? `Pendencia atrasada resolvida em ${previousDeal.title}`
+          : `Proxima acao criada em ${previousDeal.title}`,
       },
     })
   }

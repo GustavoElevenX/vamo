@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -17,7 +17,7 @@ export default function KpisPage() {
   const [kpis, setKpis] = useState<KpiDefinition[]>([])
   const [entries, setEntries] = useState<KpiEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (!user) return
@@ -53,7 +53,7 @@ export default function KpisPage() {
       }
     }
     fetch()
-  }, [user])
+  }, [supabase, user])
 
 
   return (
@@ -61,12 +61,12 @@ export default function KpisPage() {
       <PageHeader
         label="Performance"
         labelIcon={<Target className="h-3 w-3" />}
-        title={<>Meus <TitleHighlight>KPIs</TitleHighlight></>}
-        description="Registre e acompanhe seus indicadores do dia"
+        title={<>Minha <TitleHighlight>Execucao</TitleHighlight></>}
+        description="Acompanhe indicadores gerados pelas suas acoes comerciais do dia"
         actions={
           <Button render={<Link href="/kpis/registrar" />}>
             <Plus className="mr-2 h-4 w-4" />
-            Registrar KPI
+            Registrar acao
           </Button>
         }
       />

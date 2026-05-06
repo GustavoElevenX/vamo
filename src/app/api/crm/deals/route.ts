@@ -65,6 +65,15 @@ export async function POST(request: Request) {
     const priorityScore = Number(input.ai_priority_score ?? 0)
 
     if (!title) return NextResponse.json({ error: 'Titulo e obrigatorio' }, { status: 400 })
+    if (stage === 'closed_won' && !input.account_id) {
+      return NextResponse.json(
+        {
+          error: 'Antes de marcar como ganho, vincule essa oportunidade a um cliente/conta.',
+          code: 'ACCOUNT_REQUIRED',
+        },
+        { status: 400 },
+      )
+    }
 
     const { data, error } = await adminClient
       .from('crm_deals')

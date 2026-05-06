@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -11,7 +11,6 @@ import {
   TrendingUp,
   DollarSign,
   Target,
-  Zap,
   BarChart3,
   Brain,
   ChevronRight,
@@ -33,6 +32,10 @@ interface OverviewData {
   engagement_rate: number
   roi_multiplier: number
   total_xp_org: number
+  receita_vendida_mes: number
+  forecast_provavel: number
+  pipeline_em_risco: number
+  meta_pct: number
   kpi_entries_hoje: number
   kpi_entries_semana: number[]   // últimos 7 dias (valor por dia)
   dias_com_kpi_semana: number
@@ -49,7 +52,7 @@ const QUICK_LINKS = [
 
 export default function MonitoramentoPage() {
   const { user } = useRequiredAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<OverviewData | null>(null)
 
@@ -93,8 +96,8 @@ export default function MonitoramentoPage() {
             .eq('status', 'completed')
             .gte('created_at', monthStart),
 
-          // Performance da equipe (engajamento)
-          fetch('/api/team/performance', { credentials: 'same-origin' }),
+          // Performance comercial da equipe
+          fetch('/api/team/commercial-performance?period=month', { credentials: 'same-origin' }),
 
           // KPI entries de hoje
           supabase
@@ -123,16 +126,23 @@ export default function MonitoramentoPage() {
         let totalVendedores = 0
         let vendedoresAtivos = 0
         let totalXp = 0
+        let receitaVendidaMes = 0
+        let forecastProvavel = 0
+        let pipelineEmRisco = 0
+        let metaPct = 0
 
         if (perfRes.status === 'fulfilled' && perfRes.value.ok) {
-          const { members } = await perfRes.value.json()
-          const list: { total_xp: number; current_streak: number; last_activity_date: string | null }[] = members ?? []
+          const commercial = await perfRes.value.json()
+          const list: { xp: number; streak: number; activities_count: number; revenue_won: number; forecast_weighted: number }[] = commercial.sellers ?? []
           totalVendedores = list.length
           vendedoresAtivos = list.filter(m =>
-            m.current_streak > 0 ||
-            (m.last_activity_date && new Date(m.last_activity_date) >= new Date(Date.now() - 7 * 86400000))
+            m.activities_count > 0 || m.revenue_won > 0 || m.forecast_weighted > 0 || m.streak > 0
           ).length
-          totalXp = list.reduce((sum, m) => sum + m.total_xp, 0)
+          totalXp = list.reduce((sum, m) => sum + m.xp, 0)
+          receitaVendidaMes = commercial.summary?.revenue_won ?? 0
+          forecastProvavel = commercial.summary?.forecast_weighted ?? 0
+          pipelineEmRisco = commercial.summary?.pipeline_at_risk ?? 0
+          metaPct = commercial.summary?.monthly_goal ? Math.round((receitaVendidaMes / commercial.summary.monthly_goal) * 100) : 0
         }
 
         const engagementRate = totalVendedores > 0
@@ -162,6 +172,10 @@ export default function MonitoramentoPage() {
           engagement_rate:          engagementRate,
           roi_multiplier:           roiMultiplier,
           total_xp_org:             totalXp,
+          receita_vendida_mes:       receitaVendidaMes,
+          forecast_provavel:         forecastProvavel,
+          pipeline_em_risco:         pipelineEmRisco,
+          meta_pct:                  metaPct,
           kpi_entries_hoje:         kpiHoje,
           kpi_entries_semana:       kpiPerDay,
           dias_com_kpi_semana:      diasComKpi,
@@ -174,7 +188,7 @@ export default function MonitoramentoPage() {
     }
 
     fetchData()
-  }, [user])
+  }, [supabase, user])
 
   if (loading) {
     return (
@@ -189,6 +203,7 @@ export default function MonitoramentoPage() {
     total_vendedores: 0, vendedores_ativos: 0,
     engagement_rate: 0, roi_multiplier: 0,
     total_xp_org: 0, kpi_entries_hoje: 0,
+    receita_vendida_mes: 0, forecast_provavel: 0, pipeline_em_risco: 0, meta_pct: 0,
     kpi_entries_semana: Array(7).fill(0),
     dias_com_kpi_semana: 0,
   }
@@ -204,25 +219,25 @@ export default function MonitoramentoPage() {
 
   const kpiCards = [
     {
-      label: 'Missões Ativas',
-      value: d.missoes_ativas,
-      sub: `${d.missoes_concluidas_mes} concluídas este mês`,
-      icon: Zap,
-      color: 'stat-icon-amber',
-      trend: d.missoes_concluidas_mes > 0 ? `+${d.missoes_concluidas_mes} no mês` : null,
-      trendUp: true,
+      label: 'Vendido no mes',
+      value: d.receita_vendida_mes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }),
+      sub: `${d.meta_pct}% da meta comercial`,
+      icon: DollarSign,
+      color: 'stat-icon-green',
+      trend: d.receita_vendida_mes > 0 ? 'Venda real' : 'Sem venda no periodo',
+      trendUp: d.receita_vendida_mes > 0,
     },
     {
-      label: 'Engajamento da Equipe',
-      value: `${d.engagement_rate}%`,
-      sub: `${d.vendedores_ativos} de ${d.total_vendedores} ativos`,
+      label: 'Pipeline em risco',
+      value: d.pipeline_em_risco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }),
+      sub: `${d.forecast_provavel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })} forecast provavel`,
       icon: TrendingUp,
-      color: d.engagement_rate >= 70 ? 'stat-icon-green' : d.engagement_rate >= 40 ? 'stat-icon-amber' : 'stat-icon-rose',
-      trend: d.engagement_rate >= 70 ? 'Saudável' : d.engagement_rate >= 40 ? 'Atenção' : 'Crítico',
-      trendUp: d.engagement_rate >= 70,
+      color: d.pipeline_em_risco > 0 ? 'stat-icon-amber' : 'stat-icon-green',
+      trend: d.pipeline_em_risco > 0 ? 'Intervencao' : 'Controlado',
+      trendUp: d.pipeline_em_risco === 0,
     },
     {
-      label: 'KPIs Registrados Hoje',
+      label: 'Acoes comerciais hoje',
       value: d.kpi_entries_hoje,
       sub: `${d.dias_com_kpi_semana} dias com registro esta semana`,
       icon: Target,
@@ -232,15 +247,15 @@ export default function MonitoramentoPage() {
     },
     {
       label: 'ROI da Plataforma',
-      value: `${d.roi_multiplier}×`,
-      sub: `${d.total_xp_org.toLocaleString()} XP total acumulado`,
+      value: `${d.roi_multiplier}x`,
+      sub: `${d.total_vendedores} vendedores | ${d.total_xp_org.toLocaleString()} XP suporte`,
       icon: BarChart3,
       color: d.roi_multiplier >= 2 ? 'stat-icon-green' : d.roi_multiplier >= 1 ? 'stat-icon-blue' : 'stat-icon-violet',
       trend: d.roi_multiplier >= 1 ? 'Retorno positivo' : 'Calculando...',
       trendUp: d.roi_multiplier >= 1,
       href: '/monitoramento/roi',
     },
-  ]
+  ].slice(0, 4)
 
   return (
     <div className="space-y-6">
@@ -264,7 +279,7 @@ export default function MonitoramentoPage() {
         </Button>
       </div>
 
-      {/* KPI Cards */}
+      {/* Placar comercial */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((kpi) => {
           const Icon = kpi.icon
@@ -303,13 +318,13 @@ export default function MonitoramentoPage() {
         })}
       </div>
 
-      {/* Gráfico de barras — KPI entries últimos 7 dias */}
+      {/* Acoes comerciais nos ultimos 7 dias */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              Registros de KPI · Últimos 7 dias
+              Acoes comerciais ? ultimos 7 dias
             </CardTitle>
             <Badge variant="secondary" className="text-[10px]">
               {d.dias_com_kpi_semana}/7 dias ativos
@@ -322,9 +337,9 @@ export default function MonitoramentoPage() {
               <div className="stat-icon stat-icon-blue h-10 w-10 mx-auto mb-3">
                 <Target className="h-5 w-5" />
               </div>
-              <p className="text-sm text-muted-foreground">Nenhum KPI registrado nos últimos 7 dias</p>
+              <p className="text-sm text-muted-foreground">Nenhuma acao comercial registrada nos ultimos 7 dias</p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Os vendedores precisam registrar seus indicadores diariamente
+                Os vendedores precisam registrar acoes comerciais reais no CRM
               </p>
             </div>
           ) : (
@@ -395,26 +410,26 @@ export default function MonitoramentoPage() {
                 <Brain className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold">Análise de Engajamento</p>
+                <p className="text-sm font-semibold">Análise de Atividade comercial</p>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   {d.engagement_rate >= 70
                     ? <>
                         Equipe com{' '}
                         <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                          {d.engagement_rate}% de engajamento
+                          {d.engagement_rate}% de atividade comercial
                         </span>{' '}
                         — acima do benchmark de 70%. Rotatividade sob controle.
                       </>
                     : d.engagement_rate >= 40
                       ? <>
-                          Engajamento em{' '}
+                          Atividade comercial em{' '}
                           <span className="text-amber-600 dark:text-amber-400 font-semibold">
                             {d.engagement_rate}%
                           </span>{' '}
                           — abaixo do ideal. Verifique os alertas proativos e a saúde da equipe.
                         </>
                       : <>
-                          Engajamento crítico em{' '}
+                          Atividade comercial crítico em{' '}
                           <span className="text-destructive font-semibold">{d.engagement_rate}%</span>
                           . Ação imediata recomendada — acesse os alertas da VAMO IA.
                         </>

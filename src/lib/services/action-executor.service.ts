@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ActionType, ActionResult } from '@/types/chat'
 import { awardXp } from './xp.service'
+import { registerExecutionEvent, type ExecutionEventType } from './execution.service'
 import { ensureSellerSetup } from './seller-setup.service'
 import {
   findOrCreateDirectConversation,
@@ -46,7 +47,7 @@ export async function executeAction(
     case 'create_challenge':
       return createChallenge(adminClient, params, orgId)
     case 'register_kpi_value':
-      return registerKpiValue(supabase, params, orgId)
+      return registerKpiValue(adminClient, params, orgId, executorUserId)
     case 'notify_seller':
       return notifySeller(adminClient, params, orgId, executorUserId)
     case 'send_chat_message':
@@ -480,7 +481,8 @@ async function createChallenge(
 async function registerKpiValue(
   supabase: SupabaseClient,
   params: Record<string, unknown>,
-  orgId: string
+  orgId: string,
+  executorUserId: string
 ): Promise<ActionResult> {
   const userId = params.user_id as string
   const kpiId = params.kpi_id as string
@@ -492,49 +494,49 @@ async function registerKpiValue(
 
   const { data: kpi } = await supabase
     .from('kpi_definitions')
-    .select('name, points_per_unit')
+    .select('id, name, source_event')
     .eq('id', kpiId)
     .eq('organization_id', orgId)
     .single()
 
   if (!kpi) return { success: false, message: 'KPI não encontrado nesta organização' }
 
-  const pointsEarned = value * (kpi.points_per_unit || 0)
-  const today = new Date().toISOString().split('T')[0]
-
-  const { error } = await supabase
-    .from('kpi_entries')
-    .insert({
-      organization_id: orgId,
-      user_id: userId,
-      kpi_id: kpiId,
-      value,
-      points_earned: pointsEarned,
-      recorded_at: today,
-      source: 'api',
-    })
-
-  if (error) return { success: false, message: `Erro ao registrar KPI: ${error.message}` }
-
-  if (pointsEarned > 0) {
-    try {
-      await awardXp(supabase, {
-        userId,
-        organizationId: orgId,
-        amount: pointsEarned,
-        sourceType: 'kpi',
-        sourceId: kpiId,
-        description: `KPI: ${kpi.name} (${value} ${kpi.name})`,
-      })
-    } catch {
-      // XP award is best-effort
-    }
-  }
+  const allowedEvents: ExecutionEventType[] = [
+    'crm_activity_call',
+    'crm_activity_whatsapp',
+    'crm_activity_email',
+    'crm_activity_follow_up',
+    'crm_activity_meeting',
+    'crm_activity_proposal_sent',
+    'crm_deal_updated',
+    'crm_deal_won',
+    'crm_deal_lost',
+    'pipeline_next_action_created',
+    'pipeline_overdue_action_resolved',
+    'manual_kpi_entry',
+    'mission_manual_validation_requested',
+  ]
+  const eventType = allowedEvents.includes(kpi.source_event as ExecutionEventType)
+    ? kpi.source_event as ExecutionEventType
+    : 'manual_kpi_entry'
+  const result = await registerExecutionEvent(supabase, {
+    organizationId: orgId,
+    userId,
+    actorUserId: executorUserId,
+    type: eventType,
+    value,
+    source: 'ai',
+    metadata: {
+      kpiId,
+      kpiName: kpi.name,
+      description: `Acao comercial registrada pela IA para ${kpi.name}`,
+    },
+  })
 
   return {
     success: true,
-    message: `Registrado: ${value} para KPI "${kpi.name}" (+${pointsEarned} XP)`,
-    data: { value, pointsEarned, kpiName: kpi.name },
+    message: `Acao comercial registrada para "${kpi.name}" e processada pela execucao central`,
+    data: { value, kpiName: kpi.name, eventType, kpiEntries: result.kpiEntries.length, missionUpdates: result.missionUpdates.length },
   }
 }
 

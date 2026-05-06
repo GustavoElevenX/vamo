@@ -90,6 +90,15 @@ interface SellerDeal {
   account?: { name?: string | null } | null
 }
 
+interface ManagerNudge {
+  id: string
+  title: string | null
+  message: string
+  action_href: string | null
+  created_at: string
+  sender_name?: string
+}
+
 interface HojeCache {
   streak: number
   priorityMission: MissionData | null
@@ -100,6 +109,7 @@ interface HojeCache {
   hasCheckinToday: boolean
   lastRecognition: string | null
   deals: SellerDeal[]
+  managerNudges: ManagerNudge[]
 }
 
 type Priority =
@@ -129,6 +139,7 @@ export default function HojePage() {
   const [hasCheckinToday, setHasCheckinToday] = useState(initialCache?.hasCheckinToday ?? false)
   const [lastRecognition, setLastRecognition] = useState<string | null>(initialCache?.lastRecognition ?? null)
   const [deals, setDeals] = useState<SellerDeal[]>(initialCache?.deals ?? [])
+  const [managerNudges, setManagerNudges] = useState<ManagerNudge[]>(initialCache?.managerNudges ?? [])
   const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
 
   useEffect(() => {
@@ -185,6 +196,14 @@ export default function HojePage() {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from('notifications')
+          .select('id,title,message,action_href,created_at,sender:users!notifications_sender_id_fkey(name)')
+          .eq('user_id', user.id)
+          .eq('source', 'team_nudge')
+          .eq('read', false)
+          .order('created_at', { ascending: false })
+          .limit(3),
         fetch('/api/crm/deals').then(async (res) => (res.ok ? res.json() : { deals: [] })),
         fetch('/api/action-recommendations').then(async (res) => (res.ok ? res.json() : { recommendations: [] })),
       ])
@@ -202,8 +221,9 @@ export default function HojePage() {
       const monthEntries = results[4].status === 'fulfilled' ? results[4].value.data : null
       const checkin = results[5].status === 'fulfilled' ? results[5].value.data : null
       const recentXp = results[6].status === 'fulfilled' ? results[6].value.data : null
-      const dealBody = results[7].status === 'fulfilled' ? results[7].value : { deals: [] }
-      const recommendationBody = results[8].status === 'fulfilled' ? results[8].value : { recommendations: [] }
+      const nudgesData = results[7].status === 'fulfilled' ? results[7].value.data : null
+      const dealBody = results[8].status === 'fulfilled' ? results[8].value : { deals: [] }
+      const recommendationBody = results[9].status === 'fulfilled' ? results[9].value : { recommendations: [] }
 
       if (cancelled) return
 
@@ -238,6 +258,14 @@ export default function HojePage() {
       const newDeals = ((dealBody.deals ?? []) as SellerDeal[]).filter(
         (deal) => deal.stage !== 'closed_won' && deal.stage !== 'closed_lost'
       )
+      const newManagerNudges = ((nudgesData ?? []) as Array<ManagerNudge & { sender?: { name?: string | null } | null }>).map((nudge) => ({
+        id: nudge.id,
+        title: nudge.title,
+        message: nudge.message,
+        action_href: nudge.action_href,
+        created_at: nudge.created_at,
+        sender_name: nudge.sender?.name ?? 'Gestor',
+      }))
       const newRecommendations = ((recommendationBody.recommendations ?? []) as ContextualRecommendation[]).slice(0, 3)
 
       setStreak(newStreak)
@@ -249,6 +277,7 @@ export default function HojePage() {
       setHasCheckinToday(newHasCheckin)
       setLastRecognition(newRecognition)
       setDeals(newDeals)
+      setManagerNudges(newManagerNudges)
       setRecommendations(newRecommendations)
       setLoading(false)
 
@@ -262,6 +291,7 @@ export default function HojePage() {
         hasCheckinToday: newHasCheckin,
         lastRecognition: newRecognition,
         deals: newDeals,
+        managerNudges: newManagerNudges,
       }, 3 * 60 * 1000)
     }
 
@@ -367,6 +397,28 @@ export default function HojePage() {
         </div>
       </div>
 
+      {managerNudges.length > 0 && (
+        <Card className="border-amber-500/25 bg-amber-500/10">
+          <CardContent className="space-y-3 pt-5">
+            <div className="section-label"><MessageSquare className="h-3.5 w-3.5" />Mensagem do gestor</div>
+            {managerNudges.map((nudge) => (
+              <div key={nudge.id} className="rounded-xl border border-amber-500/20 bg-background/70 p-3">
+                <p className="text-sm font-semibold">{nudge.title || 'Nudge comercial'}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{nudge.message}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" render={<Link href={nudge.action_href || '/crm'} />}>
+                    Ver oportunidades
+                  </Button>
+                  <Button size="sm" variant="outline" render={<Link href="/kpis/registrar" />}>
+                    Registrar acao
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={DollarSign} label="Ganho do mês" value={formatCurrency(monthlyEarnings)} hint={projectedBonus ? `+${formatCurrency(projectedBonus)} se cumprir a missão` : 'parcial acumulada'} />
         <StatCard icon={TrendingUp} label="Forecast provável" value={compactCurrency(forecastLikely)} hint={`${deals.length} deals em movimento`} />
@@ -415,7 +467,7 @@ export default function HojePage() {
                 </div>
                 <Progress value={kpiPct} className="h-3" />
                 <Button variant="outline" className="w-full" render={<Link href="/kpis/registrar" />}>
-                  Registrar KPI
+                  Registrar acao
                 </Button>
               </>
             ) : (

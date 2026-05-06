@@ -17,12 +17,12 @@ import {
   STAGE_LABELS,
   STAGE_ORDER,
   STAGE_STUCK_DAYS,
-type CrmDeal,
+  type CrmDeal,
   type DealStage,
   type ForecastCategory,
   type NextActionType,
 } from '@/types/crm'
-import { AlertTriangle, CalendarClock, Filter, Pencil, Plus, Sparkles, Target, UserRound } from 'lucide-react'
+import { AlertTriangle, BadgeDollarSign, CalendarClock, Filter, HandCoins, Pencil, Plus, Sparkles, Target, UserRound } from 'lucide-react'
 
 type AccountOption = { id: string; name: string; segment: string | null }
 
@@ -71,6 +71,7 @@ export default function CrmPipelinePage() {
   const [loading, setLoading] = useState(true)
   const [crmError, setCrmError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [createAccountId, setCreateAccountId] = useState('')
   const [title, setTitle] = useState('')
   const [value, setValue] = useState('')
   const [nextActionTitle, setNextActionTitle] = useState('')
@@ -149,6 +150,7 @@ export default function CrmPipelinePage() {
       body: JSON.stringify({
         title,
         value,
+        account_id: createAccountId || accountFilter || null,
         stage: 'prospecting',
         next_action_title: nextActionTitle || null,
         next_action_type: nextActionType,
@@ -160,6 +162,7 @@ export default function CrmPipelinePage() {
     if (res.ok) {
       setTitle('')
       setValue('')
+      setCreateAccountId('')
       setNextActionTitle('')
       setNextActionDueAt('')
       setNextActionType('follow_up')
@@ -207,6 +210,17 @@ export default function CrmPipelinePage() {
     setWinPostSaleAction(deal.next_action_title ?? '')
     setWinPostSaleDueAt('')
     setCrmError(null)
+  }
+
+  function openExpansion(deal: CrmDeal) {
+    setCreateAccountId(deal.account_id ?? '')
+    setTitle(`Expansao - ${deal.account?.name || deal.title}`)
+    setValue('')
+    setNextActionTitle('')
+    setNextActionDueAt('')
+    setNextActionType('follow_up')
+    setForecastCategory('pipeline')
+    setOpen(true)
   }
 
   async function handleStageChange(deal: CrmDeal, stage: DealStage) {
@@ -303,14 +317,28 @@ export default function CrmPipelinePage() {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger render={<Button />}>
             <Plus className="h-4 w-4" />
-            Novo lead
+            Nova oportunidade
           </SheetTrigger>
           <SheetContent>
-            <SheetHeader><SheetTitle>Novo lead</SheetTitle></SheetHeader>
+            <SheetHeader><SheetTitle>Nova oportunidade</SheetTitle></SheetHeader>
             <div className="space-y-3 px-4">
               <div className="space-y-2">
-                <Label htmlFor="deal-title">Título ou cliente</Label>
+                <Label htmlFor="deal-title">Titulo da oportunidade</Label>
                 <Input id="deal-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Proposta ACME" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deal-account">Conta vinculada</Label>
+                <select
+                  id="deal-account"
+                  value={createAccountId}
+                  onChange={(e) => setCreateAccountId(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+                >
+                  <option value="">Sem conta por enquanto</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>{account.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="deal-value">Valor estimado</Label>
@@ -350,7 +378,7 @@ export default function CrmPipelinePage() {
               </div>
             </div>
             <SheetFooter>
-              <Button onClick={createDeal} disabled={!title.trim()}>Criar lead</Button>
+              <Button onClick={createDeal} disabled={!title.trim()}>Criar oportunidade</Button>
             </SheetFooter>
           </SheetContent>
         </Sheet>
@@ -367,7 +395,7 @@ export default function CrmPipelinePage() {
 
       <Sheet open={!!editingDeal} onOpenChange={(nextOpen) => !nextOpen && setEditingDeal(null)}>
         <SheetContent>
-          <SheetHeader><SheetTitle>Editar lead</SheetTitle></SheetHeader>
+          <SheetHeader><SheetTitle>Editar oportunidade</SheetTitle></SheetHeader>
           <div className="space-y-3 px-4">
             <div className="space-y-2">
               <Label htmlFor="edit-title">Título</Label>
@@ -530,13 +558,13 @@ export default function CrmPipelinePage() {
                   <div>
                     <p className="font-bold">Seu pipeline ainda está vazio</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Cadastre um lead com próxima ação para a VAMO priorizar follow-ups, forecast e ganho potencial.
+                      Cadastre uma oportunidade com próxima ação para a VAMO priorizar follow-ups, forecast e ganho potencial.
                     </p>
                   </div>
                 </div>
                 <Button onClick={() => setOpen(true)}>
                   <Plus className="h-4 w-4" />
-                  Novo lead
+                  Nova oportunidade
                 </Button>
               </CardContent>
             </Card>
@@ -557,7 +585,7 @@ export default function CrmPipelinePage() {
                   {columnDeals.length === 0 ? (
                     <div className="flex min-h-[180px] flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/35 px-4 text-center">
                       <CalendarClock className="mb-2 h-6 w-6 text-muted-foreground/45" />
-                      <p className="text-xs font-semibold text-muted-foreground">Nenhum lead nesta etapa</p>
+                      <p className="text-xs font-semibold text-muted-foreground">Nenhuma oportunidade nesta etapa</p>
                       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground/70">
                         Quando houver uma oportunidade aqui, a próxima ação aparecerá no cartão.
                       </p>
@@ -608,7 +636,7 @@ export default function CrmPipelinePage() {
                                   <span className="text-muted-foreground">{hasOpenNextAction(deal) ? dueLabel(deal.next_action_due_at) : 'sem ação aberta'}</span>
                                 </div>
                                 <p className="text-muted-foreground">
-                                  {hasOpenNextAction(deal) ? deal.next_action_title : 'Defina uma ação para este lead não ficar parado.'}
+                                  {hasOpenNextAction(deal) ? deal.next_action_title : 'Defina uma ação para esta oportunidade não ficar parado.'}
                                 </p>
                                 {hasOpenNextAction(deal) && (
                                   <Button
@@ -630,10 +658,39 @@ export default function CrmPipelinePage() {
                                 )}
                               </div>
                               <AiSuggestionCard dealId={deal.id} />
-                              <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => openEdit(deal)}>
-                                <Pencil className="h-3.5 w-3.5" />
-                                Editar lead
-                              </Button>
+                              {deal.stage === 'closed_won' ? (
+                                <div className="space-y-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="w-full"
+                                    render={<Link href={deal.account_id ? `/crm/clientes?customer=${deal.account_id}` : '/crm/clientes'} />}
+                                  >
+                                    <HandCoins className="h-3.5 w-3.5" />
+                                    Ver cliente
+                                  </Button>
+                                  <div className="grid gap-2 sm:grid-cols-2">
+                                    <Button type="button" variant="outline" size="sm" onClick={() => openWinConfirmation(deal)}>
+                                      <BadgeDollarSign className="h-3.5 w-3.5" />
+                                      Recebimento
+                                    </Button>
+                                    <Button type="button" variant="outline" size="sm" render={<Link href="/monitoramento/comissionamento" />}>
+                                      Comissao
+                                    </Button>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => openEdit(deal)}>
+                                      Pos-venda
+                                    </Button>
+                                    <Button type="button" variant="outline" size="sm" onClick={() => openExpansion(deal)}>
+                                      Expansao
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => openEdit(deal)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Editar oportunidade
+                                </Button>
+                              )}
                             </CardContent>
                           </Card>
                         )

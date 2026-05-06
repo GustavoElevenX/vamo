@@ -140,7 +140,8 @@ export async function registerExecutionEvent(
 
   const matchingKpis = ((kpisData ?? []) as KpiRow[]).filter((kpi) => {
     const legacyEvent = typeof kpi.targets?.source_event === 'string' ? kpi.targets.source_event : null
-    return kpi.source_event === input.type || legacyEvent === input.type
+    const explicitKpiId = typeof metadata.kpiId === 'string' ? metadata.kpiId : typeof metadata.kpi_id === 'string' ? metadata.kpi_id : null
+    return kpi.source_event === input.type || legacyEvent === input.type || explicitKpiId === kpi.id
   })
 
   const { event, impacts } = await createEventWithImpacts(

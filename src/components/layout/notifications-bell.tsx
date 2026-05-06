@@ -6,10 +6,13 @@ import { cn } from '@/lib/utils'
 
 interface Notification {
   id: string
+  title?: string | null
   message: string
   read: boolean
   created_at: string
   sender_name: string
+  source?: string | null
+  action_href?: string | null
 }
 
 export function NotificationsBell() {
@@ -121,10 +124,18 @@ export function NotificationsBell() {
                       <span className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
                     )}
                     <div className={cn('flex-1', n.read && 'pl-4')}>
+                      {n.title && (
+                        <p className="mb-0.5 text-xs font-semibold text-foreground">{n.title}</p>
+                      )}
                       <p className="text-sm text-foreground leading-snug">{n.message}</p>
                       <p className="text-[11px] text-muted-foreground mt-1">
                         {n.sender_name} · {timeAgo(n.created_at)}
                       </p>
+                      {n.action_href && (
+                        <a href={n.action_href} className="mt-2 inline-flex text-[11px] font-medium text-primary hover:underline">
+                          Abrir
+                        </a>
+                      )}
                     </div>
                   </div>
                 </button>

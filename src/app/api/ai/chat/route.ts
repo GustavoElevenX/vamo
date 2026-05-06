@@ -324,7 +324,7 @@ const ACTION_LABELS: Record<string, string> = {
   generate_briefing: 'Gerar Briefing Semanal',
   generate_retrospective: 'Gerar Retrospectiva Mensal',
   create_challenge: 'Criar Desafio',
-  register_kpi_value: 'Registrar KPI',
+  register_kpi_value: 'Registrar acao comercial',
   notify_seller: 'Enviar Notificação',
   send_chat_message: 'Enviar Mensagem no Chat',
 }
@@ -672,7 +672,7 @@ Fluxo correto: texto opcional brevíssimo (1 frase, opcional) → tool call.
 Fluxo ERRADO: escrever um parágrafo descrevendo o que vai fazer sem chamar a tool.
 
 AÇÕES DISPONÍVEIS:
-Se ${firstName} pedir para adicionar vendedor, criar missão, definir KPI, dar XP, gerar briefing, criar desafio, registrar KPI — use a tool correspondente IMEDIATAMENTE.
+Se ${firstName} pedir para adicionar vendedor, criar missão, definir KPI, dar XP, gerar briefing, criar desafio, registrar acao comercial — use a tool correspondente IMEDIATAMENTE.
 Nunca diga "você pode fazer isso em tal página" — faça você mesma via tool.
 
 CHAT DA EQUIPE:

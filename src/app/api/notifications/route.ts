@@ -21,7 +21,7 @@ export async function GET() {
 
     const { data: notifications, error } = await adminClient
       .from('notifications')
-      .select('id, message, read, created_at, sender_id')
+      .select('id, title, message, read, created_at, sender_id, type, source, context, action_href, related_mission_id')
       .eq('user_id', appUser.id)
       .eq('organization_id', appUser.organization_id)
       .order('created_at', { ascending: false })

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'VAMO — Plataforma de Performance Comercial',
+  title: 'Vamo - Plataforma de Performance Comercial',
   description: 'Engaje sua equipe, acelere resultados e transforme metas em conquistas com gamificação inteligente.',
 }
 

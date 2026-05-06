@@ -1,5 +1,5 @@
 -- ============ NOTIFICATIONS ============
--- Mensagens enviadas pelo gestor para vendedores via VAMO IA
+-- Mensagens enviadas pelo gestor para vendedores via Vamo IA
 
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -89,7 +89,15 @@ export interface KpiDefinition {
   description: string | null
   unit: string
   points_per_unit: number
-  targets: { daily?: number; weekly?: number; monthly?: number } | null
+  targets: { daily?: number; weekly?: number; monthly?: number; source?: string; source_event?: string; alert_tolerance?: number } | null
+  source?: string
+  source_event?: string | null
+  period?: 'daily' | 'weekly' | 'monthly'
+  target_daily?: number
+  target_weekly?: number
+  target_monthly?: number
+  calculation_type?: 'sum' | 'count' | 'average' | 'max' | 'min'
+  alert_tolerance?: number
   active: boolean
   created_at: string
 }
@@ -103,6 +111,11 @@ export interface KpiEntry {
   points_earned: number
   recorded_at: string
   source: 'manual' | 'api'
+  source_event?: string | null
+  source_entity_type?: string | null
+  source_entity_id?: string | null
+  mission_id?: string | null
+  metadata?: Record<string, unknown>
   created_at: string
 }
 

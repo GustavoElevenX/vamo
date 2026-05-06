@@ -17,12 +17,14 @@ import {
   STAGE_LABELS,
   STAGE_ORDER,
   STAGE_STUCK_DAYS,
-  type CrmDeal,
+type CrmDeal,
   type DealStage,
   type ForecastCategory,
   type NextActionType,
 } from '@/types/crm'
 import { AlertTriangle, CalendarClock, Filter, Pencil, Plus, Sparkles, Target, UserRound } from 'lucide-react'
+
+type AccountOption = { id: string; name: string; segment: string | null }
 
 function money(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -64,7 +66,10 @@ function formatMoneyInput(value: number) {
 export default function CrmPipelinePage() {
   const { user } = useRequiredAuth()
   const [deals, setDeals] = useState<CrmDeal[]>([])
+  const [accounts, setAccounts] = useState<AccountOption[]>([])
+  const [accountFilter, setAccountFilter] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [crmError, setCrmError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [value, setValue] = useState('')
@@ -82,21 +87,44 @@ export default function CrmPipelinePage() {
   const [editNextActionType, setEditNextActionType] = useState<NextActionType>('follow_up')
   const [editForecastCategory, setEditForecastCategory] = useState<ForecastCategory>('pipeline')
   const [savingDealId, setSavingDealId] = useState<string | null>(null)
+  const [winDeal, setWinDeal] = useState<CrmDeal | null>(null)
+  const [winAccountId, setWinAccountId] = useState('')
+  const [winNewAccountName, setWinNewAccountName] = useState('')
+  const [winFinalValue, setWinFinalValue] = useState('')
+  const [winProductName, setWinProductName] = useState('')
+  const [winReceivedAmount, setWinReceivedAmount] = useState('')
+  const [winReceivedAt, setWinReceivedAt] = useState('')
+  const [winPostSaleAction, setWinPostSaleAction] = useState('')
+  const [winPostSaleDueAt, setWinPostSaleDueAt] = useState('')
+  const [confirmingWin, setConfirmingWin] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/crm/deals')
-    const body = await res.json().catch(() => ({}))
-    setDeals(body.deals ?? [])
+    const [dealsRes, accountsRes] = await Promise.all([
+      fetch('/api/crm/deals'),
+      fetch('/api/crm/accounts'),
+    ])
+    const dealsBody = await dealsRes.json().catch(() => ({}))
+    const accountsBody = await accountsRes.json().catch(() => ({}))
+    setDeals(dealsBody.deals ?? [])
+    setAccounts((accountsBody.accounts ?? []).map((account: { id: string; name: string; segment: string | null }) => ({
+      id: account.id,
+      name: account.name,
+      segment: account.segment,
+    })))
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    const params = new URLSearchParams(window.location.search)
+    setAccountFilter(params.get('account'))
     load().catch(() => setLoading(false))
   }, [load])
 
-  const activeDeals = useMemo(() => deals.filter((deal) => deal.stage !== 'closed_lost'), [deals])
+  const activeDeals = useMemo(
+    () => deals.filter((deal) => deal.stage !== 'closed_lost' && (!accountFilter || deal.account_id === accountFilter)),
+    [deals, accountFilter],
+  )
   const openDeals = useMemo(() => activeDeals.filter((deal) => deal.stage !== 'closed_won'), [activeDeals])
   const totalOpen = openDeals.reduce((sum, deal) => sum + Number(deal.value || 0), 0)
   const forecastLikely = openDeals.reduce((sum, deal) => sum + (Number(deal.value || 0) * Number(deal.probability || 0)) / 100, 0)
@@ -154,19 +182,49 @@ export default function CrmPipelinePage() {
   }
 
   async function updateDeal(id: string, patch: Record<string, unknown>) {
+    setCrmError(null)
     setSavingDealId(id)
     const res = await fetch(`/api/crm/deals/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
     })
+    const body = await res.json().catch(() => ({}))
     setSavingDealId(null)
     if (res.ok) await load()
+    else setCrmError(body.error || 'Nao foi possivel atualizar o deal.')
     return res.ok
+  }
+
+  function openWinConfirmation(deal: CrmDeal, overrides?: { title?: string; value?: string }) {
+    setWinDeal({ ...deal, title: overrides?.title ?? deal.title })
+    setWinAccountId(deal.account_id ?? '')
+    setWinNewAccountName(deal.account?.name ? '' : deal.title)
+    setWinFinalValue(overrides?.value ?? formatMoneyInput(Number(deal.value || 0)))
+    setWinProductName(deal.product_name ?? '')
+    setWinReceivedAmount(deal.received_amount ? formatMoneyInput(Number(deal.received_amount || 0)) : '')
+    setWinReceivedAt('')
+    setWinPostSaleAction(deal.next_action_title ?? '')
+    setWinPostSaleDueAt('')
+    setCrmError(null)
+  }
+
+  async function handleStageChange(deal: CrmDeal, stage: DealStage) {
+    if (stage === 'closed_won' && deal.stage !== 'closed_won') {
+      openWinConfirmation(deal)
+      return
+    }
+    await updateDeal(deal.id, { stage })
   }
 
   async function saveEdit() {
     if (!editingDeal) return
+    if (editStage === 'closed_won' && editingDeal.stage !== 'closed_won') {
+      const dealToWin = { ...editingDeal, title: editTitle, value: Number(editValue.replace(/\./g, '').replace(',', '.')) || Number(editingDeal.value || 0) }
+      setEditingDeal(null)
+      openWinConfirmation(dealToWin, { title: editTitle, value: editValue })
+      return
+    }
     const ok = await updateDeal(editingDeal.id, {
       title: editTitle,
       value: editValue,
@@ -178,6 +236,60 @@ export default function CrmPipelinePage() {
       forecast_category: editForecastCategory,
     })
     if (ok) setEditingDeal(null)
+  }
+
+  async function confirmWonDeal() {
+    if (!winDeal || confirmingWin) return
+    if (!winAccountId && !winNewAccountName.trim()) {
+      setCrmError('Antes de marcar como ganho, selecione uma conta existente ou crie uma nova.')
+      return
+    }
+
+    setConfirmingWin(true)
+    setCrmError(null)
+    let accountId = winAccountId
+
+    if (!accountId) {
+      const accountRes = await fetch('/api/crm/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: winNewAccountName.trim() }),
+      })
+      const accountBody = await accountRes.json().catch(() => ({}))
+      if (!accountRes.ok || !accountBody.account?.id) {
+        setCrmError(accountBody.error || 'Nao foi possivel criar a conta.')
+        setConfirmingWin(false)
+        return
+      }
+      accountId = accountBody.account.id
+    }
+
+    const ok = await updateDeal(winDeal.id, {
+      stage: 'closed_won',
+      account_id: accountId,
+      value: winFinalValue,
+      product_name: winProductName || null,
+      received_amount: winReceivedAmount || null,
+      received_at: winReceivedAt || null,
+      next_action_title: winPostSaleAction || null,
+      next_action_type: winPostSaleAction ? 'follow_up' : winDeal.next_action_type,
+      next_action_due_at: winPostSaleDueAt || null,
+      next_action_status: winPostSaleAction ? 'open' : winDeal.next_action_status,
+      forecast_category: 'closed',
+      probability: 100,
+    })
+
+    setConfirmingWin(false)
+    if (ok) {
+      setWinDeal(null)
+      setWinAccountId('')
+      setWinNewAccountName('')
+      setWinProductName('')
+      setWinReceivedAmount('')
+      setWinReceivedAt('')
+      setWinPostSaleAction('')
+      setWinPostSaleDueAt('')
+    }
   }
 
   return (
@@ -244,6 +356,15 @@ export default function CrmPipelinePage() {
         </Sheet>
       </div>
 
+      {crmError && (
+        <Card className="border-amber-500/30 bg-amber-500/10">
+          <CardContent className="flex items-start gap-2 py-3 text-sm text-amber-700 dark:text-amber-300">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{crmError}</span>
+          </CardContent>
+        </Card>
+      )}
+
       <Sheet open={!!editingDeal} onOpenChange={(nextOpen) => !nextOpen && setEditingDeal(null)}>
         <SheetContent>
           <SheetHeader><SheetTitle>Editar lead</SheetTitle></SheetHeader>
@@ -309,6 +430,80 @@ export default function CrmPipelinePage() {
           <SheetFooter>
             <Button onClick={saveEdit} disabled={!editingDeal || savingDealId === editingDeal.id || !editTitle.trim()}>
               {editingDeal && savingDealId === editingDeal.id ? 'Salvando...' : 'Salvar alterações'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={!!winDeal} onOpenChange={(nextOpen) => !nextOpen && setWinDeal(null)}>
+        <SheetContent className="overflow-y-auto">
+          <SheetHeader><SheetTitle>Confirmar venda ganha</SheetTitle></SheetHeader>
+          <div className="space-y-4 px-4">
+            <div className="rounded-lg border border-primary/25 bg-primary/5 p-3">
+              <p className="text-sm font-semibold">{winDeal?.title}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Antes de marcar como ganho, vincule essa oportunidade a uma conta. Isso garante historico, comissao, recebimento e pos-venda corretamente.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="win-account">Cliente / Conta</Label>
+              <select
+                id="win-account"
+                value={winAccountId}
+                onChange={(event) => setWinAccountId(event.target.value)}
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+              >
+                <option value="">Criar nova conta abaixo</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {!winAccountId && (
+              <div className="space-y-2">
+                <Label htmlFor="win-new-account">Criar nova conta</Label>
+                <Input id="win-new-account" value={winNewAccountName} onChange={(event) => setWinNewAccountName(event.target.value)} placeholder="Nome do cliente/conta" />
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="win-value">Valor final</Label>
+                <Input id="win-value" value={winFinalValue} onChange={(event) => setWinFinalValue(event.target.value)} inputMode="decimal" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="win-product">Produto / servico</Label>
+                <Input id="win-product" value={winProductName} onChange={(event) => setWinProductName(event.target.value)} placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="win-received">Valor recebido</Label>
+                <Input id="win-received" value={winReceivedAmount} onChange={(event) => setWinReceivedAmount(event.target.value)} inputMode="decimal" placeholder="Opcional" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="win-received-at">Data de recebimento</Label>
+                <Input id="win-received-at" type="datetime-local" value={winReceivedAt} onChange={(event) => setWinReceivedAt(event.target.value)} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="win-post-sale">Proxima acao pos-venda</Label>
+              <Input id="win-post-sale" value={winPostSaleAction} onChange={(event) => setWinPostSaleAction(event.target.value)} placeholder="Ex.: Agendar onboarding" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="win-post-sale-due">Prazo da acao pos-venda</Label>
+              <Input id="win-post-sale-due" type="datetime-local" value={winPostSaleDueAt} onChange={(event) => setWinPostSaleDueAt(event.target.value)} />
+            </div>
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setWinDeal(null)}>Cancelar</Button>
+            <Button onClick={confirmWonDeal} disabled={confirmingWin || (!winAccountId && !winNewAccountName.trim())}>
+              {confirmingWin ? 'Confirmando...' : 'Confirmar ganho'}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -389,7 +584,7 @@ export default function CrmPipelinePage() {
                                   id={`stage-${deal.id}`}
                                   value={deal.stage}
                                   disabled={savingDealId === deal.id}
-                                  onChange={(event) => updateDeal(deal.id, { stage: event.target.value })}
+                                  onChange={(event) => handleStageChange(deal, event.target.value as DealStage)}
                                   className="h-8 w-full rounded-lg border border-input bg-background px-2 text-xs"
                                 >
                                   {[...STAGE_ORDER, 'closed_lost' as DealStage].map((stageOption) => (

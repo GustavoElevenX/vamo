@@ -1,5 +1,5 @@
 -- ============================================================
--- VAMO — Seed de Usuários de Teste para QA
+-- Vamo - Seed de usuarios de teste para QA
 -- Execute no Supabase Dashboard → SQL Editor
 -- ⚠️  Use apenas em ambiente de desenvolvimento/staging
 -- ============================================================

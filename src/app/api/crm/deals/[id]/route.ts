@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAppUser } from '@/lib/server/auth'
 import { createRecommendation } from '@/lib/services/action-recommendation.service'
 import { createEventWithImpacts } from '@/lib/services/performance-os.service'
+import { registerExecutionEvent, type ExecutionEventType } from '@/lib/services/execution.service'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import type { DealStage } from '@/types/crm'
 
@@ -55,7 +56,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const { data: previousDeal } = await adminClient
     .from('crm_deals')
-    .select('id,title,owner_id,stage,value,probability,next_action_title,next_action_due_at,forecast_category')
+    .select('id,title,account_id,owner_id,stage,value,probability,next_action_title,next_action_due_at,forecast_category')
     .eq('id', id)
     .eq('organization_id', appUser.organization_id)
     .maybeSingle()
@@ -68,10 +69,14 @@ export async function PATCH(request: Request, { params }: Params) {
   for (const key of ['title', 'account_id', 'expected_close', 'lost_reason', 'notes'] as const) {
     if (key in input) patch[key] = input[key] || null
   }
+  for (const key of ['product_id', 'product_name', 'category_id', 'category_name', 'commercial_table_id', 'commercial_table_name', 'received_at'] as const) {
+    if (key in input) patch[key] = input[key] || null
+  }
   for (const key of ['next_action_title', 'next_action_due_at'] as const) {
     if (key in input) patch[key] = input[key] || null
   }
   if ('value' in input) patch.value = parseMoney(input.value)
+  if ('received_amount' in input) patch.received_amount = parseMoney(input.received_amount)
   if ('probability' in input) patch.probability = Number(input.probability || 0)
   if (STAGES.includes(input.stage)) patch.stage = input.stage
   if (NEXT_ACTION_TYPES.includes(input.next_action_type)) patch.next_action_type = input.next_action_type
@@ -85,6 +90,16 @@ export async function PATCH(request: Request, { params }: Params) {
     patch.ai_priority_score = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0
   }
   if (input.owner_id && appUser.role !== 'seller') patch.owner_id = input.owner_id
+
+  if (patch.stage === 'closed_won' && !(patch.account_id || previousDeal.account_id)) {
+    return NextResponse.json(
+      {
+        error: 'Antes de marcar como ganho, vincule essa oportunidade a um cliente/conta.',
+        code: 'ACCOUNT_REQUIRED',
+      },
+      { status: 400 },
+    )
+  }
 
   let query = adminClient
     .from('crm_deals')
@@ -159,6 +174,29 @@ export async function PATCH(request: Request, { params }: Params) {
       suggestedActionHref: `/crm/${id}`,
       priority: isLost ? 'high' : 'medium',
       metadata: { dealId: id, eventType: 'crm_deal.stage_changed' },
+    })
+
+    const executionType: ExecutionEventType = isWon ? 'crm_deal_won' : isLost ? 'crm_deal_lost' : 'crm_deal_updated'
+    await registerExecutionEvent(adminClient, {
+      organizationId: appUser.organization_id,
+      userId: previousDeal.owner_id,
+      actorUserId: appUser.id,
+      type: executionType,
+      value: isWon ? nextValue : 1,
+      source: 'crm',
+      sourceEntityType: 'crm_deal',
+      sourceEntityId: id,
+      metadata: {
+        dealId: id,
+        title: previousDeal.title,
+        fromStage: previousDeal.stage,
+        toStage: patch.stage,
+        revenue: nextValue,
+        value: nextValue,
+        probability: nextProbability,
+        forecastImpact,
+        description: `${previousDeal.title}: ${previousDeal.stage} -> ${patch.stage}`,
+      },
     })
   }
 

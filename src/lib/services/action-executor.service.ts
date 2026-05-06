@@ -165,12 +165,23 @@ async function createMission(
   const difficulty = (params.difficulty as number) || 2
   const xpReward = (params.xp_reward as number) || 50
   const commissionBonus = (params.commission_bonus as number) || 0
+  const type = (params.type as string) || ((params.kpi_id || params.source_event) ? 'kpi_target' : 'manual_validation')
+  const targetValue = Number(params.target_value ?? 1)
+  const currentValue = Number(params.current_value ?? 0)
+  const verificationType = (params.verification_type as string) || (type === 'manual_validation' ? 'manual' : 'automatic')
+  const criteria = (params.criteria as Record<string, unknown>) || {
+    type,
+    kpi_id: params.kpi_id ?? null,
+    source_event: params.source_event ?? null,
+    target_value: targetValue,
+  }
 
   const { data, error } = await adminClient
     .from('ai_missions')
     .insert({
       organization_id: orgId,
       user_id: userId,
+      created_by: executorUserId,
       title,
       description: description || title,
       area,
@@ -178,6 +189,13 @@ async function createMission(
       xp_reward: xpReward,
       commission_bonus: commissionBonus,
       status: 'pending',
+      type,
+      kpi_id: params.kpi_id || null,
+      target_value: Number.isFinite(targetValue) ? targetValue : 1,
+      current_value: Number.isFinite(currentValue) ? currentValue : 0,
+      deadline: params.deadline || null,
+      verification_type: ['automatic', 'manual', 'hybrid'].includes(verificationType) ? verificationType : 'manual',
+      criteria,
     })
     .select('id, title, xp_reward, commission_bonus')
     .single()
@@ -199,7 +217,19 @@ async function defineKpi(
 
   const unit = (params.unit as string) || 'un'
   const pointsPerUnit = (params.points_per_unit as number) || 10
-  const targets = params.targets || { daily: 0 }
+  const targetDaily = Number(params.target_daily ?? 0)
+  const targetWeekly = Number(params.target_weekly ?? 0)
+  const targetMonthly = Number(params.target_monthly ?? params.target ?? 0)
+  const source = String(params.source || 'manual')
+  const sourceEvent = (params.source_event as string) || null
+  const targets = params.targets || {
+    daily: targetDaily,
+    weekly: targetWeekly,
+    monthly: targetMonthly,
+    source,
+    source_event: sourceEvent,
+    alert_tolerance: Number(params.alert_tolerance ?? 10),
+  }
 
   const { data, error } = await adminClient
     .from('kpi_definitions')
@@ -210,6 +240,14 @@ async function defineKpi(
       unit,
       points_per_unit: pointsPerUnit,
       targets,
+      source,
+      source_event: sourceEvent,
+      target_daily: targetDaily,
+      target_weekly: targetWeekly,
+      target_monthly: targetMonthly,
+      period: (params.period as string) || 'monthly',
+      calculation_type: (params.calculation_type as string) || 'sum',
+      alert_tolerance: Number(params.alert_tolerance ?? 10),
       active: true,
     })
     .select('id, name, unit')

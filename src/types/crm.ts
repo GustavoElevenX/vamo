@@ -12,6 +12,7 @@ export type ActivityType =
   | 'meeting'
   | 'proposal_sent'
   | 'whatsapp'
+  | 'follow_up'
   | 'note'
 
 export type NextActionType =
@@ -59,6 +60,7 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   meeting: 'Reunião',
   proposal_sent: 'Proposta',
   whatsapp: 'WhatsApp',
+  follow_up: 'Follow-up',
   note: 'Nota',
 }
 
@@ -143,6 +145,14 @@ export interface CrmDeal {
   next_action_status: NextActionStatus
   forecast_category: ForecastCategory
   ai_priority_score: number
+  received_amount?: number | null
+  received_at?: string | null
+  product_id?: string | null
+  product_name?: string | null
+  category_id?: string | null
+  category_name?: string | null
+  commercial_table_id?: string | null
+  commercial_table_name?: string | null
   created_at: string
   updated_at: string
   account?: Pick<CrmAccount, 'id' | 'name'> | null

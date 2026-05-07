@@ -29,7 +29,7 @@ export async function GET() {
 
     const { data, error } = await adminClient
       .from('ai_missions')
-      .select('*, kpi:kpi_definitions(id,name,unit,source_event)')
+      .select('*, kpi:kpi_definitions(id,name,unit,source_event), pdi_plan:pdi_plans(id,status)')
       .eq('organization_id', appUser.organization_id)
       .eq('user_id', appUser.id)
       .in('status', ['pending', 'in_progress', 'awaiting_approval', 'rejected', 'completed', 'expired'])
@@ -38,7 +38,12 @@ export async function GET() {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const missions = (data ?? []).map((mission: any) => {
+    const visibleMissions = (data ?? []).filter((mission: any) => {
+      const pdiPlan = Array.isArray(mission.pdi_plan) ? mission.pdi_plan[0] : mission.pdi_plan
+      return !(mission.type === 'pdi' && mission.status === 'awaiting_approval' && ['recommended', 'pending_approval'].includes(pdiPlan?.status))
+    })
+
+    const missions = visibleMissions.map((mission: any) => {
       const targetValue = Number(mission.target_value ?? mission.criteria?.target_value ?? 0)
       const currentValue = Number(mission.current_value ?? 0)
       const progressPct = progress(currentValue, targetValue)

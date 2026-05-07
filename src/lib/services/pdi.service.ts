@@ -61,6 +61,7 @@ interface SubmitApplicationInput extends UserContext {
   planId: string
   dealId?: string | null
   activityId?: string | null
+  accountId?: string | null
   applicationType?: 'deal' | 'follow_up' | 'proposal' | 'roleplay' | 'simulation'
   description: string
   evidence?: JsonObject
@@ -979,7 +980,7 @@ export async function generatePdiTraining(
           validationCriteria: trainingPayload.validation_criteria,
         },
         resources: [{ type: 'pdi', href: '/desenvolvimento/pdi', label: 'Meu PDI' }],
-        status: 'pending',
+        status: 'awaiting_approval',
         deadline: tomorrowPlus(trainingPayload.recommended_deadline_days),
         verification_type: 'manual',
       })
@@ -1179,6 +1180,20 @@ export async function approvePdiPlan(
 
   if (error) throw error
 
+  const releasingPlan = !['rejected', 'cancelled'].includes(plan.status)
+  const { error: missionReleaseError } = await supabase
+    .from('ai_missions')
+    .update({
+      status: releasingPlan ? 'pending' : 'cancelled',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('organization_id', params.organizationId)
+    .eq('pdi_plan_id', plan.id)
+    .eq('status', 'awaiting_approval')
+    .eq('current_value', 0)
+
+  if (missionReleaseError) throw missionReleaseError
+
   if (plan.gap_id) {
     const gapStatus = ['rejected', 'cancelled'].includes(plan.status) ? 'dismissed' : 'in_pdi'
     await supabase
@@ -1250,6 +1265,30 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
   if (!plan) throw new Error('PDI nao encontrado')
   if (plan.user_id !== input.targetUserId) throw new Error('PDI pertence a outro usuario')
 
+  let accountId = input.accountId ?? null
+  if (input.dealId) {
+    const { data: deal } = await supabase
+      .from('crm_deals')
+      .select('id, account_id, organization_id')
+      .eq('id', input.dealId)
+      .eq('organization_id', input.organizationId)
+      .maybeSingle()
+
+    if (!deal) throw new Error('Oportunidade nao encontrada na organizacao')
+    if (!accountId) accountId = deal.account_id ?? null
+  }
+
+  if (accountId) {
+    const { data: account } = await supabase
+      .from('crm_accounts')
+      .select('id, organization_id')
+      .eq('id', accountId)
+      .eq('organization_id', input.organizationId)
+      .maybeSingle()
+
+    if (!account) throw new Error('Cliente nao encontrado na organizacao')
+  }
+
   const { data: application, error } = await supabase
     .from('pdi_applications')
     .insert({
@@ -1257,10 +1296,11 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
       plan_id: input.planId,
       user_id: input.targetUserId,
       deal_id: input.dealId ?? null,
+      account_id: accountId,
       activity_id: input.activityId ?? null,
       application_type: input.applicationType ?? 'deal',
       description: input.description,
-      evidence: input.evidence ?? {},
+      evidence: { ...(input.evidence ?? {}), accountId },
     })
     .select('*')
     .single()
@@ -1295,6 +1335,14 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
       toEntityId: input.activityId,
       relationshipType: 'evidenced_by_activity',
     }) : null,
+    accountId ? createEntityRelationship(supabase, {
+      organizationId: input.organizationId,
+      fromEntityType: 'pdi_application',
+      fromEntityId: application.id,
+      toEntityType: 'crm_account',
+      toEntityId: accountId,
+      relationshipType: 'applied_in_customer_context',
+    }) : null,
   ].filter(Boolean)
   await Promise.all(relationships)
 
@@ -1312,11 +1360,12 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
       description: input.description,
       impactScore: 75,
       priorityScore: 60,
-      metadata: { planId: plan.id, dealId: input.dealId ?? null },
+      metadata: { planId: plan.id, dealId: input.dealId ?? null, accountId },
     },
     [
       { impactedModule: 'pdi', impactedEntityType: 'pdi_plan', impactedEntityId: plan.id, impactType: 'application_submitted' },
       { impactedModule: 'crm', impactedEntityType: 'crm_deal', impactedEntityId: input.dealId ?? null, impactType: 'pdi_applied' },
+      { impactedModule: 'crm', impactedEntityType: 'crm_account', impactedEntityId: accountId, impactType: 'pdi_applied' },
       { impactedModule: 'xp', impactedEntityType: 'pdi_application', impactedEntityId: application.id, impactType: 'eligible_with_evidence' },
       { impactedModule: 'feed', impactedEntityType: 'pdi_application', impactedEntityId: application.id, impactType: 'recognition_candidate' },
     ],

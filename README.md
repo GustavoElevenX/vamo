@@ -98,6 +98,8 @@ Telas:
 - Check-in de saude gera evento; energia baixa cria calibragem, reduz intensidade sugerida e recomenda conversa de apoio.
 - XP agora aceita `performance_event_id`, `evidence` e `impact_expected`, evitando gamificacao sem evidencia.
 - Comissao ganhou suporte a recibos de pagamento por deal e explicacao de prevista, liberada, pendente e bloqueada.
+- PDI gerado por IA fica aguardando aprovacao do gestor; missao vinculada so libera ao vendedor depois da aprovacao.
+- Aplicacao de PDI registra `deal_id` e `account_id`, permitindo rastrear cliente/carteira fora do JSON de evidencia.
 
 ## APIs novas
 

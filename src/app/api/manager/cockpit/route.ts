@@ -267,7 +267,7 @@ export async function GET() {
         .in('status', ['recommended', 'pending_approval', 'approved', 'active']),
       adminClient
         .from('pdi_applications')
-        .select('id,user_id,plan_id,deal_id,description,status,created_at')
+        .select('id,user_id,plan_id,deal_id,account_id,description,status,created_at,account:crm_accounts(id,name)')
         .eq('organization_id', appUser.organization_id)
         .eq('status', 'submitted'),
     ])

@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   const status = params.get('status')
   let query = adminClient
     .from('pdi_applications')
-    .select('*, plan:pdi_plans(title), deal:crm_deals(title,value,stage), user:users(name)')
+    .select('*, plan:pdi_plans(title), deal:crm_deals(title,value,stage), account:crm_accounts(id,name), user:users(name)')
     .eq('organization_id', appUser.organization_id)
     .order('created_at', { ascending: false })
 
@@ -51,13 +51,14 @@ export async function POST(request: Request) {
       targetUserId: appUser.role === 'seller' ? appUser.id : asString(body.userId, appUser.id),
       planId,
       dealId: asString(body.dealId || body.deal_id) || null,
+      accountId: asString(body.accountId || body.account_id) || null,
       activityId: asString(body.activityId || body.activity_id) || null,
       applicationType: asString(body.applicationType, 'deal') as any,
       description,
       evidence: {
         ...asObject(body.evidence),
         result: asString(body.result) || null,
-        accountId: asString(body.account_id) || null,
+        accountId: asString(body.accountId || body.account_id) || null,
         attachments: Array.isArray(body.attachments) ? body.attachments : [],
       },
     })

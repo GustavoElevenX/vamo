@@ -22,6 +22,7 @@ interface PdiApplication {
   status: string
   plan?: { title?: string | null } | null
   deal?: { title?: string | null } | null
+  account?: { name?: string | null } | null
 }
 
 interface DealOption {
@@ -332,6 +333,7 @@ export default function SellerPdiPage() {
               title={item.plan?.title || item.deal?.title || 'Aplicacao de PDI'}
               description={item.description}
               status={item.status}
+              accountName={item.account?.name ?? null}
             />
           )) : (
             <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">

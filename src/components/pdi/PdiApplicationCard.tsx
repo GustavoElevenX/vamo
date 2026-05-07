@@ -6,10 +6,12 @@ export function PdiApplicationCard({
   title,
   description,
   status,
+  accountName,
 }: {
   title: string
   description: string
   status: string
+  accountName?: string | null
 }) {
   return (
     <Card>
@@ -20,6 +22,7 @@ export function PdiApplicationCard({
             <p className="font-bold">{title}</p>
             <Badge variant="outline">{status}</Badge>
           </div>
+          {accountName && <p className="mt-1 text-xs font-medium text-primary">Cliente: {accountName}</p>}
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
       </CardContent>

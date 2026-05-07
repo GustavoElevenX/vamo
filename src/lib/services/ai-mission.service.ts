@@ -20,6 +20,7 @@ export async function completeMission(
 
   if (error || !mission) throw new Error('Missao nao encontrada')
   if (mission.status === 'completed') throw new Error('Missao ja completada')
+  if (mission.status === 'awaiting_approval') throw new Error('Missao aguardando aprovacao do gestor')
 
   const targetValue = Number(mission.target_value ?? mission.criteria?.target_value ?? 0)
   const currentValue = Number(mission.current_value ?? 0)
@@ -79,11 +80,19 @@ export async function updateMissionStatus(
 ) {
   const { missionId, userId, status } = params
 
-  const { error } = await supabase
+  const allowedCurrentStatuses = status === 'in_progress'
+    ? ['pending', 'rejected']
+    : ['pending', 'in_progress', 'rejected']
+
+  const { data, error } = await supabase
     .from('ai_missions')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', missionId)
     .eq('user_id', userId)
+    .in('status', allowedCurrentStatuses)
+    .select('id')
+    .maybeSingle()
 
   if (error) throw error
+  if (!data) throw new Error('Missao nao pode ser alterada neste status')
 }

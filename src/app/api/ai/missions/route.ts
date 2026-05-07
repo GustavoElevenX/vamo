@@ -22,14 +22,19 @@ export async function GET() {
     return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
   }
 
-  const { data: missions } = await supabase
+  const { data: missions } = await adminClient
     .from('ai_missions')
-    .select('*')
+    .select('*, pdi_plan:pdi_plans(id,status)')
     .eq('user_id', appUser.id)
     .eq('organization_id', appUser.organization_id)
     .order('created_at', { ascending: false })
 
-  return NextResponse.json({ missions: missions ?? [] })
+  const visibleMissions = (missions ?? []).filter((mission: any) => {
+    const pdiPlan = Array.isArray(mission.pdi_plan) ? mission.pdi_plan[0] : mission.pdi_plan
+    return !(mission.type === 'pdi' && mission.status === 'awaiting_approval' && ['recommended', 'pending_approval'].includes(pdiPlan?.status))
+  })
+
+  return NextResponse.json({ missions: visibleMissions })
 }
 
 export async function PATCH(request: Request) {

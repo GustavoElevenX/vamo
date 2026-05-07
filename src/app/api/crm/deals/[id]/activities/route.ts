@@ -174,10 +174,11 @@ export async function POST(request: Request, { params }: Params) {
         plan_id: input.pdi_plan_id,
         user_id: appUser.id,
         deal_id: id,
+        account_id: deal.account_id ?? null,
         activity_id: activity.id,
         application_type: type === 'proposal_sent' ? 'proposal' : 'follow_up',
         description: outcome,
-        evidence: { activityId: activity.id, dealId: id, source: 'crm_activity' },
+        evidence: { activityId: activity.id, dealId: id, accountId: deal.account_id ?? null, source: 'crm_activity' },
       })
       .select('id')
       .single()

@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS pdi_applications (
   plan_id UUID NOT NULL REFERENCES pdi_plans(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   deal_id UUID REFERENCES crm_deals(id) ON DELETE SET NULL,
+  account_id UUID REFERENCES crm_accounts(id) ON DELETE SET NULL,
   activity_id UUID REFERENCES crm_activities(id) ON DELETE SET NULL,
   application_type TEXT NOT NULL DEFAULT 'deal',
   description TEXT NOT NULL,
@@ -323,6 +324,7 @@ CREATE INDEX IF NOT EXISTS idx_pdi_plan_items_plan ON pdi_plan_items(plan_id);
 CREATE INDEX IF NOT EXISTS idx_pdi_applications_plan ON pdi_applications(plan_id);
 CREATE INDEX IF NOT EXISTS idx_pdi_applications_user ON pdi_applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_pdi_applications_deal ON pdi_applications(deal_id);
+CREATE INDEX IF NOT EXISTS idx_pdi_applications_account ON pdi_applications(account_id);
 CREATE INDEX IF NOT EXISTS idx_pdi_evidence_plan ON pdi_evolution_evidence(plan_id);
 CREATE INDEX IF NOT EXISTS idx_health_calibrations_org_user ON health_calibrations(organization_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_health_calibrations_checkin ON health_calibrations(checkin_id);

@@ -45,6 +45,10 @@ export async function POST(request: Request) {
   const auth = await getAppUser()
   if (auth.error) return auth.error
   const { adminClient, appUser } = auth
+  if (!['manager', 'admin'].includes(appUser.role)) {
+    return NextResponse.json({ error: 'Apenas gestores podem criar gaps manuais' }, { status: 403 })
+  }
+
   const body = await request.json() as Record<string, unknown>
   const targetUserId = asString(body.userId, appUser.id)
   const title = asString(body.title)
@@ -52,6 +56,18 @@ export async function POST(request: Request) {
 
   if (!title || !skillArea) {
     return NextResponse.json({ error: 'title e skillArea sao obrigatorios' }, { status: 400 })
+  }
+
+  const { data: targetUser } = await adminClient
+    .from('users')
+    .select('id')
+    .eq('id', targetUserId)
+    .eq('organization_id', appUser.organization_id)
+    .eq('active', true)
+    .maybeSingle()
+
+  if (!targetUser) {
+    return NextResponse.json({ error: 'Vendedor nao encontrado na organizacao' }, { status: 404 })
   }
 
   try {

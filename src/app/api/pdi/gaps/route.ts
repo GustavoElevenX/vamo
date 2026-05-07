@@ -30,7 +30,8 @@ export async function GET(request: Request) {
 
   if (appUser.role === 'seller') query = query.eq('user_id', appUser.id)
   else if (userId) query = query.eq('user_id', userId)
-  if (status) query = query.eq('status', status)
+  if (status && status !== 'all') query = query.eq('status', status)
+  else if (!status) query = query.in('status', ['open', 'in_training', 'in_pdi', 'improving'])
   if (source) query = query.eq('detected_from', source)
   if (skillSlug) query = query.eq('skill_area', skillSlug)
   if (severity) query = query.eq('severity', severity)

@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowLeft, Bell, Briefcase, CheckCircle2, DollarSign, LineChart, MessageSquare, Target, Zap } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -75,6 +75,8 @@ function dueLabel(value: string | null) {
 export default function MemberDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const pdiRef = useRef<HTMLDivElement | null>(null)
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [pdiGaps, setPdiGaps] = useState<PdiGap[]>([])
@@ -109,6 +111,12 @@ export default function MemberDetailPage() {
     load()
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    if (!loading && searchParams.get('tab') === 'pdi') {
+      pdiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [loading, searchParams])
 
   if (loading) {
     return (
@@ -179,7 +187,7 @@ export default function MemberDetailPage() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card ref={pdiRef}>
           <CardHeader><CardTitle className="text-sm">Pipeline</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">

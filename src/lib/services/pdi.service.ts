@@ -545,7 +545,7 @@ export async function detectPdiGaps(supabase: SupabaseClient, input: DetectPdiGa
     enabledSources.has('crm') || enabledSources.has('lost_deal') || enabledSources.has('customer_portfolio') || enabledSources.has('commercial_performance')
       ? supabase
         .from('crm_deals')
-        .select('id,owner_id,account_id,title,value,stage,lost_reason,last_activity_at,next_action_title,next_action_due_at,next_action_status,updated_at,created_at')
+        .select('id,owner_id,account_id,title,value,stage,lost_reason,last_activity_at,next_action_title,next_action_due_at,next_action_status,received_amount,updated_at,created_at')
         .eq('organization_id', input.organizationId)
         .in('owner_id', sellerIds)
       : Promise.resolve({ data: [], error: null }),
@@ -718,6 +718,9 @@ export async function detectPdiGaps(supabase: SupabaseClient, input: DetectPdiGa
 
     if (enabledSources.has('customer_portfolio')) {
       const wonWithoutRecentAction = sellerDeals.filter((deal) => deal.stage === 'closed_won' && daysSince(deal.last_activity_at || deal.updated_at) >= 14)
+      const pendingReceipt = sellerDeals.filter((deal) => deal.stage === 'closed_won' && num(deal.received_amount) < num(deal.value))
+      const expansionStalled = sellerOpenDeals.filter((deal) => deal.account_id && ['proposal', 'negotiation'].includes(String(deal.stage)) && daysSince(deal.last_activity_at || deal.updated_at) >= 10)
+      const importantWithoutContact = sellerDeals.filter((deal) => deal.account_id && num(deal.value) >= 10000 && daysSince(deal.last_activity_at || deal.updated_at) >= 30)
       if (wonWithoutRecentAction.length >= 2) {
         await registerGap({
           skillArea: 'pos_venda',
@@ -730,6 +733,48 @@ export async function detectPdiGaps(supabase: SupabaseClient, input: DetectPdiGa
           confidenceScore: 0.76,
           impactValue: wonWithoutRecentAction.reduce((sum, deal) => sum + num(deal.value), 0),
           evidence: { sellerId: seller.id, customersWithoutPostSale: wonWithoutRecentAction.length },
+        })
+      }
+      if (pendingReceipt.length >= 2) {
+        await registerGap({
+          skillArea: 'organizacao_de_carteira',
+          title: `${seller.name} tem clientes com recebimento pendente sem acao clara`,
+          description: `${pendingReceipt.length} clientes ganhos possuem valor recebido menor que o valor vendido.`,
+          detectedFrom: 'customer_portfolio',
+          sourceEntityType: 'crm_account',
+          sourceEntityId: pendingReceipt[0]?.account_id ?? null,
+          severity: severityFromCount(pendingReceipt.length),
+          confidenceScore: 0.78,
+          impactValue: pendingReceipt.reduce((sum, deal) => sum + Math.max(0, num(deal.value) - num(deal.received_amount)), 0),
+          evidence: { sellerId: seller.id, pendingReceipts: pendingReceipt.length },
+        })
+      }
+      if (expansionStalled.length >= 2) {
+        await registerGap({
+          skillArea: 'expansao',
+          title: `${seller.name} tem expansoes paradas na carteira`,
+          description: `${expansionStalled.length} oportunidades de expansao estao paradas em proposta ou negociacao.`,
+          detectedFrom: 'customer_portfolio',
+          sourceEntityType: 'crm_account',
+          sourceEntityId: expansionStalled[0]?.account_id ?? null,
+          severity: severityFromCount(expansionStalled.length),
+          confidenceScore: 0.77,
+          impactValue: expansionStalled.reduce((sum, deal) => sum + num(deal.value), 0),
+          evidence: { sellerId: seller.id, expansionStalled: expansionStalled.length },
+        })
+      }
+      if (importantWithoutContact.length >= 2) {
+        await registerGap({
+          skillArea: 'relacionamento',
+          title: `${seller.name} tem clientes importantes sem contato recente`,
+          description: `${importantWithoutContact.length} contas relevantes estao sem contato recente.`,
+          detectedFrom: 'customer_portfolio',
+          sourceEntityType: 'crm_account',
+          sourceEntityId: importantWithoutContact[0]?.account_id ?? null,
+          severity: severityFromCount(importantWithoutContact.length),
+          confidenceScore: 0.73,
+          impactValue: importantWithoutContact.reduce((sum, deal) => sum + num(deal.value), 0),
+          evidence: { sellerId: seller.id, importantWithoutContact: importantWithoutContact.length },
         })
       }
     }

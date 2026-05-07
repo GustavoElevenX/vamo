@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +16,7 @@ import {
   BarChart3,
   Building2,
   CheckCircle2,
+  Brain,
   LineChart,
   MessageSquareText,
   Search,
@@ -173,7 +175,15 @@ function SummaryCard({ title, value, detail, icon: Icon }: { title: string; valu
   )
 }
 
-function CustomerCard({ customer, isManager }: { customer: Customer; isManager: boolean }) {
+function CustomerCard({
+  customer,
+  isManager,
+  onGeneratePdi,
+}: {
+  customer: Customer
+  isManager: boolean
+  onGeneratePdi: (customer: Customer) => void
+}) {
   return (
     <Card className="border-border/70">
       <CardContent className="space-y-4 p-4">
@@ -224,6 +234,12 @@ function CustomerCard({ customer, isManager }: { customer: Customer; isManager: 
             <MessageSquareText className="h-3.5 w-3.5" />
             Gerar mensagem
           </Button>
+          {isManager && customer.owner && ['without_post_sale', 'pending_receipt', 'expansion_open', 'inactive', 'at_risk'].includes(customer.status) && (
+            <Button size="sm" variant="outline" onClick={() => onGeneratePdi(customer)}>
+              <Brain className="h-3.5 w-3.5" />
+              Gerar PDI
+            </Button>
+          )}
           {isManager && customer.owner && (
             <Button size="sm" variant="outline" render={<Link href={`/equipe/${customer.owner.id}`} />}>
               <UserRound className="h-3.5 w-3.5" />
@@ -282,6 +298,57 @@ export default function CrmClientesPage() {
 
   const priorityCustomer = filtered[0] ?? customers[0] ?? null
   const summary = data?.summary
+
+  const generateCustomerPdi = async (customer: Customer) => {
+    if (!customer.owner?.id) return
+    try {
+      const skillArea = customer.status === 'without_post_sale'
+        ? 'pos_venda'
+        : customer.status === 'expansion_open'
+          ? 'expansao'
+          : customer.status === 'pending_receipt'
+            ? 'organizacao_de_carteira'
+            : 'relacionamento'
+      const gapRes = await fetch('/api/pdi/gaps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          userId: customer.owner.id,
+          title: `Gap de carteira: ${customer.name}`,
+          skillArea,
+          description: customer.suggested_action ?? customer.status_label,
+          detectedFrom: 'customer_portfolio',
+          sourceEntityType: 'crm_account',
+          sourceEntityId: customer.id,
+          severity: customer.priority_score >= 70 ? 'high' : 'medium',
+          confidenceScore: 0.82,
+          impactValue: customer.pending_receivable || customer.open_pipeline_value || customer.won_revenue,
+          evidence: {
+            customerId: customer.id,
+            customerName: customer.name,
+            status: customer.status,
+            pendingReceivable: customer.pending_receivable,
+            openPipelineValue: customer.open_pipeline_value,
+            lastActivityAt: customer.last_activity_at,
+          },
+        }),
+      })
+      const gapBody = await gapRes.json()
+      if (!gapRes.ok) throw new Error(gapBody.error || 'Erro ao criar gap')
+      const trainingRes = await fetch('/api/pdi/generate-training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ gap_id: gapBody.gap.id, seller_id: customer.owner.id, create_mission: true }),
+      })
+      const trainingBody = await trainingRes.json()
+      if (!trainingRes.ok) throw new Error(trainingBody.error || 'Erro ao gerar treinamento')
+      toast.success('PDI de carteira gerado para revisao.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar PDI')
+    }
+  }
 
   if (loading) {
     return (
@@ -427,7 +494,7 @@ export default function CrmClientesPage() {
 
           <section className="grid gap-3 xl:grid-cols-2">
             {filtered.map((customer) => (
-              <CustomerCard key={customer.id} customer={customer} isManager={isManager} />
+              <CustomerCard key={customer.id} customer={customer} isManager={isManager} onGeneratePdi={generateCustomerPdi} />
             ))}
           </section>
 

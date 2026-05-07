@@ -10,7 +10,9 @@ import { PdiGapCard, type PdiGap } from '@/components/pdi/PdiGapCard'
 import { PdiPlanCard, type PdiPlan } from '@/components/pdi/PdiPlanCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Brain, ChartNoAxesCombined, CheckCircle2, Loader2, RefreshCw, Sparkles, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,11 +38,17 @@ interface PdiApplication {
   deal?: { title?: string; value?: number }
 }
 
+interface SellerOption {
+  id: string
+  name: string
+}
+
 export default function ManagerDevelopmentPage() {
   useRequiredAuth()
   const [gaps, setGaps] = useState<PdiGap[]>([])
   const [plans, setPlans] = useState<PdiPlan[]>([])
   const [applications, setApplications] = useState<PdiApplication[]>([])
+  const [sellers, setSellers] = useState<SellerOption[]>([])
   const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
   const [roi, setRoi] = useState<RoiRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,25 +57,34 @@ export default function ManagerDevelopmentPage() {
   const [kpiValues, setKpiValues] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
   const [detecting, setDetecting] = useState(false)
+  const [createMissionWithTraining, setCreateMissionWithTraining] = useState(true)
+  const [manualOpen, setManualOpen] = useState(false)
+  const [manualSellerId, setManualSellerId] = useState('')
+  const [manualSkill, setManualSkill] = useState('fechamento')
+  const [manualTitle, setManualTitle] = useState('')
+  const [manualEvidence, setManualEvidence] = useState('')
 
   async function load() {
-    const [gapsRes, plansRes, appRes, recRes, roiRes] = await Promise.all([
+    const [gapsRes, plansRes, appRes, recRes, sellersRes, roiRes] = await Promise.all([
       fetch('/api/pdi/gaps'),
       fetch('/api/pdi/plans'),
       fetch('/api/pdi/applications'),
       fetch('/api/action-recommendations'),
+      fetch('/api/team/sellers'),
       fetch('/api/roi/calculate').catch(() => null),
     ])
-    const [gapsBody, plansBody, appBody, recBody] = await Promise.all([
+    const [gapsBody, plansBody, appBody, recBody, sellersBody] = await Promise.all([
       gapsRes.json().catch(() => ({ gaps: [] })),
       plansRes.json().catch(() => ({ plans: [] })),
       appRes.json().catch(() => ({ applications: [] })),
       recRes.json().catch(() => ({ recommendations: [] })),
+      sellersRes.json().catch(() => ({ sellers: [] })),
     ])
     const roiBody = roiRes && roiRes.ok ? await roiRes.json().catch(() => ({})) : {}
     setGaps((gapsBody.gaps ?? []) as PdiGap[])
     setPlans((plansBody.plans ?? []) as PdiPlan[])
     setApplications((appBody.applications ?? []) as PdiApplication[])
+    setSellers((sellersBody.sellers ?? []) as SellerOption[])
     setRecommendations(((recBody.recommendations ?? []) as ContextualRecommendation[]).filter((item) => ['pdi', 'health'].includes(item.source_module)))
     setRoi((roiBody.pdi_roi ?? roiBody.rows ?? []) as RoiRow[])
     setLoading(false)
@@ -124,13 +141,46 @@ export default function ManagerDevelopmentPage() {
       const res = await fetch('/api/pdi/generate-training', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gap_id: gap.id, seller_id: gap.user?.id, create_mission: true }),
+        body: JSON.stringify({ gap_id: gap.id, seller_id: gap.user?.id, create_mission: createMissionWithTraining }),
       })
       if (!res.ok) throw new Error('Erro ao gerar treinamento')
       toast.success('Treinamento gerado. Revise e aprove antes de liberar ao vendedor.')
       await load()
     } catch {
       toast.error('Nao foi possivel gerar treinamento com IA.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const createManualGap = async () => {
+    if (!manualSellerId || !manualTitle.trim() || !manualSkill.trim()) return
+    setSavingId('manual-gap')
+    try {
+      const res = await fetch('/api/pdi/gaps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: manualSellerId,
+          title: manualTitle,
+          skillArea: manualSkill,
+          description: manualEvidence,
+          detectedFrom: 'manager',
+          severity: 'medium',
+          confidenceScore: 0.9,
+          evidence: { managerObservation: manualEvidence },
+        }),
+      })
+      if (!res.ok) throw new Error('Erro ao criar gap')
+      toast.success('Gap manual criado.')
+      setManualOpen(false)
+      setManualSellerId('')
+      setManualSkill('fechamento')
+      setManualTitle('')
+      setManualEvidence('')
+      await load()
+    } catch {
+      toast.error('Nao foi possivel criar o gap manual.')
     } finally {
       setSavingId(null)
     }
@@ -206,6 +256,25 @@ export default function ManagerDevelopmentPage() {
     const values = roi.map((row) => Number(row.avg_kpi_delta || 0)).filter((value) => value !== 0)
     return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0
   }, [roi])
+  const aiReading = useMemo(() => {
+    const active = gaps.filter((gap) => ['open', 'in_training', 'in_pdi', 'improving'].includes(gap.status))
+    const bySkill = new Map<string, number>()
+    for (const gap of active) bySkill.set(gap.skill_area, (bySkill.get(gap.skill_area) ?? 0) + 1)
+    const topSkills = [...bySkill.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([skill]) => skill.replace(/_/g, ' '))
+    const critical = active.filter((gap) => ['critical', 'high'].includes(gap.severity))
+    const topGap = [...active].sort((a, b) => Number(b.impact_value ?? 0) - Number(a.impact_value ?? 0))[0]
+    return {
+      summary: topSkills.length
+        ? `O principal gargalo do time hoje esta em ${topSkills.join(' e ')}.`
+        : 'Ainda nao ha gargalo dominante detectado nos gaps ativos.',
+      evidence: topGap
+        ? `${topGap.user?.name ?? 'Um vendedor'} tem ${topGap.title.toLowerCase()} com impacto estimado de ${Number(topGap.impact_value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}.`
+        : 'A VAMO precisa de mais sinais de CRM, KPI, carteira e simulador para priorizar.',
+      priority: critical[0]
+        ? `Prioridade recomendada: gerar treinamento aplicado para ${critical[0].user?.name ?? 'o vendedor'} em ${critical[0].skill_area.replace(/_/g, ' ')} e validar aplicacao real.`
+        : 'Prioridade recomendada: rodar deteccao de gaps e observar padroes comerciais recorrentes.',
+    }
+  }, [gaps])
 
   if (loading) {
     return <div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-[3px] border-primary border-t-transparent" /></div>
@@ -221,14 +290,19 @@ export default function ManagerDevelopmentPage() {
             Gaps, PDIs, aplicacoes reais e ROI do desenvolvimento vistos como decisao comercial, nao biblioteca de cursos.
           </p>
         </div>
-        <Button variant="outline" render={<Link href="/monitoramento/roi" />}>
-          <ChartNoAxesCombined className="h-4 w-4" />
-          Ver ROI
-        </Button>
-        <Button onClick={detectGaps} disabled={detecting}>
-          {detecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          Detectar gaps
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href="/monitoramento/roi" />}>
+            <ChartNoAxesCombined className="h-4 w-4" />
+            Ver ROI
+          </Button>
+          <Button variant="outline" onClick={() => setManualOpen(true)}>
+            Criar gap manual
+          </Button>
+          <Button onClick={detectGaps} disabled={detecting}>
+            {detecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Detectar gaps
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-5">
@@ -244,6 +318,19 @@ export default function ManagerDevelopmentPage() {
         description="O vendedor ve treino, aplicacao e progresso. O gestor ve risco, aprovacao, evolucao por habilidade e impacto no resultado."
         modules={['pdi', 'crm', 'kpi', 'health', 'commission', 'roi']}
       />
+
+      <Card className="border-primary/25 bg-primary/5">
+        <CardContent className="space-y-3 p-5">
+          <div className="section-label"><Sparkles className="h-3.5 w-3.5" />VAMO IA - Desenvolvimento da Equipe</div>
+          <p className="text-lg font-bold">{aiReading.summary}</p>
+          <p className="text-sm text-muted-foreground">{aiReading.evidence}</p>
+          <div className="rounded-lg border border-primary/20 bg-background/70 p-3 text-sm font-medium">{aiReading.priority}</div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <input type="checkbox" checked={createMissionWithTraining} onChange={(event) => setCreateMissionWithTraining(event.target.checked)} />
+            Criar missao vinculada quando gerar treinamento com IA
+          </label>
+        </CardContent>
+      </Card>
 
       {recommendations.length > 0 && (
         <Card>
@@ -355,6 +442,41 @@ export default function ManagerDevelopmentPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={manualOpen} onOpenChange={setManualOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Criar gap manual</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="manual-seller">Vendedor</Label>
+              <select id="manual-seller" value={manualSellerId} onChange={(event) => setManualSellerId(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
+                <option value="">Selecione</option>
+                {sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-skill">Habilidade</Label>
+              <select id="manual-skill" value={manualSkill} onChange={(event) => setManualSkill(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
+                {['prospeccao', 'qualificacao', 'diagnostico', 'follow_up', 'proposta', 'negociacao', 'fechamento', 'objecoes', 'construcao_de_valor', 'organizacao_de_pipeline', 'pos_venda', 'expansao', 'retencao', 'relacionamento'].map((skill) => (
+                  <option key={skill} value={skill}>{skill.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-title">Titulo do gap</Label>
+              <Input id="manual-title" value={manualTitle} onChange={(event) => setManualTitle(event.target.value)} placeholder="Ex.: Dificuldade em objeção de preço" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-evidence">Evidencia observada</Label>
+              <Textarea id="manual-evidence" value={manualEvidence} onChange={(event) => setManualEvidence(event.target.value)} placeholder="Descreva a reuniao, comportamento observado, impacto e contexto comercial." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManualOpen(false)}>Cancelar</Button>
+            <Button onClick={createManualGap} disabled={!manualSellerId || !manualTitle.trim() || savingId === 'manual-gap'}>Criar gap</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

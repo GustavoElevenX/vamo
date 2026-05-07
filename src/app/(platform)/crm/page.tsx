@@ -59,6 +59,17 @@ function isInteractiveDragTarget(target: EventTarget | null) {
 
 const actionTypes: NextActionType[] = ['follow_up', 'call', 'email', 'proposal', 'meeting', 'review', 'other']
 const forecastCategories: ForecastCategory[] = ['pipeline', 'best_case', 'commit']
+const lostReasons = [
+  'Preco',
+  'Sem orcamento',
+  'Concorrente',
+  'Sem resposta',
+  'Proposta fraca',
+  'Timing',
+  'Nao viu valor',
+  'Nao era perfil',
+  'Outro',
+]
 
 function formatMoneyInput(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', {
@@ -102,6 +113,10 @@ export default function CrmPipelinePage() {
   const [winPostSaleAction, setWinPostSaleAction] = useState('')
   const [winPostSaleDueAt, setWinPostSaleDueAt] = useState('')
   const [confirmingWin, setConfirmingWin] = useState(false)
+  const [lostDeal, setLostDeal] = useState<CrmDeal | null>(null)
+  const [lostReason, setLostReason] = useState('')
+  const [lostNotes, setLostNotes] = useState('')
+  const [confirmingLost, setConfirmingLost] = useState(false)
   const [draggingDealId, setDraggingDealId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<DealStage | null>(null)
 
@@ -234,6 +249,13 @@ export default function CrmPipelinePage() {
       openWinConfirmation(deal)
       return
     }
+    if (stage === 'closed_lost' && deal.stage !== 'closed_lost') {
+      setLostDeal(deal)
+      setLostReason('')
+      setLostNotes('')
+      setCrmError(null)
+      return
+    }
     await updateDeal(deal.id, { stage })
   }
 
@@ -270,6 +292,14 @@ export default function CrmPipelinePage() {
       const dealToWin = { ...editingDeal, title: editTitle, value: Number(editValue.replace(/\./g, '').replace(',', '.')) || Number(editingDeal.value || 0) }
       setEditingDeal(null)
       openWinConfirmation(dealToWin, { title: editTitle, value: editValue })
+      return
+    }
+    if (editStage === 'closed_lost' && editingDeal.stage !== 'closed_lost') {
+      const dealToLose = { ...editingDeal, title: editTitle, value: Number(editValue.replace(/\./g, '').replace(',', '.')) || Number(editingDeal.value || 0) }
+      setEditingDeal(null)
+      setLostDeal(dealToLose)
+      setLostReason('')
+      setLostNotes('')
       return
     }
     const ok = await updateDeal(editingDeal.id, {
@@ -336,6 +366,23 @@ export default function CrmPipelinePage() {
       setWinReceivedAt('')
       setWinPostSaleAction('')
       setWinPostSaleDueAt('')
+    }
+  }
+
+  async function confirmLostDeal() {
+    if (!lostDeal || confirmingLost || !lostReason) return
+    setConfirmingLost(true)
+    const ok = await updateDeal(lostDeal.id, {
+      stage: 'closed_lost',
+      lost_reason: lostReason,
+      notes: lostNotes ? `${lostDeal.notes ? `${lostDeal.notes}\n\n` : ''}Motivo da perda: ${lostReason}. ${lostNotes}` : lostDeal.notes,
+      probability: 0,
+    })
+    setConfirmingLost(false)
+    if (ok) {
+      setLostDeal(null)
+      setLostReason('')
+      setLostNotes('')
     }
   }
 
@@ -565,6 +612,42 @@ export default function CrmPipelinePage() {
             <Button variant="outline" onClick={() => setWinDeal(null)}>Cancelar</Button>
             <Button onClick={confirmWonDeal} disabled={confirmingWin || (!winAccountId && !winNewAccountName.trim())}>
               {confirmingWin ? 'Confirmando...' : 'Confirmar ganho'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={!!lostDeal} onOpenChange={(nextOpen) => !nextOpen && setLostDeal(null)}>
+        <SheetContent>
+          <SheetHeader><SheetTitle>Registrar motivo da perda</SheetTitle></SheetHeader>
+          <div className="space-y-4 px-4">
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3">
+              <p className="text-sm font-semibold">{lostDeal?.title}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                O motivo alimenta gaps de PDI quando o padrao se repete por vendedor.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lost-reason">Motivo da perda</Label>
+              <select
+                id="lost-reason"
+                value={lostReason}
+                onChange={(event) => setLostReason(event.target.value)}
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm"
+              >
+                <option value="">Selecione</option>
+                {lostReasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lost-notes">Contexto da perda</Label>
+              <Input id="lost-notes" value={lostNotes} onChange={(event) => setLostNotes(event.target.value)} placeholder="Ex.: cliente comparou com concorrente e nao viu ROI" />
+            </div>
+          </div>
+          <SheetFooter>
+            <Button variant="outline" onClick={() => setLostDeal(null)}>Cancelar</Button>
+            <Button onClick={confirmLostDeal} disabled={confirmingLost || !lostReason}>
+              {confirmingLost ? 'Registrando...' : 'Confirmar perda'}
             </Button>
           </SheetFooter>
         </SheetContent>

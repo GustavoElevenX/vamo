@@ -29,6 +29,7 @@ import { ArrowLeft, CalendarClock, CalendarDays, DollarSign, Save } from 'lucide
 
 const actionTypes: NextActionType[] = ['follow_up', 'call', 'email', 'proposal', 'meeting', 'review', 'other']
 const forecastCategories: ForecastCategory[] = ['pipeline', 'best_case', 'commit', 'closed']
+const lostReasons = ['Preco', 'Sem orcamento', 'Concorrente', 'Sem resposta', 'Proposta fraca', 'Timing', 'Nao viu valor', 'Nao era perfil', 'Outro']
 
 function money(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -60,6 +61,7 @@ export default function DealDetailPage() {
   const [editNextActionDueAt, setEditNextActionDueAt] = useState('')
   const [editNextActionType, setEditNextActionType] = useState<NextActionType>('follow_up')
   const [editForecastCategory, setEditForecastCategory] = useState<ForecastCategory>('pipeline')
+  const [editLostReason, setEditLostReason] = useState('')
   const [timeline, setTimeline] = useState<PerformanceEventTimelineItem[]>([])
   const [commissionTrace, setCommissionTrace] = useState<{
     expectedCommission: number
@@ -78,6 +80,7 @@ export default function DealDetailPage() {
     setEditNextActionDueAt(nextDeal.next_action_due_at ? nextDeal.next_action_due_at.slice(0, 16) : '')
     setEditNextActionType(nextDeal.next_action_type ?? 'follow_up')
     setEditForecastCategory(nextDeal.forecast_category ?? 'pipeline')
+    setEditLostReason(nextDeal.lost_reason ?? '')
   }
 
   const load = useCallback(async () => {
@@ -107,6 +110,7 @@ export default function DealDetailPage() {
 
   async function saveDeal() {
     if (!deal) return
+    if (editStage === 'closed_lost' && !editLostReason) return
     setSaving(true)
     const res = await fetch(`/api/crm/deals/${deal.id}`, {
       method: 'PATCH',
@@ -120,6 +124,7 @@ export default function DealDetailPage() {
         next_action_due_at: editNextActionDueAt || null,
         next_action_type: editNextActionType,
         forecast_category: editForecastCategory,
+        lost_reason: editStage === 'closed_lost' ? editLostReason : null,
       }),
     })
     setSaving(false)
@@ -210,8 +215,17 @@ export default function DealDetailPage() {
                     {forecastCategories.map((category) => <option key={category} value={category}>{FORECAST_LABELS[category]}</option>)}
                   </select>
                 </div>
+                {editStage === 'closed_lost' && (
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="deal-lost-reason">Motivo da perda</Label>
+                    <select id="deal-lost-reason" value={editLostReason} onChange={(event) => setEditLostReason(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
+                      <option value="">Selecione um motivo</option>
+                      {lostReasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+                    </select>
+                  </div>
+                )}
               </div>
-              <Button onClick={saveDeal} disabled={saving || !editTitle.trim()}>
+              <Button onClick={saveDeal} disabled={saving || !editTitle.trim() || (editStage === 'closed_lost' && !editLostReason)}>
                 <Save className="h-4 w-4" />
                 {saving ? 'Salvando...' : 'Salvar lead'}
               </Button>

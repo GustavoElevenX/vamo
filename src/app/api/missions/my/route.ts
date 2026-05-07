@@ -38,10 +38,7 @@ export async function GET() {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const visibleMissions = (data ?? []).filter((mission: any) => {
-      const pdiPlan = Array.isArray(mission.pdi_plan) ? mission.pdi_plan[0] : mission.pdi_plan
-      return !(mission.type === 'pdi' && mission.status === 'awaiting_approval' && ['recommended', 'pending_approval'].includes(pdiPlan?.status))
-    })
+    const visibleMissions = (data ?? []).filter((mission: any) => !(mission.type === 'pdi' && mission.status === 'awaiting_approval'))
 
     const missions = visibleMissions.map((mission: any) => {
       const targetValue = Number(mission.target_value ?? mission.criteria?.target_value ?? 0)

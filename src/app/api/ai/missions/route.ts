@@ -29,10 +29,7 @@ export async function GET() {
     .eq('organization_id', appUser.organization_id)
     .order('created_at', { ascending: false })
 
-  const visibleMissions = (missions ?? []).filter((mission: any) => {
-    const pdiPlan = Array.isArray(mission.pdi_plan) ? mission.pdi_plan[0] : mission.pdi_plan
-    return !(mission.type === 'pdi' && mission.status === 'awaiting_approval' && ['recommended', 'pending_approval'].includes(pdiPlan?.status))
-  })
+  const visibleMissions = (missions ?? []).filter((mission: any) => !(mission.type === 'pdi' && mission.status === 'awaiting_approval'))
 
   return NextResponse.json({ missions: visibleMissions })
 }

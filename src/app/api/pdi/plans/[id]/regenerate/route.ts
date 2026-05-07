@@ -36,10 +36,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       createMission: Boolean(body.create_mission),
     })
 
+    const now = new Date().toISOString()
+
     await adminClient
       .from('pdi_plans')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .update({ status: 'cancelled', updated_at: now })
       .eq('id', id)
+
+    await adminClient
+      .from('ai_missions')
+      .update({ status: 'cancelled', updated_at: now })
+      .eq('organization_id', appUser.organization_id)
+      .eq('pdi_plan_id', id)
+      .eq('status', 'awaiting_approval')
 
     return NextResponse.json(result, { status: 201 })
   } catch (err) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { type DragEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +22,7 @@ import {
   type ForecastCategory,
   type NextActionType,
 } from '@/types/crm'
-import { AlertTriangle, BadgeDollarSign, CalendarClock, Filter, HandCoins, Pencil, Plus, Sparkles, Target, UserRound } from 'lucide-react'
+import { AlertTriangle, BadgeDollarSign, CalendarClock, Filter, GripVertical, HandCoins, Pencil, Plus, Sparkles, Target, UserRound } from 'lucide-react'
 
 type AccountOption = { id: string; name: string; segment: string | null }
 
@@ -51,6 +51,10 @@ function isActionOverdue(value: string | null) {
 
 function hasOpenNextAction(deal: CrmDeal) {
   return !!deal.next_action_title && deal.next_action_status === 'open'
+}
+
+function isInteractiveDragTarget(target: EventTarget | null) {
+  return target instanceof Element && !!target.closest('a, button, input, select, textarea, [data-no-drag="true"]')
 }
 
 const actionTypes: NextActionType[] = ['follow_up', 'call', 'email', 'proposal', 'meeting', 'review', 'other']
@@ -98,6 +102,8 @@ export default function CrmPipelinePage() {
   const [winPostSaleAction, setWinPostSaleAction] = useState('')
   const [winPostSaleDueAt, setWinPostSaleDueAt] = useState('')
   const [confirmingWin, setConfirmingWin] = useState(false)
+  const [draggingDealId, setDraggingDealId] = useState<string | null>(null)
+  const [dragOverStage, setDragOverStage] = useState<DealStage | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -229,6 +235,33 @@ export default function CrmPipelinePage() {
       return
     }
     await updateDeal(deal.id, { stage })
+  }
+
+  function handleDealDragStart(event: DragEvent<HTMLElement>, deal: CrmDeal) {
+    if (isInteractiveDragTarget(event.target)) {
+      event.preventDefault()
+      return
+    }
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', deal.id)
+    setDraggingDealId(deal.id)
+  }
+
+  function handleStageDragOver(event: DragEvent<HTMLElement>, stage: DealStage) {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    setDragOverStage(stage)
+  }
+
+  async function handleStageDrop(event: DragEvent<HTMLElement>, stage: DealStage) {
+    event.preventDefault()
+    const dealId = event.dataTransfer.getData('text/plain') || draggingDealId
+    setDraggingDealId(null)
+    setDragOverStage(null)
+    if (!dealId) return
+    const deal = deals.find((item) => item.id === dealId)
+    if (!deal || deal.stage === stage || savingDealId === deal.id) return
+    await handleStageChange(deal, stage)
   }
 
   async function saveEdit() {
@@ -574,7 +607,19 @@ export default function CrmPipelinePage() {
             {STAGE_ORDER.map((stage) => {
               const columnDeals = grouped.get(stage) ?? []
               return (
-                <section key={stage} className="min-w-[240px] rounded-2xl border border-border/60 bg-card/35 p-3">
+                <section
+                  key={stage}
+                  onDragOver={(event) => handleStageDragOver(event, stage)}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragOverStage(null)
+                  }}
+                  onDrop={(event) => handleStageDrop(event, stage)}
+                  className={`min-w-[240px] rounded-2xl border p-3 transition-colors ${
+                    dragOverStage === stage
+                      ? 'border-primary/60 bg-primary/10 ring-2 ring-primary/20'
+                      : 'border-border/60 bg-card/35'
+                  }`}
+                >
                   <div className="mb-3 flex items-center justify-between gap-2">
                     <span className="text-sm font-bold">{STAGE_LABELS[stage]}</span>
                     <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border/70 px-2 text-xs font-bold text-muted-foreground">
@@ -596,12 +641,26 @@ export default function CrmPipelinePage() {
                         const stuckDays = daysSince(deal.last_activity_at)
                         const isStuck = stuckDays > STAGE_STUCK_DAYS[deal.stage]
                         return (
-                          <Card key={deal.id} className="transition-colors hover:ring-primary/30">
+                          <Card
+                            key={deal.id}
+                            draggable={savingDealId !== deal.id}
+                            onDragStart={(event) => handleDealDragStart(event, deal)}
+                            onDragEnd={() => {
+                              setDraggingDealId(null)
+                              setDragOverStage(null)
+                            }}
+                            className={`transition-colors hover:ring-primary/30 ${
+                              draggingDealId === deal.id ? 'opacity-60 ring-2 ring-primary/35' : 'cursor-grab active:cursor-grabbing'
+                            }`}
+                          >
                             <CardContent className="space-y-3 py-4">
-                              <Link href={`/crm/${deal.id}`} className="block space-y-1">
-                                <p className="font-semibold leading-snug">{deal.account?.name || deal.title}</p>
-                                {deal.account?.name && <p className="text-xs text-muted-foreground">{deal.title}</p>}
-                              </Link>
+                              <div className="flex items-start gap-2">
+                                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/55" aria-hidden="true" />
+                                <Link href={`/crm/${deal.id}`} className="block min-w-0 flex-1 space-y-1">
+                                  <p className="font-semibold leading-snug">{deal.account?.name || deal.title}</p>
+                                  {deal.account?.name && <p className="text-xs text-muted-foreground">{deal.title}</p>}
+                                </Link>
+                              </div>
                               <div className="flex items-center justify-between text-sm">
                                 <span className="font-semibold tabular-nums">{money(deal.value)}</span>
                                 {user.role !== 'seller' && <span className="flex items-center gap-1 text-xs text-muted-foreground"><UserRound className="h-3.5 w-3.5" />{deal.owner?.name || 'Sem dono'}</span>}

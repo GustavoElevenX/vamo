@@ -20,11 +20,11 @@ export async function GET(request: Request) {
   const userId = new URL(request.url).searchParams.get('userId')
   let query = adminClient
     .from('pdi_plans')
-    .select('*, gap:pdi_gaps(*), items:pdi_plan_items(*)')
+    .select('*, gap:pdi_gaps(*), items:pdi_plan_items(*), user:users(id,name), training:training_modules(*)')
     .eq('organization_id', appUser.organization_id)
     .order('created_at', { ascending: false })
 
-  if (appUser.role === 'seller') query = query.eq('user_id', appUser.id)
+  if (appUser.role === 'seller') query = query.eq('user_id', appUser.id).in('status', ['approved', 'active', 'completed'])
   else if (userId) query = query.eq('user_id', userId)
 
   const { data, error } = await query
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       targetKpiKey: asString(body.targetKpiKey) || null,
       baselineValue: typeof body.baselineValue === 'number' ? body.baselineValue : null,
       targetValue: typeof body.targetValue === 'number' ? body.targetValue : null,
-      status: asString(body.status, appUser.role === 'seller' ? 'recommended' : 'approved') as any,
+      status: asString(body.status, 'pending_approval') as any,
       recommendedBy: appUser.role === 'seller' ? 'ai' : 'manager',
       metadata: asObject(body.metadata),
     })
@@ -85,7 +85,7 @@ export async function PATCH(request: Request) {
       planId: id,
       title: asString(body.title) || undefined,
       description: body.description === undefined ? undefined : asString(body.description),
-      status: status as any,
+      status: status === 'approved' ? 'active' as any : status as any,
       dueDate: body.dueDate === undefined ? undefined : asString(body.dueDate) || null,
       targetValue: typeof body.targetValue === 'number' ? body.targetValue : undefined,
       currentValue: typeof body.currentValue === 'number' ? body.currentValue : undefined,

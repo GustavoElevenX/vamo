@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { PdiGapCard, type PdiGap } from '@/components/pdi/PdiGapCard'
+import { PdiPlanCard, type PdiPlan } from '@/components/pdi/PdiPlanCard'
 
 interface Seller {
   id: string
@@ -75,6 +77,8 @@ export default function MemberDetailPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [pdiGaps, setPdiGaps] = useState<PdiGap[]>([])
+  const [pdiPlans, setPdiPlans] = useState<PdiPlan[]>([])
 
   useEffect(() => {
     if (!id) return
@@ -82,10 +86,20 @@ export default function MemberDetailPage() {
     const load = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/team/commercial-performance?period=month&seller_id=${id}`, { credentials: 'same-origin' })
+        const [res, gapsRes, plansRes] = await Promise.all([
+          fetch(`/api/team/commercial-performance?period=month&seller_id=${id}`, { credentials: 'same-origin' }),
+          fetch(`/api/pdi/gaps?userId=${id}`, { credentials: 'same-origin' }),
+          fetch(`/api/pdi/plans?userId=${id}`, { credentials: 'same-origin' }),
+        ])
         const data: ApiData & { error?: string } = await res.json()
         if (!res.ok) throw new Error(data.error || 'Erro ao carregar perfil comercial')
-        if (!cancelled) setProfile(data.seller_profile)
+        const gapsBody = await gapsRes.json().catch(() => ({ gaps: [] }))
+        const plansBody = await plansRes.json().catch(() => ({ plans: [] }))
+        if (!cancelled) {
+          setProfile(data.seller_profile)
+          setPdiGaps((gapsBody.gaps ?? []) as PdiGap[])
+          setPdiPlans((plansBody.plans ?? []) as PdiPlan[])
+        }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Erro ao carregar perfil comercial')
       } finally {
@@ -215,6 +229,15 @@ export default function MemberDetailPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">PDI e desenvolvimento</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {pdiGaps.slice(0, 3).map((gap) => <PdiGapCard key={gap.id} gap={gap} context="manager" />)}
+            {pdiPlans.slice(0, 3).map((plan) => <PdiPlanCard key={plan.id} plan={plan} context="manager" sellerId={seller.id} />)}
+            {!pdiGaps.length && !pdiPlans.length && <p className="text-sm text-muted-foreground">Nenhum PDI ou gap aberto para este vendedor.</p>}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Bell className="h-4 w-4" />Historico de nudges</CardTitle></CardHeader>
           <CardContent className="space-y-3">

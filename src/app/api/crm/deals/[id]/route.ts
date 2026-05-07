@@ -3,6 +3,7 @@ import { getAppUser } from '@/lib/server/auth'
 import { createRecommendation } from '@/lib/services/action-recommendation.service'
 import { createEventWithImpacts } from '@/lib/services/performance-os.service'
 import { registerExecutionEvent, type ExecutionEventType } from '@/lib/services/execution.service'
+import { detectGap } from '@/lib/services/pdi.service'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import type { DealStage } from '@/types/crm'
 
@@ -177,6 +178,39 @@ export async function PATCH(request: Request, { params }: Params) {
       priority: isLost ? 'high' : 'medium',
       metadata: { dealId: id, eventType: 'crm_deal.stage_changed' },
     })
+
+    if (isLost) {
+      const lostReason = String(input.lost_reason ?? patch.lost_reason ?? 'perda_sem_motivo')
+      const skillArea = lostReason.toLowerCase().includes('valor')
+        ? 'construcao_de_valor'
+        : lostReason.toLowerCase().includes('pre')
+          ? 'objecoes'
+          : lostReason.toLowerCase().includes('concorrente')
+            ? 'negociacao'
+            : 'fechamento'
+
+      await detectGap(adminClient, {
+        organizationId: appUser.organization_id,
+        actorUserId: appUser.id,
+        targetUserId: previousDeal.owner_id,
+        skillArea,
+        title: `Perda comercial: ${lostReason}`,
+        description: 'Esse deal perdido pode indicar um padrao de desenvolvimento se a causa se repetir.',
+        detectedFrom: 'lost_deal',
+        sourceEntityType: 'crm_deal',
+        sourceEntityId: id,
+        severity: nextValue >= 10000 ? 'high' : 'medium',
+        confidenceScore: 0.7,
+        impactValue: nextValue,
+        evidence: {
+          dealId: id,
+          title: previousDeal.title,
+          lostReason,
+          value: nextValue,
+          recommendation: 'Criar gap, gerar PDI ou abrir treinamento recomendado se o padrao se repetir.',
+        },
+      })
+    }
 
     const executionType: ExecutionEventType = isWon ? 'crm_deal_won' : isLost ? 'crm_deal_lost' : 'crm_deal_updated'
     await registerExecutionEvent(adminClient, {

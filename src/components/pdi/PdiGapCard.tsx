@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
 export interface PdiGap {
@@ -11,9 +12,21 @@ export interface PdiGap {
   status: string
   detected_from: string
   confidence_score: number
+  impact_value?: number | null
+  user?: { id: string; name: string } | null
 }
 
-export function PdiGapCard({ gap }: { gap: PdiGap }) {
+export function PdiGapCard({
+  gap,
+  context = 'seller',
+  onGenerateTraining,
+  onDismiss,
+}: {
+  gap: PdiGap
+  context?: 'seller' | 'manager'
+  onGenerateTraining?: (gap: PdiGap) => void
+  onDismiss?: (gap: PdiGap) => void
+}) {
   return (
     <Card>
       <CardContent className="space-y-3 pt-5">
@@ -28,10 +41,18 @@ export function PdiGapCard({ gap }: { gap: PdiGap }) {
           <Badge variant={gap.severity === 'critical' ? 'destructive' : 'outline'}>{gap.severity}</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
+          {gap.user?.name && <Badge variant="outline">{gap.user.name}</Badge>}
           <Badge className="bg-primary/10 text-primary">{gap.skill_area}</Badge>
           <Badge variant="outline">{gap.detected_from}</Badge>
           <Badge variant="outline">{Math.round(Number(gap.confidence_score || 0) * 100)}% conf.</Badge>
+          {gap.impact_value ? <Badge variant="outline">{Number(gap.impact_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</Badge> : null}
         </div>
+        {context === 'manager' && (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onGenerateTraining?.(gap)}>Gerar treinamento com IA</Button>
+            <Button size="sm" variant="outline" onClick={() => onDismiss?.(gap)}>Dispensar</Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Brain, ChartNoAxesCombined, CheckCircle2, XCircle } from 'lucide-react'
+import { Brain, ChartNoAxesCombined, CheckCircle2, Loader2, RefreshCw, Sparkles, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface RoiRow {
@@ -48,6 +48,7 @@ export default function ManagerDevelopmentPage() {
   const [planAdjustments, setPlanAdjustments] = useState<Record<string, string>>({})
   const [kpiValues, setKpiValues] = useState<Record<string, string>>({})
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [detecting, setDetecting] = useState(false)
 
   async function load() {
     const [gapsRes, plansRes, appRes, recRes, roiRes] = await Promise.all([
@@ -98,7 +99,80 @@ export default function ManagerDevelopmentPage() {
     }
   }
 
-  const reviewApplication = async (application: PdiApplication, status: 'validated' | 'needs_adjustment') => {
+  const detectGaps = async () => {
+    setDetecting(true)
+    try {
+      const res = await fetch('/api/pdi/detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) throw new Error('Erro ao detectar gaps')
+      const body = await res.json().catch(() => ({ created: 0, updated: 0 }))
+      toast.success(`Deteccao concluida: ${body.created ?? 0} novos, ${body.updated ?? 0} atualizados.`)
+      await load()
+    } catch {
+      toast.error('Nao foi possivel detectar gaps agora.')
+    } finally {
+      setDetecting(false)
+    }
+  }
+
+  const generateTraining = async (gap: PdiGap) => {
+    setSavingId(gap.id)
+    try {
+      const res = await fetch('/api/pdi/generate-training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gap_id: gap.id, seller_id: gap.user?.id, create_mission: true }),
+      })
+      if (!res.ok) throw new Error('Erro ao gerar treinamento')
+      toast.success('Treinamento gerado. Revise e aprove antes de liberar ao vendedor.')
+      await load()
+    } catch {
+      toast.error('Nao foi possivel gerar treinamento com IA.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const dismissGap = async (gap: PdiGap) => {
+    setSavingId(gap.id)
+    try {
+      const res = await fetch('/api/pdi/gaps', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: gap.id, status: 'dismissed' }),
+      })
+      if (!res.ok) throw new Error('Erro ao dispensar gap')
+      toast.success('Gap dispensado.')
+      await load()
+    } catch {
+      toast.error('Nao foi possivel dispensar o gap.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const regeneratePlan = async (plan: PdiPlan) => {
+    setSavingId(plan.id)
+    try {
+      const res = await fetch(`/api/pdi/plans/${plan.id}/regenerate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manager_notes: planAdjustments[plan.id] ?? '', create_mission: true }),
+      })
+      if (!res.ok) throw new Error('Erro ao regenerar PDI')
+      toast.success('Novo treinamento gerado para revisao.')
+      await load()
+    } catch {
+      toast.error('Nao foi possivel regenerar o PDI.')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const reviewApplication = async (application: PdiApplication, status: 'approved' | 'validated' | 'needs_revision' | 'needs_adjustment' | 'rejected') => {
     setSavingId(application.id)
     try {
       const rawKpiValue = (kpiValues[application.id] ?? '').trim()
@@ -116,7 +190,7 @@ export default function ManagerDevelopmentPage() {
         }),
       })
       if (!res.ok) throw new Error('Erro ao validar evidencia')
-      toast.success(status === 'validated' ? 'Evidencia validada e ciclo atualizado.' : 'Ajuste solicitado.')
+      toast.success(['approved', 'validated'].includes(status) ? 'Evidencia validada e ciclo atualizado.' : status === 'rejected' ? 'Evidencia reprovada.' : 'Ajuste solicitado.')
       setReviewNotes('')
       await load()
     } catch {
@@ -126,7 +200,7 @@ export default function ManagerDevelopmentPage() {
     }
   }
 
-  const activePlans = plans.filter((plan) => ['recommended', 'approved', 'active'].includes(plan.status)).length
+  const activePlans = plans.filter((plan) => ['approved', 'active'].includes(plan.status)).length
   const completedPlans = plans.filter((plan) => plan.status === 'completed').length
   const avgDelta = useMemo(() => {
     const values = roi.map((row) => Number(row.avg_kpi_delta || 0)).filter((value) => value !== 0)
@@ -151,10 +225,15 @@ export default function ManagerDevelopmentPage() {
           <ChartNoAxesCombined className="h-4 w-4" />
           Ver ROI
         </Button>
+        <Button onClick={detectGaps} disabled={detecting}>
+          {detecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          Detectar gaps
+        </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <PdiEvidenceCard label="Gaps detectados" value={String(gaps.length)} hint="CRM, KPI, simulacao ou gestor" />
+      <div className="grid gap-4 sm:grid-cols-5">
+        <PdiEvidenceCard label="Gaps criticos" value={String(gaps.filter((gap) => ['critical', 'high'].includes(gap.severity)).length)} hint="Priorizados por impacto e confianca" />
+        <PdiEvidenceCard label="PDIs para aprovar" value={String(plans.filter((plan) => ['recommended', 'pending_approval'].includes(plan.status)).length)} hint="Gerados pela IA aguardando gestor" />
         <PdiEvidenceCard label="PDIs ativos" value={String(activePlans)} hint="Aguardando treino e aplicacao" />
         <PdiEvidenceCard label="PDIs concluidos" value={String(completedPlans)} hint="Com evidencia mensuravel" />
         <PdiEvidenceCard label="Delta medio KPI" value={avgDelta.toFixed(1)} hint="Baseado na view de ROI" />
@@ -181,8 +260,16 @@ export default function ManagerDevelopmentPage() {
         <Card>
           <CardHeader><CardTitle>Gaps por vendedor</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {gaps.length ? gaps.slice(0, 8).map((gap) => <PdiGapCard key={gap.id} gap={gap} />) : (
-              <p className="text-sm text-muted-foreground">Sem gaps ativos. Conforme CRM e KPIs gerarem padroes, eles entram aqui.</p>
+            {gaps.length ? gaps.slice(0, 8).map((gap) => (
+              <PdiGapCard
+                key={gap.id}
+                gap={gap}
+                context="manager"
+                onGenerateTraining={generateTraining}
+                onDismiss={dismissGap}
+              />
+            )) : (
+              <p className="text-sm text-muted-foreground">Nenhum gap critico detectado ainda. A VAMO analisara KPIs, CRM, pipeline, clientes, missoes e simulacoes para identificar pontos de desenvolvimento.</p>
             )}
           </CardContent>
         </Card>
@@ -192,8 +279,8 @@ export default function ManagerDevelopmentPage() {
           <CardContent className="space-y-3">
             {plans.length ? plans.slice(0, 8).map((plan) => (
               <div key={plan.id} className="space-y-2">
-                <PdiPlanCard plan={plan} />
-                {plan.status === 'recommended' && (
+                <PdiPlanCard plan={plan} context="manager" sellerId={plan.user_id} />
+                {['recommended', 'pending_approval'].includes(plan.status) && (
                   <div className="flex justify-end gap-2">
                     <Textarea
                       value={planAdjustments[plan.id] ?? ''}
@@ -203,9 +290,13 @@ export default function ManagerDevelopmentPage() {
                     />
                     <Button size="sm" variant="outline" onClick={() => updatePlanStatus(plan, 'rejected')} disabled={savingId === plan.id}>
                       <XCircle className="h-3.5 w-3.5" />
-                      Rejeitar
+                      Descartar
                     </Button>
-                    <Button size="sm" onClick={() => updatePlanStatus(plan, 'approved')} disabled={savingId === plan.id}>
+                    <Button size="sm" variant="outline" onClick={() => regeneratePlan(plan)} disabled={savingId === plan.id}>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Gerar novo
+                    </Button>
+                    <Button size="sm" onClick={() => updatePlanStatus(plan, 'active')} disabled={savingId === plan.id}>
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Aprovar PDI
                     </Button>
@@ -213,7 +304,7 @@ export default function ManagerDevelopmentPage() {
                 )}
               </div>
             )) : (
-              <p className="text-sm text-muted-foreground">Nenhum PDI recomendado no momento.</p>
+              <p className="text-sm text-muted-foreground">Nenhum PDI ativo. Gere um treinamento com IA a partir de um gap ou crie um PDI manualmente para um vendedor.</p>
             )}
           </CardContent>
         </Card>
@@ -249,7 +340,10 @@ export default function ManagerDevelopmentPage() {
                     <Button size="sm" variant="outline" onClick={() => reviewApplication(application, 'needs_adjustment')} disabled={savingId === application.id}>
                       Pedir ajuste
                     </Button>
-                    <Button size="sm" onClick={() => reviewApplication(application, 'validated')} disabled={savingId === application.id}>
+                    <Button size="sm" variant="outline" onClick={() => reviewApplication(application, 'rejected' as any)} disabled={savingId === application.id}>
+                      Reprovar
+                    </Button>
+                    <Button size="sm" onClick={() => reviewApplication(application, 'approved' as any)} disabled={savingId === application.id}>
                       Validar
                     </Button>
                   </div>
@@ -257,7 +351,7 @@ export default function ManagerDevelopmentPage() {
               </div>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground">Nenhuma aplicacao pendente de validacao.</p>
+            <p className="text-sm text-muted-foreground">Nenhuma aplicacao aguardando validacao. Quando um vendedor aplicar um treinamento em um caso real, a evidencia aparecera aqui.</p>
           )}
         </CardContent>
       </Card>

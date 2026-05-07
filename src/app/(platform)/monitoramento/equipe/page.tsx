@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Bell,
   Bot,
+  Brain,
   Briefcase,
   LineChart,
   Medal,
@@ -204,6 +205,41 @@ export default function MonitoramentoEquipePage() {
     }
   }
 
+  const generatePdiFromAction = async (item: ActionQueueItem) => {
+    try {
+      const gapRes = await fetch('/api/pdi/gaps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          userId: item.seller_id,
+          title: item.title,
+          skillArea: item.type === 'coaching' ? 'fechamento' : item.type === 'risk' ? 'organizacao_de_pipeline' : 'disciplina_comercial',
+          description: item.reason,
+          detectedFrom: 'commercial_performance',
+          severity: item.priority === 'critical' ? 'critical' : item.priority === 'high' ? 'high' : 'medium',
+          confidenceScore: 0.82,
+          impactValue: item.impact_value,
+          evidence: item.context,
+        }),
+      })
+      const gapBody = await gapRes.json()
+      if (!gapRes.ok) throw new Error(gapBody.error || 'Erro ao criar gap')
+
+      const trainingRes = await fetch('/api/pdi/generate-training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ gap_id: gapBody.gap.id, seller_id: item.seller_id, create_mission: true }),
+      })
+      const trainingBody = await trainingRes.json()
+      if (!trainingRes.ok) throw new Error(trainingBody.error || 'Erro ao gerar PDI')
+      toast.success('PDI gerado para revisao em Desenvolvimento da Equipe.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar PDI')
+    }
+  }
+
   if (loading && !data) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -365,6 +401,12 @@ export default function MonitoramentoEquipePage() {
                     <p className="mt-1 text-xs text-muted-foreground">Impacto: {item.impact_value > 0 ? currency(item.impact_value) : 'sem impacto financeiro direto'}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {['coaching', 'risk', 'execution'].includes(item.type) && (
+                      <Button size="sm" variant="outline" onClick={() => generatePdiFromAction(item)}>
+                        <Brain className="mr-2 h-4 w-4" />
+                        Gerar PDI com IA
+                      </Button>
+                    )}
                     <Button size="sm" onClick={() => openNudge(item)}>
                       <Bell className="mr-2 h-4 w-4" />
                       Enviar nudge

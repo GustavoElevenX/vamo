@@ -264,7 +264,7 @@ export async function GET() {
         .from('pdi_plans')
         .select('id,user_id,title,status,due_date,created_at')
         .eq('organization_id', appUser.organization_id)
-        .in('status', ['recommended', 'approved', 'active']),
+        .in('status', ['recommended', 'pending_approval', 'approved', 'active']),
       adminClient
         .from('pdi_applications')
         .select('id,user_id,plan_id,deal_id,description,status,created_at')
@@ -634,7 +634,7 @@ export async function GET() {
       forecastRisks,
       development: {
         openGaps: pdiGaps.length,
-        plansToApprove: (pdiPlans as Array<{ status: string }>).filter((plan) => plan.status === 'recommended').length,
+        plansToApprove: (pdiPlans as Array<{ status: string }>).filter((plan) => ['recommended', 'pending_approval'].includes(plan.status)).length,
         activePlans: (pdiPlans as Array<{ status: string }>).filter((plan) => ['approved', 'active'].includes(plan.status)).length,
         applicationsToValidate: pdiApplications.length,
         href: '/monitoramento/desenvolvimento',

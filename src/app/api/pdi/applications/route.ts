@@ -17,7 +17,9 @@ export async function GET(request: Request) {
   const auth = await getAppUser()
   if (auth.error) return auth.error
   const { adminClient, appUser } = auth
-  const planId = new URL(request.url).searchParams.get('planId')
+  const params = new URL(request.url).searchParams
+  const planId = params.get('planId')
+  const status = params.get('status')
   let query = adminClient
     .from('pdi_applications')
     .select('*, plan:pdi_plans(title), deal:crm_deals(title,value,stage), user:users(name)')
@@ -26,6 +28,7 @@ export async function GET(request: Request) {
 
   if (appUser.role === 'seller') query = query.eq('user_id', appUser.id)
   if (planId) query = query.eq('plan_id', planId)
+  if (status) query = query.eq('status', status)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -37,8 +40,8 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error
   const { adminClient, appUser } = auth
   const body = await request.json() as Record<string, unknown>
-  const planId = asString(body.planId)
-  const description = asString(body.description)
+  const planId = asString(body.planId || body.pdi_plan_id)
+  const description = asString(body.description || body.evidence_text)
   if (!planId || !description) return NextResponse.json({ error: 'planId e description obrigatorios' }, { status: 400 })
 
   try {
@@ -47,11 +50,16 @@ export async function POST(request: Request) {
       actorUserId: appUser.id,
       targetUserId: appUser.role === 'seller' ? appUser.id : asString(body.userId, appUser.id),
       planId,
-      dealId: asString(body.dealId) || null,
-      activityId: asString(body.activityId) || null,
+      dealId: asString(body.dealId || body.deal_id) || null,
+      activityId: asString(body.activityId || body.activity_id) || null,
       applicationType: asString(body.applicationType, 'deal') as any,
       description,
-      evidence: asObject(body.evidence),
+      evidence: {
+        ...asObject(body.evidence),
+        result: asString(body.result) || null,
+        accountId: asString(body.account_id) || null,
+        attachments: Array.isArray(body.attachments) ? body.attachments : [],
+      },
     })
 
     return NextResponse.json(result, { status: 201 })
@@ -80,8 +88,8 @@ export async function PATCH(request: Request) {
       organizationId: appUser.organization_id,
       managerId: appUser.id,
       applicationId,
-      status: status as any,
-      reviewNotes: asString(body.reviewNotes) || null,
+      status: status === 'approved' ? 'approved' as any : status as any,
+      reviewNotes: asString(body.manager_feedback || body.reviewNotes) || null,
       currentValue: typeof body.currentValue === 'number' ? body.currentValue : null,
       kpiEntryValue: typeof body.kpiEntryValue === 'number' ? body.kpiEntryValue : null,
     })

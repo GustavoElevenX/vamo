@@ -295,9 +295,9 @@ function buildActionForSeller(seller: Omit<CommercialSellerPerformance, 'recomme
       status_message: 'Precisa de ajuda em proposta, negociacao ou fechamento.',
       action: {
         type: 'coaching' as const,
-        label: 'Gerar pauta 1:1',
+        label: 'Gerar PDI com IA',
         reason: 'Ha execucao comercial, mas a conversao em vendas esta baixa.',
-        href: `/chat-ia?prompt=${encodeURIComponent(`Gere uma pauta de 1:1 para ${seller.name} focada em conversao comercial.`)}`,
+        href: '/monitoramento/desenvolvimento',
       },
     }
   }
@@ -679,9 +679,9 @@ export async function getTeamCommercialPerformance(
         title: `${seller.name} executa, mas nao converte`,
         reason: `${seller.activities_count} acoes, ${seller.proposals_sent} propostas e ${seller.conversion_rate}% de conversao.`,
         impact_value: seller.forecast_weighted,
-        suggested_action: 'Gerar pauta de 1:1 focada em proposta, negociacao e fechamento.',
+        suggested_action: 'Gerar PDI de proposta, negociacao ou fechamento e criar pauta de 1:1.',
         message: nudgeMessage(seller, 'coaching', seller.forecast_weighted),
-        cta: { label: 'Gerar pauta 1:1', action: 'open_1on1', href: seller.recommended_action.href },
+        cta: { label: 'Gerar PDI com IA', action: 'generate_pdi', href: '/monitoramento/desenvolvimento' },
         context: { activities_count: seller.activities_count, proposals_sent: seller.proposals_sent, conversion_rate: seller.conversion_rate },
       })
     }

@@ -12,7 +12,6 @@ import { PdiPlanCard, type PdiPlan } from '@/components/pdi/PdiPlanCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { BookOpenCheck, Sparkles } from 'lucide-react'
@@ -25,11 +24,21 @@ interface PdiApplication {
   deal?: { title?: string | null } | null
 }
 
+interface DealOption {
+  id: string
+  title: string
+  value: number
+  stage: string
+  next_action_title?: string | null
+  account?: { name?: string | null } | null
+}
+
 export default function SellerPdiPage() {
   const { user } = useRequiredAuth()
   const [gaps, setGaps] = useState<PdiGap[]>([])
   const [plans, setPlans] = useState<PdiPlan[]>([])
   const [applications, setApplications] = useState<PdiApplication[]>([])
+  const [deals, setDeals] = useState<DealOption[]>([])
   const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
   const [planId, setPlanId] = useState('')
   const [dealId, setDealId] = useState('')
@@ -38,21 +47,24 @@ export default function SellerPdiPage() {
   const [loading, setLoading] = useState(true)
 
   async function load() {
-    const [gapsRes, plansRes, appRes, recRes] = await Promise.all([
+    const [gapsRes, plansRes, appRes, recRes, dealsRes] = await Promise.all([
       fetch('/api/pdi/gaps'),
       fetch('/api/pdi/plans'),
       fetch('/api/pdi/applications'),
       fetch('/api/action-recommendations'),
+      fetch('/api/crm/deals'),
     ])
-    const [gapsBody, plansBody, appBody, recBody] = await Promise.all([
+    const [gapsBody, plansBody, appBody, recBody, dealsBody] = await Promise.all([
       gapsRes.json().catch(() => ({ gaps: [] })),
       plansRes.json().catch(() => ({ plans: [] })),
       appRes.json().catch(() => ({ applications: [] })),
       recRes.json().catch(() => ({ recommendations: [] })),
+      dealsRes.json().catch(() => ({ deals: [] })),
     ])
     setGaps((gapsBody.gaps ?? []) as PdiGap[])
     setPlans((plansBody.plans ?? []) as PdiPlan[])
     setApplications((appBody.applications ?? []) as PdiApplication[])
+    setDeals(((dealsBody.deals ?? []) as DealOption[]).filter((deal) => !['closed_won', 'closed_lost'].includes(deal.stage)))
     setRecommendations(((recBody.recommendations ?? []) as ContextualRecommendation[]).filter((item) => item.source_module === 'pdi'))
     setLoading(false)
   }
@@ -66,7 +78,7 @@ export default function SellerPdiPage() {
   }, [planId, plans])
 
   const activePlan = useMemo(() => plans.find((plan) => plan.id === planId) ?? plans[0] ?? null, [planId, plans])
-  const completedApplications = applications.filter((item) => item.status === 'validated').length
+  const completedApplications = applications.filter((item) => ['validated', 'approved'].includes(item.status)).length
 
   async function submitApplication(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -114,7 +126,7 @@ export default function SellerPdiPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <PdiEvidenceCard label="Gaps abertos" value={String(gaps.length)} hint="Diagnostico vindo de KPI, CRM ou gestor" />
-        <PdiEvidenceCard label="PDIs ativos" value={String(plans.filter((plan) => ['approved', 'active', 'recommended'].includes(plan.status)).length)} hint="Treinos curtos com aplicacao real" />
+        <PdiEvidenceCard label="PDIs ativos" value={String(plans.filter((plan) => ['approved', 'active'].includes(plan.status)).length)} hint="Treinos curtos com aplicacao real" />
         <PdiEvidenceCard label="Aplicacoes validadas" value={String(completedApplications)} hint="Evidencias praticas aceitas" />
       </div>
 
@@ -151,8 +163,8 @@ export default function SellerPdiPage() {
         <Card>
           <CardHeader><CardTitle>Planos em andamento</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {plans.length ? plans.map((plan) => <PdiPlanCard key={plan.id} plan={plan} />) : (
-              <p className="text-sm text-muted-foreground">Seu PDI aparece aqui depois de recomendado ou aprovado.</p>
+            {plans.length ? plans.map((plan) => <PdiPlanCard key={plan.id} plan={plan} context="seller" />) : (
+              <p className="text-sm text-muted-foreground">Voce ainda nao possui um PDI ativo. Quando a VAMO identificar uma oportunidade de evolucao, seu gestor podera liberar um plano para voce.</p>
             )}
           </CardContent>
         </Card>
@@ -169,8 +181,15 @@ export default function SellerPdiPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="deal">Deal relacionado</Label>
-              <Input id="deal" value={dealId} onChange={(event) => setDealId(event.target.value)} placeholder="Cole o ID do deal, se houver" />
+              <Label htmlFor="deal">Selecionar oportunidade</Label>
+              <select id="deal" value={dealId} onChange={(event) => setDealId(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
+                <option value="">Sem oportunidade vinculada</option>
+                {deals.map((deal) => (
+                  <option key={deal.id} value={deal.id}>
+                    {deal.title} | {deal.account?.name ?? 'Sem conta'} | {deal.stage} | {Number(deal.value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })} | {deal.next_action_title ?? 'sem proxima acao'}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="evidence">Evidencia aplicada</Label>

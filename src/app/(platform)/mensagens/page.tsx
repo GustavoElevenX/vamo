@@ -93,6 +93,17 @@ export default function MensagensPage() {
     return () => clearInterval(iv)
   }, [fetchConversations])
 
+  // Abre automaticamente uma conversa quando vier de /mensagens?conversation=ID
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const conversationId = new URLSearchParams(window.location.search).get('conversation')
+    if (!conversationId || selectedId === conversationId) return
+    if (!conversations.some((conversation) => conversation.id === conversationId)) return
+
+    setSelectedId(conversationId)
+    setMobileShowThread(true)
+  }, [conversations, selectedId])
+
   // ── Fetch messages for selected conv ──
   const fetchMessages = useCallback(
     async (convId: string, isPoll = false) => {

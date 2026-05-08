@@ -1145,76 +1145,144 @@ async function notifySeller(
   orgId: string,
   senderId: string
 ): Promise<ActionResult> {
-  const message = params.message as string
+  const message = (params.message as string | undefined)?.trim()
   if (!message) return { success: false, message: 'Mensagem é obrigatória' }
-  const title = (params.title as string | undefined) ?? null
-  const notificationType = (params.type as string | undefined) ?? 'general'
-  const source = (params.source as string | undefined) ?? 'ai_chat'
-  const actionHref = (params.action_href as string | undefined) ?? null
+  if (message.length > 2000) return { success: false, message: 'Mensagem muito longa (máx 2000)' }
+
+  const title = (params.title as string | undefined) ?? 'Mensagem do gestor'
+  const notificationType = (params.type as string | undefined) ?? 'manager_message'
+  const source = (params.source as string | undefined) ?? 'team_nudge'
   const relatedMissionId = (params.related_mission_id as string | undefined) ?? null
   const performanceEventId = (params.performance_event_id as string | undefined) ?? null
-  const context = (params.context as Record<string, unknown> | undefined) ?? {}
-
+  const baseContext = (params.context as Record<string, unknown> | undefined) ?? {}
   const targetAll = params.user_id === 'all' || !params.user_id
 
-  if (targetAll) {
-    // Notify all active sellers
-    const { data: sellers } = await adminClient
-      .from('users')
-      .select('id, name')
-      .eq('organization_id', orgId)
-      .eq('role', 'seller')
-      .eq('active', true)
+  const createMessageAndNotification = async (seller: { id: string; name: string }) => {
+    const conversationId = await findOrCreateDirectConversation(adminClient, orgId, senderId, seller.id)
+    const chatMessage = await sendChatMessage(adminClient, orgId, conversationId, senderId, message)
+    const actionHref = (params.action_href as string | undefined) ?? `/mensagens?conversation=${conversationId}`
 
-    if (!sellers || sellers.length === 0) {
-      return { success: false, message: 'Nenhum vendedor ativo encontrado' }
+    const { data: notification, error: notificationError } = await adminClient
+      .from('notifications')
+      .insert({
+        organization_id: orgId,
+        user_id: seller.id,
+        sender_id: senderId,
+        title,
+        message,
+        type: notificationType,
+        source,
+        action_href: actionHref,
+        related_mission_id: relatedMissionId,
+        performance_event_id: performanceEventId,
+        context: {
+          ...baseContext,
+          delivery_channel: 'chat_and_notification',
+          conversation_id: conversationId,
+          chat_message_id: chatMessage.id,
+        },
+      })
+      .select('id, user_id, source, action_href, read, created_at')
+      .single()
+
+    if (notificationError || !notification) {
+      throw new Error(
+        `Mensagem salva no chat, mas houve erro ao criar notificação: ${notificationError?.message ?? 'notificação não retornada'}`
+      )
     }
 
-    const notifications = sellers.map((s: { id: string }) => ({
-      organization_id: orgId,
-      user_id: s.id,
-      sender_id: senderId,
-      title,
-      message,
-      type: notificationType,
-      source,
-      action_href: actionHref,
-      related_mission_id: relatedMissionId,
-      performance_event_id: performanceEventId,
-      context,
-    }))
-
-    const { error } = await adminClient.from('notifications').insert(notifications)
-    if (error) return { success: false, message: `Erro ao enviar notificações: ${error.message}` }
-
-    const names = sellers.map((s: { name: string }) => s.name).join(', ')
     return {
-      success: true,
-      message: `Notificação enviada para ${sellers.length} vendedor(es): ${names}`,
+      sellerId: seller.id,
+      sellerName: seller.name,
+      conversationId,
+      chatMessageId: chatMessage.id,
+      notificationId: notification.id,
+      actionHref,
     }
   }
 
-  // Notify specific seller
-  const userId = params.user_id as string
-  const seller = await validateActiveSeller(adminClient, orgId, userId)
-  if (!seller) return { success: false, message: 'Vendedor não encontrado, inativo ou fora desta organização.' }
+  try {
+    if (targetAll) {
+      const { data: sellers, error: sellersError } = await adminClient
+        .from('users')
+        .select('id, name')
+        .eq('organization_id', orgId)
+        .eq('role', 'seller')
+        .eq('active', true)
 
-  const { error } = await adminClient.from('notifications').insert({
-    organization_id: orgId,
-    user_id: userId,
-    sender_id: senderId,
-    title,
-    message,
-    type: notificationType,
-    source,
-    action_href: actionHref,
-    related_mission_id: relatedMissionId,
-    performance_event_id: performanceEventId,
-    context,
-  })
+      if (sellersError) return { success: false, message: `Erro ao buscar vendedores: ${sellersError.message}` }
+      if (!sellers || sellers.length === 0) return { success: false, message: 'Nenhum vendedor ativo encontrado' }
 
-  if (error) return { success: false, message: `Erro ao enviar notificação: ${error.message}` }
-  return { success: true, message: `Notificação enviada para ${seller.name}` }
+      const deliveries = [] as Array<{
+        sellerId: string
+        sellerName: string
+        conversationId: string
+        chatMessageId: string
+        notificationId: string
+        actionHref: string
+      }>
+      const failures = [] as string[]
+
+      for (const seller of sellers as Array<{ id: string; name: string }>) {
+        try {
+          deliveries.push(await createMessageAndNotification(seller))
+        } catch (error) {
+          failures.push(`${seller.name}: ${error instanceof Error ? error.message : 'erro desconhecido'}`)
+        }
+      }
+
+      if (deliveries.length === 0) {
+        return {
+          success: false,
+          message: `Nenhuma mensagem foi entregue. Falhas: ${failures.join(' | ')}`,
+        }
+      }
+
+      const deliveredNames = deliveries.map((d) => d.sellerName).join(', ')
+      return {
+        success: failures.length === 0,
+        message:
+          failures.length === 0
+            ? `Mensagem enviada, salva em Mensagens e notificação confirmada para ${deliveries.length} vendedor(es): ${deliveredNames}`
+            : `Mensagem entregue para ${deliveries.length} vendedor(es), mas houve falhas em ${failures.length}: ${failures.join(' | ')}`,
+        data: {
+          deliveryChannel: 'chat_and_notification',
+          deliveredCount: deliveries.length,
+          failedCount: failures.length,
+          deliveries,
+          failures,
+          verified: failures.length === 0,
+        },
+      }
+    }
+
+    const userId = params.user_id as string
+    const seller = await validateActiveSeller(adminClient, orgId, userId)
+    if (!seller) {
+      return { success: false, message: 'Vendedor não encontrado, inativo ou fora desta organização.' }
+    }
+
+    const delivery = await createMessageAndNotification(seller)
+    return {
+      success: true,
+      message: `Mensagem enviada para ${seller.name}, salva em Mensagens para gestor e vendedor, e notificação confirmada.`,
+      data: {
+        deliveryChannel: 'chat_and_notification',
+        sellerId: seller.id,
+        sellerName: seller.name,
+        conversationId: delivery.conversationId,
+        chatMessageId: delivery.chatMessageId,
+        notificationId: delivery.notificationId,
+        actionHref: delivery.actionHref,
+        verified: true,
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: `Erro ao enviar mensagem/notificação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+    }
+  }
 }
 
 // ── Send Chat Message (bidirectional chat) ──

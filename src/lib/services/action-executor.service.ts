@@ -8,6 +8,8 @@ import {
   createGroupConversation,
   sendChatMessage,
 } from './chat.service'
+import { buildCommercialBrainContext } from './commercial-brain.service'
+import { createPerformanceEvent } from './performance-os.service'
 
 export async function executeAction(
   adminClient: SupabaseClient,
@@ -18,6 +20,24 @@ export async function executeAction(
   executorUserId: string
 ): Promise<ActionResult> {
   switch (actionType) {
+    case 'analyze_operation':
+      return analyzeOperation(adminClient, params, orgId, executorUserId)
+    case 'simulate_decision':
+      return simulateDecision(adminClient, params, orgId, executorUserId)
+    case 'generate_manager_briefing':
+      return generateManagerBriefing(adminClient, params, orgId, executorUserId)
+    case 'generate_meeting_agenda':
+      return generateMeetingAgenda(adminClient, params, orgId, executorUserId)
+    case 'create_action_plan':
+      return createActionPlan(adminClient, params, orgId, executorUserId)
+    case 'create_pdi_plan':
+      return createPdiPlan(adminClient, params, orgId, executorUserId)
+    case 'create_recovery_mission':
+      return createRecoveryMission(adminClient, params, orgId, executorUserId)
+    case 'create_manager_nudge':
+      return createManagerNudge(adminClient, params, orgId, executorUserId)
+    case 'mark_recommendation_done':
+      return markRecommendationDone(adminClient, params, orgId, executorUserId)
     case 'add_seller':
       return addSeller(adminClient, params, orgId)
     case 'edit_seller':
@@ -80,6 +100,97 @@ function slugify(name: string): string {
 }
 
 // ── Add Seller ──
+async function getExecutorName(adminClient: SupabaseClient, userId: string) {
+  const { data } = await adminClient.from('users').select('name').eq('id', userId).maybeSingle()
+  return (data?.name as string | undefined) ?? 'Gestor'
+}
+
+async function analyzeOperation(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const brain = await buildCommercialBrainContext(adminClient, orgId, executorUserId, await getExecutorName(adminClient, executorUserId))
+  return {
+    success: true,
+    message: `Analise ${String(params.focus || 'geral')}: ${brain.executiveSummary.resumo} Prioridade: ${brain.executiveSummary.prioridadeHoje}.`,
+    data: { executiveSummary: brain.executiveSummary, risks: brain.risks, opportunities: brain.opportunities, recommendedActions: brain.recommendedActions, verified: true },
+  }
+}
+
+async function simulateDecision(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const brain = await buildCommercialBrainContext(adminClient, orgId, executorUserId, await getExecutorName(adminClient, executorUserId))
+  const scenario = String(params.scenario || 'simulacao')
+  const value = Number(params.value ?? 0)
+  const base = brain.executiveSummary
+  const isPipelineScenario = String(params.variable || scenario).toLowerCase().includes('pipeline')
+  const pipelineLift = isPipelineScenario ? Math.min(base.pipelineEmRisco, Math.max(value, base.pipelineEmRisco * 0.25)) : 0
+  const forecastLift = String(params.variable || scenario).toLowerCase().includes('forecast') ? Math.max(value, base.forecastProvavel * 0.1) : pipelineLift * 0.35
+  const projectedGap = Math.max(0, base.gapMeta - forecastLift)
+  return { success: true, message: `Simulacao pronta. No cenario "${scenario}", o gap projetado cai de ${base.gapMeta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} para ${projectedGap.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`, data: { scenario, current: base, simulated: { forecastLift, pipelineLift, projectedGap }, verified: true } }
+}
+
+async function generateManagerBriefing(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const brain = await buildCommercialBrainContext(adminClient, orgId, executorUserId, await getExecutorName(adminClient, executorUserId))
+  const period = String(params.period || 'daily')
+  return { success: true, message: `Briefing ${period === 'weekly' ? 'semanal' : 'diario'} gerado. Prioridade: ${brain.executiveSummary.prioridadeHoje}.`, data: { period, summary: brain.executiveSummary.resumo, priority: brain.executiveSummary.prioridadeHoje, risks: brain.risks, opportunities: brain.opportunities, recommendedActions: brain.recommendedActions.slice(0, 5), verified: true } }
+}
+
+async function generateMeetingAgenda(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const brain = await buildCommercialBrainContext(adminClient, orgId, executorUserId, await getExecutorName(adminClient, executorUserId))
+  const userId = params.user_id as string | undefined
+  const seller = userId ? brain.teamPerformance.sellers.find((item) => item.id === userId) : null
+  const title = seller ? `Pauta 1:1 - ${seller.name}` : 'Pauta da reuniao do time'
+  const topics = seller
+    ? [seller.status_message, `Pipeline em risco: ${seller.pipeline_at_risk.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, `Pendencias: ${seller.deals_without_next_action} deals sem proxima acao e ${seller.overdue_followups} follow-ups atrasados`, `Acao recomendada: ${seller.recommended_action.label}`]
+    : [brain.executiveSummary.resumo, `Gap de meta: ${brain.executiveSummary.gapMeta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, `Pipeline em risco: ${brain.executiveSummary.pipelineEmRisco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, `Prioridade: ${brain.executiveSummary.prioridadeHoje}`]
+  return { success: true, message: `${title} gerada com ${topics.length} blocos de conversa.`, data: { title, objective: params.objective ?? null, topics, seller, verified: true } }
+}
+
+async function createActionPlan(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const title = String(params.title || '')
+  const summary = String(params.summary || '')
+  const items = Array.isArray(params.items) ? params.items as Array<Record<string, unknown>> : []
+  if (!title || !summary || items.length === 0) return { success: false, message: 'Titulo, resumo e itens sao obrigatorios' }
+  const { data: plan, error } = await adminClient.from('manager_action_plans').insert({ organization_id: orgId, manager_id: executorUserId, title, summary, status: 'active', source: 'chat_ia', created_by_ai: true }).select('id,title').single()
+  if (error || !plan) return { success: false, message: `Erro ao criar plano de acao: ${error?.message}` }
+  const rows = items.map((item) => ({ plan_id: plan.id, organization_id: orgId, target_user_id: item.target_user_id || null, action_type: String(item.action_type || 'manager_action'), title: String(item.title || 'Acao do plano'), description: String(item.description || ''), priority: ['low', 'medium', 'high', 'critical'].includes(String(item.priority)) ? item.priority : 'medium', status: 'pending', due_at: item.due_at || null, metadata: item }))
+  const { data: insertedItems, error: itemError } = await adminClient.from('manager_action_plan_items').insert(rows).select('id,title,target_user_id,action_type')
+  if (itemError) return { success: false, message: `Plano criado, mas houve erro nos itens: ${itemError.message}`, data: { plan } }
+  const event = await createPerformanceEvent(adminClient, { organizationId: orgId, actorUserId: executorUserId, eventType: 'manager_action_plan_created', sourceModule: 'chat_ia', entityType: 'manager_action_plan', entityId: plan.id, title: 'Plano de acao criado pela VAMO IA', description: `Plano "${title}" criado com ${insertedItems?.length ?? 0} item(ns).`, impactScore: 70, priorityScore: 75, riskScore: 30, metadata: { createdByAI: true, itemCount: insertedItems?.length ?? 0 } })
+  return { success: true, message: `Plano criado, ${insertedItems?.length ?? 0} item(ns) vinculados e acao registrada no historico.`, data: { entityType: 'manager_action_plan', entityId: plan.id, plan, items: insertedItems ?? [], eventId: event.id, verified: true } }
+}
+
+async function createPdiPlan(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const userId = params.user_id as string
+  const title = String(params.title || 'PDI gerado pela VAMO IA')
+  if (!userId) return { success: false, message: 'ID do vendedor e obrigatorio' }
+  const { data, error } = await adminClient.from('pdi_plans').insert({ organization_id: orgId, user_id: userId, manager_id: executorUserId, title, description: String(params.description || title), status: 'recommended', recommended_by: 'ai', start_date: params.start_date || new Date().toISOString().slice(0, 10), due_date: params.due_date || null, metadata: { source: 'chat_ia', createdByAI: true, ...params } }).select('id,title,status,user_id').single()
+  if (error || !data) return { success: false, message: `Erro ao criar PDI: ${error?.message}` }
+  const event = await createPerformanceEvent(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: userId, eventType: 'pdi_plan_created_by_ai', sourceModule: 'chat_ia', entityType: 'pdi_plan', entityId: data.id, title: 'PDI criado pela VAMO IA', description: `PDI "${title}" criado para aprovacao do gestor.`, impactScore: 60, priorityScore: 65, riskScore: 25, metadata: { createdByAI: true, verified: true } })
+  return { success: true, message: `PDI "${data.title}" criado e registrado no historico.`, data: { ...data, eventId: event.id, verified: true } }
+}
+
+async function createRecoveryMission(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const result = await createMission(adminClient, { ...params, area: params.area || 'sales_process', type: 'manual_validation', verification_type: 'manual', criteria: { type: 'pipeline_recovery', target_value: params.target_value ?? 1, source: 'chat_ia' } }, orgId, executorUserId)
+  if (!result.success) return result
+  const data = result.data as { id?: string; title?: string } | undefined
+  const event = await createPerformanceEvent(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: params.user_id as string | undefined, eventType: 'ai_recovery_mission_created', sourceModule: 'chat_ia', entityType: 'ai_mission', entityId: data?.id ?? null, title: 'Missao de recuperacao criada pela VAMO IA', description: data?.title ? `Missao "${data.title}" criada para recuperar pipeline.` : null, impactScore: 65, priorityScore: 75, riskScore: 35, metadata: { createdByAI: true, verified: true } })
+  return { ...result, message: `${result.message}. Evento operacional registrado.`, data: { ...(data ?? {}), eventId: event.id, verified: true } }
+}
+
+async function createManagerNudge(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const result = await notifySeller(adminClient, params, orgId, executorUserId)
+  if (!result.success) return result
+  const event = await createPerformanceEvent(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: params.user_id as string | undefined, eventType: 'manager_nudge_created', sourceModule: 'chat_ia', entityType: 'notification', title: 'Nudge do gestor criado pela VAMO IA', description: String(params.message || ''), impactScore: 45, priorityScore: params.tone === 'charge' ? 70 : 50, riskScore: params.tone === 'charge' ? 40 : 15, metadata: { tone: params.tone || 'coaching', createdByAI: true, verified: true } })
+  return { ...result, message: `${result.message}. Nudge registrado no historico.`, data: { eventId: event.id, verified: true } }
+}
+
+async function markRecommendationDone(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
+  const recommendationId = params.recommendation_id as string
+  if (!recommendationId) return { success: false, message: 'ID da recomendacao e obrigatorio' }
+  const { data, error } = await adminClient.from('action_recommendations').update({ status: 'done', metadata: { completed_by_chat: true, note: params.note ?? null }, updated_at: new Date().toISOString() }).eq('id', recommendationId).eq('organization_id', orgId).select('id,title,target_user_id').single()
+  if (error || !data) return { success: false, message: `Erro ao concluir recomendacao: ${error?.message}` }
+  const event = await createPerformanceEvent(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: data.target_user_id as string | null, eventType: 'action_recommendation_done', sourceModule: 'chat_ia', entityType: 'action_recommendation', entityId: data.id, title: 'Recomendacao concluida pela VAMO IA', description: String(data.title || ''), impactScore: 35, priorityScore: 40, riskScore: 10, metadata: { note: params.note ?? null, verified: true } })
+  return { success: true, message: `Recomendacao "${data.title}" marcada como concluida e registrada no historico.`, data: { ...data, eventId: event.id, verified: true } }
+}
+
 async function addSeller(
   adminClient: SupabaseClient,
   params: Record<string, unknown>,

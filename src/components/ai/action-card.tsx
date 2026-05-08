@@ -13,6 +13,15 @@ import {
 } from 'lucide-react'
 
 const ACTION_ICONS: Record<string, string> = {
+  analyze_operation: 'AI',
+  simulate_decision: 'SIM',
+  generate_manager_briefing: 'BRF',
+  generate_meeting_agenda: '1:1',
+  create_action_plan: 'PLAN',
+  create_pdi_plan: 'PDI',
+  create_recovery_mission: 'REC',
+  create_manager_nudge: 'MSG',
+  mark_recommendation_done: 'OK',
   add_seller: '👤',
   edit_seller: '✏️',
   remove_seller: '🗑️',

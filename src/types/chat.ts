@@ -1,4 +1,13 @@
 export type ActionType =
+  | 'analyze_operation'
+  | 'simulate_decision'
+  | 'generate_manager_briefing'
+  | 'generate_meeting_agenda'
+  | 'create_action_plan'
+  | 'create_pdi_plan'
+  | 'create_recovery_mission'
+  | 'create_manager_nudge'
+  | 'mark_recommendation_done'
   | 'add_seller'
   | 'edit_seller'
   | 'remove_seller'

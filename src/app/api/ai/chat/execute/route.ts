@@ -5,6 +5,9 @@ import { executeAction } from '@/lib/services/action-executor.service'
 import type { ActionType } from '@/types/chat'
 
 const VALID_ACTIONS: ActionType[] = [
+  'analyze_operation', 'simulate_decision', 'generate_manager_briefing',
+  'generate_meeting_agenda', 'create_action_plan', 'create_pdi_plan',
+  'create_recovery_mission', 'create_manager_nudge', 'mark_recommendation_done',
   'add_seller', 'edit_seller', 'remove_seller',
   'create_mission', 'edit_mission', 'delete_mission',
   'define_kpi', 'edit_kpi', 'delete_kpi', 'set_goal',

@@ -70,6 +70,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       label: 'Hoje',
       items: [
         { label: 'Hoje', href: '/hoje-gestor', icon: 'LayoutDashboard' },
+        { label: 'Mensagens', href: '/mensagens', icon: 'Mail' },
       ],
     },
     {
@@ -230,7 +231,6 @@ export const SELLER_ONLY_ROUTES = [
   '/ganhos',
   '/desenvolvimento',
   '/minhas-metas',
-  '/mensagens',
   '/simulador',
   '/feed',
   '/kpis/registrar',

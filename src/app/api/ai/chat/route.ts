@@ -1,11 +1,168 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { buildCommercialBrainContext } from '@/lib/services/commercial-brain.service'
 
 export const runtime = 'nodejs'
 
 // ── OpenAI Tools (function calling) ──
 const MANAGER_TOOLS = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'analyze_operation',
+      description: 'Analisar a operacao comercial atual usando o Commercial Brain: forecast, gap, equipe em atencao, riscos e acoes recomendadas. Use para perguntas de diagnostico.',
+      parameters: {
+        type: 'object',
+        properties: {
+          focus: { type: 'string', description: 'Foco opcional: forecast, equipe, execucao, pdi, comissao ou geral' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'simulate_decision',
+      description: 'Simular uma decisao comercial sem alterar dados: comissao, meta, forecast, foco em pipeline parado, redistribuicao de esforco.',
+      parameters: {
+        type: 'object',
+        properties: {
+          scenario: { type: 'string', description: 'Cenario a simular' },
+          variable: { type: 'string', description: 'Variavel principal: comissao, meta, forecast, pipeline, esforco' },
+          value: { type: 'number', description: 'Valor numerico opcional da mudanca' },
+        },
+        required: ['scenario'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'generate_manager_briefing',
+      description: 'Gerar briefing gerencial diario/semana com base no Commercial Brain, sem salvar briefing semanal tradicional.',
+      parameters: {
+        type: 'object',
+        properties: {
+          period: { type: 'string', enum: ['daily', 'weekly'], description: 'Periodo do briefing' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'generate_meeting_agenda',
+      description: 'Gerar uma pauta de reuniao para time ou 1:1 com vendedor usando dados reais da operacao.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', description: 'ID do vendedor se for pauta 1:1' },
+          meeting_type: { type: 'string', enum: ['team', 'one_on_one'], description: 'Tipo de reuniao' },
+          objective: { type: 'string', description: 'Objetivo da reuniao' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_action_plan',
+      description: 'Criar um plano de acao gerencial com itens rastreaveis. Use quando o gestor pedir plano de acao, plano semanal, recuperacao da operacao ou conjunto de acoes.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Titulo do plano' },
+          summary: { type: 'string', description: 'Resumo executivo do plano' },
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                target_user_id: { type: 'string', description: 'ID do vendedor alvo, se houver' },
+                action_type: { type: 'string', description: 'Tipo: mission, nudge, meeting, pdi, crm, commission, recognition' },
+                title: { type: 'string' },
+                description: { type: 'string' },
+                priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+                due_at: { type: 'string', description: 'Data limite ISO opcional' },
+              },
+              required: ['action_type', 'title', 'description'],
+            },
+          },
+        },
+        required: ['title', 'summary', 'items'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_recovery_mission',
+      description: 'Criar missao de recuperacao de pipeline para um vendedor com base nos riscos atuais.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', description: 'ID do vendedor' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          target_value: { type: 'number', description: 'Meta numerica da missao' },
+          xp_reward: { type: 'number' },
+          deadline: { type: 'string', description: 'Prazo ISO opcional' },
+        },
+        required: ['user_id', 'title', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_pdi_plan',
+      description: 'Criar um PDI para vendedor baseado em gap real ou necessidade de desenvolvimento.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', description: 'ID do vendedor' },
+          title: { type: 'string', description: 'Titulo do PDI' },
+          description: { type: 'string', description: 'Descricao do desenvolvimento esperado' },
+          due_date: { type: 'string', description: 'Data limite no formato YYYY-MM-DD' },
+          target_kpi_key: { type: 'string', description: 'KPI alvo opcional' },
+          target_value: { type: 'number', description: 'Valor alvo opcional' },
+        },
+        required: ['user_id', 'title', 'description'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_manager_nudge',
+      description: 'Criar nudge gerencial para vendedor: cobranca, reconhecimento ou orientacao. Pode enviar notificacao real.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_id: { type: 'string', description: 'ID do vendedor' },
+          message: { type: 'string', description: 'Mensagem do nudge' },
+          tone: { type: 'string', enum: ['charge', 'recognition', 'coaching'], description: 'Tom do nudge' },
+        },
+        required: ['user_id', 'message'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'mark_recommendation_done',
+      description: 'Marcar uma recomendacao aberta como concluida/fechada.',
+      parameters: {
+        type: 'object',
+        properties: {
+          recommendation_id: { type: 'string', description: 'ID da recomendacao' },
+          note: { type: 'string', description: 'Observacao opcional' },
+        },
+        required: ['recommendation_id'],
+      },
+    },
+  },
   {
     type: 'function' as const,
     function: {
@@ -310,6 +467,15 @@ const MANAGER_TOOLS = [
 ]
 
 const ACTION_LABELS: Record<string, string> = {
+  analyze_operation: 'Analisar Operacao',
+  simulate_decision: 'Simular Decisao',
+  generate_manager_briefing: 'Gerar Briefing Gerencial',
+  generate_meeting_agenda: 'Gerar Pauta',
+  create_action_plan: 'Criar Plano de Acao',
+  create_pdi_plan: 'Criar PDI',
+  create_recovery_mission: 'Criar Missao de Recuperacao',
+  create_manager_nudge: 'Criar Nudge do Gestor',
+  mark_recommendation_done: 'Concluir Recomendacao',
   add_seller: 'Cadastrar Vendedor',
   edit_seller: 'Editar Vendedor',
   remove_seller: 'Remover Vendedor',
@@ -361,6 +527,7 @@ export async function POST(req: NextRequest) {
   let businessContext = ''
   let teamContext = ''
   let kpiContext = ''
+  let operationContext = ''
 
   if (dbUser?.organization_id) {
     const orgId = dbUser.organization_id
@@ -448,8 +615,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (dbUser?.organization_id && role === 'manager') {
+    try {
+      const commercialBrain = await buildCommercialBrainContext(
+        adminClient,
+        dbUser.organization_id,
+        dbUser.id,
+        userName,
+      )
+      operationContext = commercialBrain.llmContext
+    } catch (error) {
+      console.error('Commercial Brain context error:', error)
+      operationContext = '\n\nCONTEXTO OPERACIONAL DO GESTOR: indisponivel nesta mensagem. Responda com base no contexto de negocio e equipe disponivel.'
+    }
+  }
+
   const isManager = role === 'manager'
-  const systemPrompt = buildSystemPrompt(role, userName, businessContext, teamContext, kpiContext)
+  const systemPrompt = buildSystemPrompt(role, userName, businessContext, teamContext, kpiContext, operationContext)
   const openAIMessages = [{ role: 'system', content: systemPrompt }, ...messages]
 
   // ── Request com tools (apenas para gestores) ──
@@ -604,6 +786,24 @@ export async function POST(req: NextRequest) {
 
 function summarizeParams(action: string, params: Record<string, unknown>): string {
   switch (action) {
+    case 'analyze_operation':
+      return `Foco: ${params.focus || 'geral'}`
+    case 'simulate_decision':
+      return `${params.scenario || 'cenario'}${params.value != null ? ` (${params.value})` : ''}`
+    case 'generate_manager_briefing':
+      return `Periodo: ${params.period || 'daily'}`
+    case 'generate_meeting_agenda':
+      return `${params.meeting_type || 'team'}${params.user_id ? ` - ID: ${params.user_id}` : ''}`
+    case 'create_action_plan':
+      return `"${params.title || '?'}" - ${Array.isArray(params.items) ? params.items.length : 0} itens`
+    case 'create_pdi_plan':
+      return `ID: ${params.user_id || '?'} - "${params.title || 'PDI'}"`
+    case 'create_recovery_mission':
+      return `ID: ${params.user_id || '?'} - "${params.title || 'recuperacao'}"`
+    case 'create_manager_nudge':
+      return `ID: ${params.user_id || '?'} - ${params.tone || 'coaching'}`
+    case 'mark_recommendation_done':
+      return `ID: ${params.recommendation_id || '?'}`
     case 'add_seller':
       return `${params.name || '?'} (${params.email || '?'})`
     case 'edit_seller':
@@ -650,13 +850,13 @@ function summarizeParams(action: string, params: Record<string, unknown>): strin
   }
 }
 
-function buildSystemPrompt(role: string, userName: string, businessContext: string, teamContext: string, kpiContext: string): string {
+function buildSystemPrompt(role: string, userName: string, businessContext: string, teamContext: string, kpiContext: string, operationContext = ''): string {
   const firstName = userName.split(' ')[0]
 
   if (role === 'manager') {
     return `Você é a VAMO IA — consultora sênior de performance comercial com mais de 15 anos de experiência em gestão de times de vendas B2B e B2C.
 Você está conversando com ${firstName}, gestor de vendas.
-${businessContext}${teamContext}${kpiContext}
+${businessContext}${teamContext}${kpiContext}${operationContext}
 
 COMO VOCÊ DEVE RESPONDER:
 - Sempre considere o contexto do negócio acima (segmento, ticket, modelo, meta, equipe) para dar respostas personalizadas

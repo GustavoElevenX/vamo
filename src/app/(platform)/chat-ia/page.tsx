@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { clearCache } from '@/lib/cache'
 import { Button } from '@/components/ui/button'
@@ -50,17 +51,20 @@ const SELLER_SUGGESTIONS: Suggestion[] = [
 ]
 
 const ACTION_DELIMITER = '\n---ACTION---\n'
+const AUTO_EXECUTE_ACTIONS = ['analyze_operation', 'simulate_decision', 'generate_manager_briefing', 'generate_meeting_agenda']
 
 let msgIdCounter = 0
 let actionIdCounter = 0
 
 export default function ChatIAPage() {
   const { user } = useRequiredAuth()
+  const searchParams = useSearchParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<Suggestion[] | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -68,7 +72,7 @@ export default function ChatIAPage() {
 
   const role = user?.role ?? 'seller'
   const firstName = user?.name?.split(' ')[0] ?? ''
-  const suggestions = role === 'manager' ? MANAGER_SUGGESTIONS : SELLER_SUGGESTIONS
+  const suggestions = role === 'manager' ? (dynamicSuggestions ?? MANAGER_SUGGESTIONS) : SELLER_SUGGESTIONS
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -79,10 +83,38 @@ export default function ChatIAPage() {
   }, [messages, scrollToBottom])
 
   useEffect(() => {
+    if (role !== 'manager') return
+
+    let cancelled = false
+    fetch('/api/manager/cockpit')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.actionQueue?.length) return
+        const items = data.actionQueue.slice(0, 4).map((item: { title: string; description: string }) => ({
+          icon: <Sparkles className="h-4 w-4" />,
+          label: item.title.length > 28 ? `${item.title.slice(0, 25)}...` : item.title,
+          prompt: `Analise este ponto e recomende a melhor acao: ${item.title}. Contexto: ${item.description}`,
+        }))
+        setDynamicSuggestions([
+          ...items,
+          { icon: <BarChart3 className="h-4 w-4" />, label: 'Analisar operacao', prompt: 'Analise a operacao atual e me diga o que devo fazer hoje.' },
+          { icon: <TrendingUp className="h-4 w-4" />, label: 'Criar plano', prompt: 'Crie um plano de acao priorizado para recuperar os principais riscos da operacao.' },
+        ])
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [role])
+
+  useEffect(() => {
     const prefill = sessionStorage.getItem('chat_prefill')
-    if (prefill) {
+    const queryPrompt = searchParams.get('prompt')
+    const prompt = queryPrompt || prefill
+    if (prompt) {
       sessionStorage.removeItem('chat_prefill')
-      setInput(prefill)
+      setInput(prompt)
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto'
@@ -91,7 +123,7 @@ export default function ChatIAPage() {
         }
       }, 50)
     }
-  }, [])
+  }, [searchParams])
 
   const handleScroll = () => {
     const el = containerRef.current
@@ -179,9 +211,6 @@ export default function ChatIAPage() {
         const [textContent, actionJson] = fullText.split(ACTION_DELIMITER)
         try {
           const actionPayload: ActionPayload = JSON.parse(actionJson.trim())
-
-          // Ações executadas autonomamente (sem aprovação)
-          const AUTO_EXECUTE_ACTIONS = ['create_mission', 'create_challenge', 'generate_briefing']
 
           if (AUTO_EXECUTE_ACTIONS.includes(actionPayload.action)) {
             // Mostrar card executando imediatamente

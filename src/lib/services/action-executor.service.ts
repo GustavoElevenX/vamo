@@ -105,6 +105,20 @@ async function getExecutorName(adminClient: SupabaseClient, userId: string) {
   return (data?.name as string | undefined) ?? 'Gestor'
 }
 
+async function validateActiveSeller(adminClient: SupabaseClient, orgId: string, userId: string) {
+  const { data: seller, error } = await adminClient
+    .from('users')
+    .select('id, name, role, active, organization_id')
+    .eq('id', userId)
+    .eq('organization_id', orgId)
+    .eq('role', 'seller')
+    .eq('active', true)
+    .maybeSingle()
+
+  if (error) throw error
+  return seller as { id: string; name: string; role: string; active: boolean; organization_id: string } | null
+}
+
 async function analyzeOperation(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
   const brain = await buildCommercialBrainContext(adminClient, orgId, executorUserId, await getExecutorName(adminClient, executorUserId))
   return {
@@ -148,6 +162,26 @@ async function createActionPlan(adminClient: SupabaseClient, params: Record<stri
   const summary = String(params.summary || '')
   const items = Array.isArray(params.items) ? params.items as Array<Record<string, unknown>> : []
   if (!title || !summary || items.length === 0) return { success: false, message: 'Titulo, resumo e itens sao obrigatorios' }
+
+  const targetUserIds = Array.from(new Set(items.map((item) => item.target_user_id).filter(Boolean).map(String)))
+  const validSellerIds = new Set<string>()
+  if (targetUserIds.length > 0) {
+    const { data: validSellers, error: sellerError } = await adminClient
+      .from('users')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('role', 'seller')
+      .eq('active', true)
+      .in('id', targetUserIds)
+
+    if (sellerError) return { success: false, message: `Erro ao validar vendedores do plano: ${sellerError.message}` }
+    for (const seller of validSellers ?? []) validSellerIds.add(String(seller.id))
+    const invalidIds = targetUserIds.filter((id) => !validSellerIds.has(id))
+    if (invalidIds.length > 0) {
+      return { success: false, message: `Plano não criado. Vendedor(es) inválido(s) ou inativo(s): ${invalidIds.join(', ')}` }
+    }
+  }
+
   const { data: plan, error } = await adminClient.from('manager_action_plans').insert({ organization_id: orgId, manager_id: executorUserId, title, summary, status: 'active', source: 'chat_ia', created_by_ai: true }).select('id,title').single()
   if (error || !plan) return { success: false, message: `Erro ao criar plano de acao: ${error?.message}` }
   const rows = items.map((item) => ({ plan_id: plan.id, organization_id: orgId, target_user_id: item.target_user_id || null, action_type: String(item.action_type || 'manager_action'), title: String(item.title || 'Acao do plano'), description: String(item.description || ''), priority: ['low', 'medium', 'high', 'critical'].includes(String(item.priority)) ? item.priority : 'medium', status: 'pending', due_at: item.due_at || null, metadata: item }))
@@ -161,10 +195,101 @@ async function createPdiPlan(adminClient: SupabaseClient, params: Record<string,
   const userId = params.user_id as string
   const title = String(params.title || 'PDI gerado pela VAMO IA')
   if (!userId) return { success: false, message: 'ID do vendedor e obrigatorio' }
+  const seller = await validateActiveSeller(adminClient, orgId, userId)
+  if (!seller) return { success: false, message: 'Vendedor não encontrado, inativo ou fora desta organização. Escolha um vendedor ativo para receber o PDI.' }
+
   const { data, error } = await adminClient.from('pdi_plans').insert({ organization_id: orgId, user_id: userId, manager_id: executorUserId, title, description: String(params.description || title), status: 'recommended', recommended_by: 'ai', start_date: params.start_date || new Date().toISOString().slice(0, 10), due_date: params.due_date || null, metadata: { source: 'chat_ia', createdByAI: true, ...params } }).select('id,title,status,user_id').single()
   if (error || !data) return { success: false, message: `Erro ao criar PDI: ${error?.message}` }
+
+  const { data: confirmed, error: confirmError } = await adminClient
+    .from('pdi_plans')
+    .select('id,title,status,user_id,organization_id')
+    .eq('id', data.id)
+    .eq('user_id', userId)
+    .eq('organization_id', orgId)
+    .single()
+  if (confirmError || !confirmed) return { success: false, message: `PDI criado, mas não foi possível confirmar vínculo com o vendedor: ${confirmError?.message ?? 'confirmação vazia'}`, data }
+
+  const itemRows: Array<Record<string, unknown>> = [
+    {
+      plan_id: confirmed.id,
+      organization_id: orgId,
+      training_module_id: null,
+      item_type: 'training',
+      title: `Treino aplicado - ${title}`,
+      description: String(params.description || title),
+      status: 'pending',
+      metadata: { source: 'chat_ia', target_kpi_key: params.target_kpi_key ?? null, target_value: params.target_value ?? null },
+    },
+    {
+      plan_id: confirmed.id,
+      organization_id: orgId,
+      item_type: 'deal_application',
+      title: 'Aplicar em oportunidade real',
+      description: 'Use o aprendizado em uma oportunidade do CRM e envie evidência para validação do gestor.',
+      status: 'pending',
+      metadata: { source: 'chat_ia' },
+    },
+    {
+      plan_id: confirmed.id,
+      organization_id: orgId,
+      item_type: 'manager_review',
+      title: 'Validação do gestor',
+      description: 'Gestor revisa a evidência e decide se o comportamento evoluiu.',
+      status: 'pending',
+      metadata: { source: 'chat_ia' },
+    },
+  ]
+  const { data: trainingModule, error: trainingError } = await adminClient
+    .from('training_modules')
+    .insert({
+      organization_id: orgId,
+      title: `Treinamento - ${title}`,
+      description: String(params.description || title),
+      skill_area: String(params.skill_area || params.target_kpi_key || 'sales_process'),
+      module_type: 'micro_training',
+      estimated_minutes: Number(params.estimated_minutes ?? 15),
+      content: {
+        objective: String(params.objective || params.description || title),
+        checklist: Array.isArray(params.checklist) ? params.checklist : ['Revisar conceito', 'Aplicar em um caso real', 'Registrar evidência'],
+        createdByAI: true,
+        source: 'chat_ia',
+      },
+      active: true,
+      pdi_plan_id: confirmed.id,
+    })
+    .select('id,title')
+    .single()
+  if (trainingError || !trainingModule) return { success: false, message: `PDI criado e confirmado, mas houve erro ao criar treinamento: ${trainingError?.message}`, data: confirmed }
+
+  itemRows[0].training_module_id = trainingModule.id
+  const { data: items, error: itemsError } = await adminClient.from('pdi_plan_items').insert(itemRows).select('id,title,item_type,status')
+  if (itemsError) return { success: false, message: `PDI criado e confirmado, mas houve erro ao criar itens: ${itemsError.message}`, data: confirmed }
+
+  const practicalMissionResult = await createMission(
+    adminClient,
+    {
+      user_id: userId,
+      title: `Aplicar PDI: ${title}`,
+      description: String(params.practice_description || `Aplicar o treinamento "${title}" em uma oportunidade real e registrar evidência para validação do gestor.`),
+      area: 'sales_process',
+      difficulty: 2,
+      xp_reward: Number(params.xp_reward ?? 50),
+      commission_bonus: Number(params.commission_bonus ?? 0),
+      deadline: params.due_date || null,
+      type: 'manual_validation',
+      verification_type: 'manual',
+      pdi_plan_id: confirmed.id,
+      criteria: { type: 'pdi_practice', pdi_plan_id: confirmed.id, training_module_id: trainingModule.id },
+    },
+    orgId,
+    executorUserId,
+  )
+  if (!practicalMissionResult.success) return { success: false, message: `PDI criado, mas houve erro ao criar missão prática: ${practicalMissionResult.message}`, data: { ...confirmed, items: items ?? [], trainingModule } }
+
+  const notificationResult = await notifySeller(adminClient, { user_id: userId, message: `Seu gestor criou um novo PDI: ${confirmed.title}` }, orgId, executorUserId)
   const event = await createPerformanceEvent(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: userId, eventType: 'pdi_plan_created_by_ai', sourceModule: 'chat_ia', entityType: 'pdi_plan', entityId: data.id, title: 'PDI criado pela VAMO IA', description: `PDI "${title}" criado para aprovacao do gestor.`, impactScore: 60, priorityScore: 65, riskScore: 25, metadata: { createdByAI: true, verified: true } })
-  return { success: true, message: `PDI "${data.title}" criado e registrado no historico.`, data: { ...data, eventId: event.id, verified: true } }
+  return { success: true, message: `PDI "${confirmed.title}" criado e confirmado para ${seller.name}; treinamento, ${items?.length ?? 0} itens e missão prática criados; ${notificationResult.success ? 'notificação enviada' : `notificação falhou: ${notificationResult.message}`}; evento registrado no histórico.`, data: { ...confirmed, targetUserName: seller.name, items: items ?? [], trainingModule, practicalMission: practicalMissionResult.data, notification: notificationResult, eventId: event.id, verified: true } }
 }
 
 async function createRecoveryMission(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
@@ -272,7 +397,22 @@ async function createMission(
   const description = params.description as string
   if (!title) return { success: false, message: 'Título da missão é obrigatório' }
 
-  const userId = (params.user_id as string) || executorUserId
+  const userId = params.user_id as string
+  if (!userId) {
+    return {
+      success: false,
+      message: 'Escolha um vendedor para receber a missão. Missões não podem ser criadas sem vendedor responsável.',
+    }
+  }
+
+  const seller = await validateActiveSeller(adminClient, orgId, userId)
+  if (!seller) {
+    return {
+      success: false,
+      message: 'Vendedor não encontrado, inativo ou fora desta organização. Escolha um vendedor ativo para receber a missão.',
+    }
+  }
+
   const area = (params.area as string) || 'sales_process'
   const difficulty = (params.difficulty as number) || 2
   const xpReward = (params.xp_reward as number) || 50
@@ -308,14 +448,80 @@ async function createMission(
       deadline: params.deadline || null,
       verification_type: ['automatic', 'manual', 'hybrid'].includes(verificationType) ? verificationType : 'manual',
       criteria,
+      pdi_plan_id: params.pdi_plan_id || null,
+      gap_id: params.gap_id || null,
     })
     .select('id, title, xp_reward, commission_bonus')
     .single()
 
   if (error) return { success: false, message: `Erro ao criar missão: ${error.message}` }
-  const rewardParts = [`${data.xp_reward} XP`]
-  if (data.commission_bonus > 0) rewardParts.push(`R$ ${data.commission_bonus} de bônus`)
-  return { success: true, message: `Missão "${data.title}" criada com ${rewardParts.join(' + ')} de recompensa`, data }
+  {
+    const { data: confirmed, error: confirmError } = await adminClient
+      .from('ai_missions')
+      .select('id, title, user_id, organization_id, xp_reward, commission_bonus, status, deadline')
+      .eq('id', data.id)
+      .eq('user_id', userId)
+      .eq('organization_id', orgId)
+      .single()
+
+    if (confirmError || !confirmed) {
+      return {
+        success: false,
+        message: `Missão criada, mas não foi possível confirmar vínculo com o vendedor: ${confirmError?.message ?? 'confirmação vazia'}`,
+        data,
+      }
+    }
+
+    const notificationResult = await notifySeller(
+      adminClient,
+      {
+        user_id: userId,
+        message: `Você recebeu uma nova missão: ${confirmed.title}`,
+      },
+      orgId,
+      executorUserId,
+    )
+
+    const event = await createPerformanceEvent(adminClient, {
+      organizationId: orgId,
+      actorUserId: executorUserId,
+      targetUserId: userId,
+      eventType: 'ai_mission_created',
+      sourceModule: 'chat_ia',
+      entityType: 'ai_mission',
+      entityId: confirmed.id,
+      title: 'Missão criada pela VAMO IA',
+      description: `Missão "${confirmed.title}" criada para ${seller.name}.`,
+      impactScore: 60,
+      priorityScore: 70,
+      riskScore: 20,
+      metadata: {
+        createdByAI: true,
+        verified: true,
+        notificationSent: notificationResult.success,
+      },
+    })
+
+    const confirmedRewardParts = [`${confirmed.xp_reward} XP`]
+    if (confirmed.commission_bonus > 0) confirmedRewardParts.push(`R$ ${confirmed.commission_bonus} de bônus`)
+    const notificationMessage = notificationResult.success ? 'notificação enviada' : `notificação falhou: ${notificationResult.message}`
+
+    return {
+      success: true,
+      message: `Missão "${confirmed.title}" criada e confirmada para ${seller.name} com ${confirmedRewardParts.join(' + ')} de recompensa; ${notificationMessage}; evento registrado no histórico.`,
+      data: {
+        entityType: 'ai_mission',
+        entityId: confirmed.id,
+        targetUserId: seller.id,
+        targetUserName: seller.name,
+        eventId: event.id,
+        notification: notificationResult,
+        verified: true,
+        actionHref: '/performance/missoes',
+        ...confirmed,
+      },
+    }
+  }
 }
 
 // ── Define KPI ──

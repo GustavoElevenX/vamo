@@ -52,6 +52,29 @@ const SELLER_SUGGESTIONS: Suggestion[] = [
 
 const ACTION_DELIMITER = '\n---ACTION---\n'
 const AUTO_EXECUTE_ACTIONS = ['analyze_operation', 'simulate_decision', 'generate_manager_briefing', 'generate_meeting_agenda']
+const CACHE_INVALIDATION_BY_ACTION: Record<string, string[]> = {
+  create_mission: ['missions', 'missoes', 'manager-cockpit', 'performance', 'notifications'],
+  create_recovery_mission: ['missions', 'missoes', 'manager-cockpit', 'performance', 'notifications'],
+  create_action_plan: ['manager-cockpit', 'performance', 'action-plans'],
+  create_pdi_plan: ['pdi', 'manager-cockpit', 'performance', 'notifications'],
+  create_manager_nudge: ['notifications', 'manager-cockpit', 'performance'],
+  notify_seller: ['notifications', 'manager-cockpit'],
+  send_chat_message: ['messages', 'mensagens', 'manager-cockpit'],
+  set_goal: ['goals', 'metas', 'kpis', 'manager-cockpit', 'performance'],
+  set_goal_rewards: ['goals', 'metas', 'manager-cockpit', 'performance'],
+  update_goal_status: ['goals', 'metas', 'manager-cockpit', 'performance'],
+  award_xp: ['xp', 'leaderboard', 'manager-cockpit', 'performance'],
+  register_kpi_value: ['kpis', 'performance', 'manager-cockpit'],
+  generate_briefing: ['briefings', 'manager-cockpit'],
+  generate_manager_briefing: ['manager-cockpit'],
+  mark_recommendation_done: ['recommendations', 'manager-cockpit', 'performance'],
+}
+
+function clearActionCaches(action: string) {
+  for (const key of CACHE_INVALIDATION_BY_ACTION[action] ?? ['manager-cockpit', 'performance']) {
+    clearCache(key)
+  }
+}
 
 let msgIdCounter = 0
 let actionIdCounter = 0
@@ -236,9 +259,7 @@ export default function ChatIAPage() {
                 }),
               })
               const execResult = await execRes.json()
-              if (execResult.success && actionPayload.action === 'generate_briefing') {
-                clearCache('briefings')
-              }
+              if (execResult.success) clearActionCaches(actionPayload.action)
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === aiMsgId && m.actionCard
@@ -320,6 +341,7 @@ export default function ChatIAPage() {
       })
 
       const result = await res.json()
+      if (result.success) clearActionCaches(msg.actionCard.action.action)
 
       setMessages((prev) =>
         prev.map((m) =>

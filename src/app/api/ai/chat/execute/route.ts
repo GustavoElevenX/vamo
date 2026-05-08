@@ -11,6 +11,7 @@ const VALID_ACTIONS: ActionType[] = [
   'add_seller', 'edit_seller', 'remove_seller',
   'create_mission', 'edit_mission', 'delete_mission',
   'define_kpi', 'edit_kpi', 'delete_kpi', 'set_goal',
+  'set_goal_rewards', 'update_goal_status',
   'award_xp', 'generate_briefing', 'generate_retrospective',
   'create_challenge', 'register_kpi_value', 'notify_seller',
   'send_chat_message',

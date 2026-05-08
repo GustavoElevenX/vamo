@@ -182,7 +182,7 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'create_mission',
-      description: 'Criar uma missão gamificada para um vendedor ou para a equipe. Use quando o gestor pedir para criar, montar, definir ou atribuir uma missão.',
+      description: 'Criar uma missão gamificada para um vendedor ativo. Use quando o gestor pedir para criar, montar, definir ou atribuir uma missão individual.',
       parameters: {
         type: 'object',
         properties: {
@@ -193,6 +193,15 @@ const MANAGER_TOOLS = [
           xp_reward: { type: 'number', description: 'XP de recompensa (10-200)' },
           commission_bonus: { type: 'number', description: 'Bônus em R$ pago ao vendedor ao concluir a missão (opcional, ex: 50)' },
           user_id: { type: 'string', description: 'ID obrigatório do vendedor ativo que receberá a missão. Nunca omita este campo.' },
+          deadline: { type: 'string', description: 'Prazo ISO opcional da missão' },
+          type: { type: 'string', description: 'Tipo da missão: manual_validation, kpi_target ou outro tipo suportado' },
+          kpi_id: { type: 'string', description: 'ID do KPI relacionado quando a missão for de indicador' },
+          target_value: { type: 'number', description: 'Valor alvo para missão automática ou híbrida' },
+          verification_type: { type: 'string', enum: ['automatic', 'manual', 'hybrid'], description: 'Como a missão será verificada' },
+          criteria: { type: 'object', description: 'Critérios estruturados de validação da missão' },
+          pdi_plan_id: { type: 'string', description: 'ID do PDI relacionado, se a missão for prática de desenvolvimento' },
+          gap_id: { type: 'string', description: 'ID do gap de desenvolvimento relacionado, se houver' },
+          playbook_content: { type: 'object', description: 'Roteiro, checklist ou instruções práticas para o vendedor executar a missão' },
         },
         required: ['title', 'description', 'user_id'],
       },
@@ -510,9 +519,8 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'OpenAI não configurado' }), { status: 503 })
   }
 
-  const { messages, role, userName } = (await req.json()) as {
+  const { messages, userName } = (await req.json()) as {
     messages: { role: 'user' | 'assistant'; content: string }[]
-    role: string
     userName: string
   }
 
@@ -520,9 +528,13 @@ export async function POST(req: NextRequest) {
   const adminClient = createAdminClient()
   const { data: dbUser } = await adminClient
     .from('users')
-    .select('id, organization_id')
+    .select('id, organization_id, role, name')
     .eq('auth_id', authUser.id)
     .single()
+
+  const effectiveRole = dbUser?.role ?? 'seller'
+  const effectiveUserName = dbUser?.name ?? userName
+  const isManager = ['manager', 'admin'].includes(effectiveRole)
 
   let businessContext = ''
   let teamContext = ''
@@ -615,13 +627,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (dbUser?.organization_id && role === 'manager') {
+  if (dbUser?.organization_id && isManager) {
     try {
       const commercialBrain = await buildCommercialBrainContext(
         adminClient,
         dbUser.organization_id,
         dbUser.id,
-        userName,
+        effectiveUserName,
       )
       operationContext = commercialBrain.llmContext
     } catch (error) {
@@ -630,8 +642,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isManager = role === 'manager'
-  const systemPrompt = buildSystemPrompt(role, userName, businessContext, teamContext, kpiContext, operationContext)
+  const systemPrompt = buildSystemPrompt(effectiveRole, effectiveUserName, businessContext, teamContext, kpiContext, operationContext)
   const openAIMessages = [{ role: 'system', content: systemPrompt }, ...messages]
 
   // ── Request com tools (apenas para gestores) ──
@@ -853,7 +864,7 @@ function summarizeParams(action: string, params: Record<string, unknown>): strin
 function buildSystemPrompt(role: string, userName: string, businessContext: string, teamContext: string, kpiContext: string, operationContext = ''): string {
   const firstName = userName.split(' ')[0]
 
-  if (role === 'manager') {
+  if (['manager', 'admin'].includes(role)) {
     return `Você é a VAMO IA — consultora sênior de performance comercial com mais de 15 anos de experiência em gestão de times de vendas B2B e B2C.
 Você está conversando com ${firstName}, gestor de vendas.
 ${businessContext}${teamContext}${kpiContext}${operationContext}

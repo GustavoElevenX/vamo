@@ -151,11 +151,11 @@ export default function MissoesPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold tracking-tight">
-          {isManager ? 'Missões & Desafios' : 'Missões Ativas'}
+          {isManager ? 'Missões da Equipe' : 'Missões Ativas'}
         </h2>
         <p className="text-sm text-muted-foreground mt-0.5">
           {isManager
-            ? 'Gestão de missões individuais e coletivas, com sugestões automáticas da VAMO IA'
+            ? 'Acompanhamento operacional das missões individuais e coletivas do time'
             : 'Missões com progresso em tempo real e sugestões da VAMO IA'}
         </p>
       </div>

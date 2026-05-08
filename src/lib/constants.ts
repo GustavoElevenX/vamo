@@ -88,6 +88,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
         { label: 'Performance', href: '/monitoramento/equipe', icon: 'BarChart3' },
         { label: 'Saude da Equipe', href: '/monitoramento/saude-equipe', icon: 'HeartPulse' },
         { label: 'Desenvolvimento da Equipe', href: '/monitoramento/desenvolvimento', icon: 'ClipboardCheck' },
+        { label: 'Missoes da Equipe', href: '/monitoramento/missoes', icon: 'Swords' },
         { label: 'Alertas', href: '/monitoramento/alertas', icon: 'Zap', badge: 'alert' },
       ],
     },

@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Sparkles,
   RefreshCw,
+  Swords,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -44,6 +45,7 @@ interface OverviewData {
 const QUICK_LINKS = [
   { label: 'Funil em Tempo Real',      href: '/monitoramento/funil',         icon: Filter },
   { label: 'Performance da Equipe',    href: '/monitoramento/equipe',        icon: Users },
+  { label: 'Missoes da Equipe',        href: '/monitoramento/missoes',       icon: Swords },
   { label: 'Alertas da VAMO IA',       href: '/monitoramento/alertas',       icon: AlertTriangle },
   { label: 'Saúde da Equipe',          href: '/monitoramento/saude-equipe',  icon: HeartPulse },
   { label: 'Comissionamento',          href: '/monitoramento/comissionamento',icon: DollarSign },

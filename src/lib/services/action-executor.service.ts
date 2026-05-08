@@ -187,8 +187,47 @@ async function createActionPlan(adminClient: SupabaseClient, params: Record<stri
   const rows = items.map((item) => ({ plan_id: plan.id, organization_id: orgId, target_user_id: item.target_user_id || null, action_type: String(item.action_type || 'manager_action'), title: String(item.title || 'Acao do plano'), description: String(item.description || ''), priority: ['low', 'medium', 'high', 'critical'].includes(String(item.priority)) ? item.priority : 'medium', status: 'pending', due_at: item.due_at || null, metadata: item }))
   const { data: insertedItems, error: itemError } = await adminClient.from('manager_action_plan_items').insert(rows).select('id,title,target_user_id,action_type')
   if (itemError) return { success: false, message: `Plano criado, mas houve erro nos itens: ${itemError.message}`, data: { plan } }
+  const executions: Array<Record<string, unknown>> = []
+  for (const [index, insertedItem] of (insertedItems ?? []).entries()) {
+    const sourceItem = items[index] ?? {}
+    const actionType = String(insertedItem.action_type || sourceItem.action_type || '').toLowerCase()
+    const targetUserId = insertedItem.target_user_id ? String(insertedItem.target_user_id) : ''
+    let execution: ActionResult | null = null
+
+    if (['mission', 'create_mission', 'recovery_mission'].includes(actionType) && targetUserId) {
+      execution = await createMission(adminClient, {
+        user_id: targetUserId,
+        title: insertedItem.title,
+        description: sourceItem.description || insertedItem.title,
+        deadline: sourceItem.due_at || null,
+        xp_reward: sourceItem.xp_reward ?? 50,
+        commission_bonus: sourceItem.commission_bonus ?? 0,
+        criteria: { type: 'manager_action_plan', plan_id: plan.id, plan_item_id: insertedItem.id },
+      }, orgId, executorUserId)
+      const missionId = execution.success ? ((execution.data as Record<string, unknown> | undefined)?.entityId ?? (execution.data as Record<string, unknown> | undefined)?.id) : null
+      if (missionId) await adminClient.from('manager_action_plan_items').update({ related_mission_id: missionId, metadata: { ...sourceItem, execution } }).eq('id', insertedItem.id).eq('organization_id', orgId)
+    } else if (['pdi', 'create_pdi_plan'].includes(actionType) && targetUserId) {
+      execution = await createPdiPlan(adminClient, {
+        user_id: targetUserId,
+        title: insertedItem.title,
+        description: sourceItem.description || insertedItem.title,
+        due_date: sourceItem.due_at || null,
+      }, orgId, executorUserId)
+      const pdiPlanId = execution.success ? ((execution.data as Record<string, unknown> | undefined)?.id ?? (execution.data as Record<string, unknown> | undefined)?.entityId) : null
+      if (pdiPlanId) await adminClient.from('manager_action_plan_items').update({ related_pdi_plan_id: pdiPlanId, metadata: { ...sourceItem, execution } }).eq('id', insertedItem.id).eq('organization_id', orgId)
+    } else if (['nudge', 'recognition', 'notify', 'notification'].includes(actionType) && targetUserId) {
+      execution = await createManagerNudge(adminClient, {
+        user_id: targetUserId,
+        message: sourceItem.description || insertedItem.title,
+        tone: actionType === 'recognition' ? 'recognition' : sourceItem.tone || 'coaching',
+      }, orgId, executorUserId)
+      if (execution.success) await adminClient.from('manager_action_plan_items').update({ status: 'done', metadata: { ...sourceItem, execution } }).eq('id', insertedItem.id).eq('organization_id', orgId)
+    }
+
+    if (execution) executions.push({ planItemId: insertedItem.id, actionType, success: execution.success, message: execution.message, data: execution.data ?? null })
+  }
   const event = await createPerformanceEvent(adminClient, { organizationId: orgId, actorUserId: executorUserId, eventType: 'manager_action_plan_created', sourceModule: 'chat_ia', entityType: 'manager_action_plan', entityId: plan.id, title: 'Plano de acao criado pela VAMO IA', description: `Plano "${title}" criado com ${insertedItems?.length ?? 0} item(ns).`, impactScore: 70, priorityScore: 75, riskScore: 30, metadata: { createdByAI: true, itemCount: insertedItems?.length ?? 0 } })
-  return { success: true, message: `Plano criado, ${insertedItems?.length ?? 0} item(ns) vinculados e acao registrada no historico.`, data: { entityType: 'manager_action_plan', entityId: plan.id, plan, items: insertedItems ?? [], eventId: event.id, verified: true } }
+  return { success: true, message: `Plano criado, ${insertedItems?.length ?? 0} item(ns) vinculados, ${executions.filter((item) => item.success).length} acao(oes) executada(s) e acao registrada no historico.`, data: { entityType: 'manager_action_plan', entityId: plan.id, plan, items: insertedItems ?? [], executions, eventId: event.id, verified: true } }
 }
 
 async function createPdiPlan(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {

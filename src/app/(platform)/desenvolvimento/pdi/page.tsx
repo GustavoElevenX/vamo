@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { BookOpenCheck, CheckCircle2, Clock, Dumbbell, ListChecks, MessageSquareText, Sparkles, Target } from 'lucide-react'
+import { BookOpenCheck, CheckCircle2, Clock, Dumbbell, ListChecks, MessageSquareText, Sparkles, Swords, Target } from 'lucide-react'
 
 interface PdiApplication {
   id: string
@@ -23,6 +23,19 @@ interface PdiApplication {
   plan?: { title?: string | null } | null
   deal?: { title?: string | null } | null
   account?: { name?: string | null } | null
+}
+
+interface PdiMission {
+  id: string
+  title: string
+  status: string
+  pdi_plan_id?: string | null
+  gap_id?: string | null
+  progressPct?: number
+  current_value?: number | null
+  target_value?: number | null
+  validationLabel?: string
+  pdi_plan?: { id: string; title: string | null; status: string | null } | null
 }
 
 interface DealOption {
@@ -62,6 +75,7 @@ export default function SellerPdiPage() {
   const [gaps, setGaps] = useState<PdiGap[]>([])
   const [plans, setPlans] = useState<PdiPlan[]>([])
   const [applications, setApplications] = useState<PdiApplication[]>([])
+  const [missions, setMissions] = useState<PdiMission[]>([])
   const [deals, setDeals] = useState<DealOption[]>([])
   const [accounts, setAccounts] = useState<AccountOption[]>([])
   const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
@@ -73,21 +87,23 @@ export default function SellerPdiPage() {
   const [loading, setLoading] = useState(true)
 
   async function load() {
-    const [gapsRes, plansRes, appRes, recRes, dealsRes, accountsRes] = await Promise.all([
+    const [gapsRes, plansRes, appRes, recRes, dealsRes, accountsRes, missionsRes] = await Promise.all([
       fetch('/api/pdi/gaps'),
       fetch('/api/pdi/plans'),
       fetch('/api/pdi/applications'),
       fetch('/api/action-recommendations'),
       fetch('/api/crm/deals'),
       fetch('/api/crm/accounts'),
+      fetch('/api/missions/my'),
     ])
-    const [gapsBody, plansBody, appBody, recBody, dealsBody, accountsBody] = await Promise.all([
+    const [gapsBody, plansBody, appBody, recBody, dealsBody, accountsBody, missionsBody] = await Promise.all([
       gapsRes.json().catch(() => ({ gaps: [] })),
       plansRes.json().catch(() => ({ plans: [] })),
       appRes.json().catch(() => ({ applications: [] })),
       recRes.json().catch(() => ({ recommendations: [] })),
       dealsRes.json().catch(() => ({ deals: [] })),
       accountsRes.json().catch(() => ({ accounts: [] })),
+      missionsRes.json().catch(() => ({ missions: [] })),
     ])
     setGaps((gapsBody.gaps ?? []) as PdiGap[])
     setPlans((plansBody.plans ?? []) as PdiPlan[])
@@ -95,6 +111,7 @@ export default function SellerPdiPage() {
     setDeals(((dealsBody.deals ?? []) as DealOption[]).filter((deal) => !['closed_won', 'closed_lost'].includes(deal.stage)))
     setAccounts((accountsBody.accounts ?? []) as AccountOption[])
     setRecommendations(((recBody.recommendations ?? []) as ContextualRecommendation[]).filter((item) => item.source_module === 'pdi'))
+    setMissions((missionsBody.missions ?? []) as PdiMission[])
     setLoading(false)
   }
 
@@ -108,6 +125,14 @@ export default function SellerPdiPage() {
 
   const activePlan = useMemo(() => plans.find((plan) => plan.id === planId) ?? plans[0] ?? null, [planId, plans])
   const training = activePlan?.metadata?.trainingPayload as TrainingPayload | undefined
+  const linkedMissions = useMemo(() => {
+    if (!activePlan) return []
+    return missions.filter((mission) => (
+      mission.pdi_plan_id === activePlan.id ||
+      mission.pdi_plan?.id === activePlan.id ||
+      (activePlan as PdiPlan & { gap?: { id?: string | null } | null }).gap?.id === mission.gap_id
+    ))
+  }, [activePlan, missions])
   const completedApplications = applications.filter((item) => ['validated', 'approved'].includes(item.status)).length
 
   async function submitApplication(event: FormEvent<HTMLFormElement>) {
@@ -151,11 +176,17 @@ export default function SellerPdiPage() {
           <div className="section-label"><BookOpenCheck className="h-3.5 w-3.5" />Evoluir</div>
           <h1 className="mt-2 text-2xl font-black tracking-tight">Meu PDI aplicado</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Seu desenvolvimento nasce de gaps reais e precisa voltar para uma aplicacao em deal, follow-up, proposta ou simulacao.
+            Seu PDI e definido pelo gestor com apoio da VamoAI e deve ser aplicado em situacoes reais de venda.
           </p>
         </div>
         <Badge className="bg-primary/10 text-primary">Performance OS</Badge>
       </div>
+
+      <Card className="border-blue-500/20 bg-blue-500/5">
+        <CardContent className="pt-4 text-sm text-muted-foreground">
+          <strong className="text-foreground">PDI desenvolve.</strong> A logica aqui e sempre: gap real, microtreino, aplicacao pratica, evidencia, validacao do gestor e evolucao acompanhada.
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <PdiEvidenceCard label="Gaps abertos" value={String(gaps.length)} hint="Diagnostico vindo de KPI, CRM ou gestor" />
@@ -206,7 +237,7 @@ export default function SellerPdiPage() {
       {activePlan && (
         <Card>
           <CardHeader>
-            <CardTitle>Treinamento liberado</CardTitle>
+            <CardTitle>Microtreino aplicado liberado</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {training ? (
@@ -280,6 +311,40 @@ export default function SellerPdiPage() {
         </Card>
       )}
 
+      {activePlan && (
+        <Card>
+          <CardHeader><CardTitle>Missoes praticas vinculadas</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {linkedMissions.length ? linkedMissions.map((mission) => (
+              <div key={mission.id} className="rounded-lg border border-border/60 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{mission.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Esta missao transforma o PDI em aplicacao pratica. Concluir a missao nao conclui o PDI automaticamente quando houver validacao humana.
+                    </p>
+                  </div>
+                  <Badge variant="outline">{mission.status}</Badge>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>{Number(mission.current_value || 0).toLocaleString('pt-BR')} / {Number(mission.target_value || 0).toLocaleString('pt-BR')}</span>
+                  <span>{mission.progressPct ?? 0}%</span>
+                  {mission.validationLabel && <span>{mission.validationLabel}</span>}
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
+                Este PDI ainda nao tem missao pratica vinculada. O gestor pode criar uma missao relacionada para forcar a aplicacao em oportunidades reais.
+              </div>
+            )}
+            <Button variant="outline" size="sm" render={<Link href="/performance/missoes" />}>
+              <Swords className="h-4 w-4" />
+              Ver missoes ativas
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card id="aplicacao-real">
         <CardHeader><CardTitle>Aplicacao real</CardTitle></CardHeader>
         <CardContent>
@@ -312,7 +377,7 @@ export default function SellerPdiPage() {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="evidence">Evidencia aplicada</Label>
-              <Textarea id="evidence" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Descreva o que treinou, onde aplicou e que comportamento mudou." />
+              <Textarea id="evidence" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Descreva o que treinou, deal ou cliente usado, resposta do cliente, proximo passo criado e resultado preliminar." />
             </div>
             <div className="md:col-span-2">
               <Button disabled={!activePlan || !description.trim() || saving}>

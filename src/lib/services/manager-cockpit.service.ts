@@ -259,7 +259,7 @@ export async function buildManagerCockpit(
         title: 'Execucao comercial',
         value: `${executionPercent}%`,
         detail: `${summary.deals_without_next_action + summary.overdue_followups} pendencia(s) de pipeline | ${missions.active} missao(oes) ativa(s)`,
-        href: '/performance',
+        href: '/monitoramento/missoes',
       },
       commission: {
         title: 'Comissao e fechamento',

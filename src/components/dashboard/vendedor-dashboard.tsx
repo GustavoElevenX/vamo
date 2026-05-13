@@ -14,17 +14,14 @@ import {
   Target,
   DollarSign,
   Zap,
-  ChevronRight,
   Brain,
-  CheckCircle2,
-  AlertTriangle,
   TrendingDown,
   Trophy,
 } from 'lucide-react'
 import { CoachWidget } from '@/components/ai/coach-widget'
 import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { cn } from '@/lib/utils'
-import type { User, UserXp, XpLevel, BehavioralProfile } from '@/types'
+import type { User, UserXp, XpLevel } from '@/types'
 
 interface VendedorDashboardProps {
   user: User
@@ -64,7 +61,6 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
   const [activeMissions, setActiveMissions] = useState<MissionSummary[]>([])
   const [myRank, setMyRank] = useState<number | null>(null)
   const [totalSellers, setTotalSellers] = useState(0)
-  const [discProfile, setDiscProfile] = useState<BehavioralProfile | null>(null)
   const [myKpis, setMyKpis] = useState<KpiItem[]>([])
 
   useEffect(() => {
@@ -117,14 +113,6 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             setNextLevel(levels.find((l: XpLevel) => l.level === xp.current_level + 1) ?? null)
           }
         }
-
-        try {
-          const res = await fetch('/api/ai/behavioral-profile')
-          if (res.ok) {
-            const data = await res.json()
-            if (data.profile) setDiscProfile(data.profile)
-          }
-        } catch { /* ignore */ }
 
         try {
           const monthStart = new Date()
@@ -388,7 +376,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
               </div>
               <h3 className="text-lg font-bold tracking-tight">Em andamento</h3>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs h-7 gap-1" render={<Link href="/missoes" />}>
+            <Button variant="ghost" size="sm" className="text-xs h-7 gap-1" render={<Link href="/performance/missoes" />}>
               Ver todas <ArrowRight className="h-3 w-3" />
             </Button>
           </div>
@@ -484,90 +472,6 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             </Button>
           </div>
         </div>
-
-        {/* Feedback IA */}
-        <div className="span-6 glass-card glass-corner p-6 md:p-7 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 blur-3xl" style={{ background: 'oklch(0.70 0.17 215)' }} />
-          <div className="relative z-10">
-            {discProfile ? (
-              <>
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="stat-icon stat-icon-blue h-10 w-10">
-                    <Brain className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="bento-label mb-0.5" style={{ color: 'oklch(0.55 0.18 215)' }}>
-                      <Sparkles className="h-3 w-3" />
-                      Feedback personalizado
-                    </div>
-                    <h3 className="text-lg font-bold tracking-tight">
-                      Perfil {discProfile.dominant_profile} · {discProfile.profile_name}
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="grid gap-5 md:grid-cols-2">
-                  {discProfile.selling_strengths?.length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-3">
-                        Pontos fortes
-                      </p>
-                      <ul className="space-y-2">
-                        {discProfile.selling_strengths.slice(0, 3).map((s, i) => (
-                          <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
-                            {s}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {discProfile.development_areas?.length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-3">
-                        Oportunidades
-                      </p>
-                      <ul className="space-y-2">
-                        {discProfile.development_areas.slice(0, 3).map((o, i) => (
-                          <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                            {o}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {(discProfile.performance_insight ?? discProfile.wellbeing_insight) && (
-                  <div className="mt-5 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/15">
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      <Brain className="inline h-3 w-3 text-blue-500 mr-1.5 mb-px" />
-                      <strong className="text-foreground">Insight: </strong>
-                      {discProfile.performance_insight ?? discProfile.wellbeing_insight}
-                    </p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-4">
-                <div className="stat-icon stat-icon-blue h-12 w-12 shrink-0">
-                  <Brain className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold">Feedback personalizado da VAMO IA</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Complete seu Perfil DISC para receber insights baseados em dados
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" className="text-xs h-8 shrink-0 gap-1" render={<Link href="/perfil-comportamental" />}>
-                  Fazer agora <ChevronRight className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Quick actions */}
         <Link href="/meus-ganhos" className="span-3 group">
           <div className="glass-card glass-hover p-5 h-full flex items-center gap-4">

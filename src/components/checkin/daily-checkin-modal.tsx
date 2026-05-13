@@ -11,7 +11,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Sparkles, X } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
+import type { CheckinQuestion } from '@/lib/services/checkin-question.service'
 
 const ENERGY_OPTIONS = [
   { value: 1, emoji: '\u{1F614}', label: 'Muito baixa' },
@@ -21,106 +22,124 @@ const ENERGY_OPTIONS = [
   { value: 5, emoji: '\u{1F525}', label: 'Excelente' },
 ]
 
-const INTENTION_OPTIONS = [
-  'Fechar uma venda',
-  'Prospectar novos clientes',
-  'Fazer follow-up com leads',
-  'Atualizar o CRM',
-  'Melhorar uma habilidade',
-]
+function todayKey(userId: string) {
+  const today = new Date().toISOString().split('T')[0]
+  return `vamo_checkin_${userId}_${today}`
+}
 
-const OBSTACLE_OPTIONS = [
-  'Sem obstáculos hoje',
-  'Muitas tarefas acumuladas',
-  'Falta de leads qualificados',
-  'Desmotivação / cansaço',
-]
+function dismissedKey(userId: string) {
+  const today = new Date().toISOString().split('T')[0]
+  return `vamo_checkin_dismissed_${userId}_${today}`
+}
 
-const CHECKIN_STORAGE_KEY = 'motiva_checkin_date'
+function answerIsFilled(value: unknown) {
+  if (typeof value === 'string') return value.trim().length > 0
+  return value !== null && value !== undefined && value !== ''
+}
 
 export function DailyCheckinModal() {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
-  const [energy, setEnergy] = useState<number | null>(null)
-  const [intention, setIntention] = useState<string | null>(null)
-  const [obstacle, setObstacle] = useState<string | null>(null)
-  const [customObstacle, setCustomObstacle] = useState('')
+  const [questions, setQuestions] = useState<CheckinQuestion[]>([])
+  const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (!user || user.role !== 'seller') return
 
-    const today = new Date().toISOString().split('T')[0]
-    const lastCheckin = localStorage.getItem(CHECKIN_STORAGE_KEY)
+    const completedKey = todayKey(user.id)
+    const skippedKey = dismissedKey(user.id)
 
-    if (lastCheckin === today) return
+    if (localStorage.getItem(completedKey) === 'true') return
+    if (localStorage.getItem(skippedKey) === 'true') return
 
-    // Verify with server
     fetch('/api/checkin')
       .then((res) => res.json())
       .then((data) => {
         if (data.checkin) {
-          localStorage.setItem(CHECKIN_STORAGE_KEY, today)
-        } else {
-          setOpen(true)
+          localStorage.setItem(completedKey, 'true')
+          return
         }
+
+        if (data.shouldShow === false) return
+
+        const nextQuestions = (data.questions ?? []) as CheckinQuestion[]
+        setQuestions(nextQuestions)
+        setAnswers({})
+        setStep(0)
+        setOpen(nextQuestions.length > 0)
       })
       .catch(() => {
-        setOpen(true)
+        // Falha silenciosa: nao abrir automaticamente para evitar repeticao.
       })
   }, [user])
 
   const handleSkip = useCallback(() => {
+    if (user?.id) {
+      localStorage.setItem(dismissedKey(user.id), 'true')
+    }
     setOpen(false)
+  }, [user?.id])
+
+  const setAnswer = useCallback((questionId: string, value: unknown) => {
+    setAnswers((current) => ({ ...current, [questionId]: value }))
   }, [])
 
   const handleSubmit = useCallback(async () => {
-    if (!energy) return
+    const energyLevel = Number(answers.energy_level)
+    if (!energyLevel) return
     setSaving(true)
 
     try {
-      const finalObstacle =
-        obstacle === 'Sem obstáculos hoje'
-          ? null
-          : obstacle === 'outro'
-            ? customObstacle || null
-            : obstacle
-
       const res = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          energy_level: energy,
-          intention,
-          obstacle: finalObstacle,
+          energy_level: energyLevel,
+          intention: String(answers.priority_focus || '') || null,
+          obstacle: String(answers.blocker || '') || null,
+          answers,
+          question_set: questions,
         }),
       })
 
-      if (res.ok) {
-        const today = new Date().toISOString().split('T')[0]
-        localStorage.setItem(CHECKIN_STORAGE_KEY, today)
+      if (res.ok && user?.id) {
+        localStorage.setItem(todayKey(user.id), 'true')
+        localStorage.removeItem(dismissedKey(user.id))
         setOpen(false)
       }
     } catch {
-      // silently fail — check-in is optional
+      // silently fail - check-in is optional
     } finally {
       setSaving(false)
     }
-  }, [energy, intention, obstacle, customObstacle])
+  }, [answers, questions, user?.id])
+
+  const currentQuestion = questions[step]
+  const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined
+  const currentRequiredMissing = Boolean(currentQuestion?.required && !answerIsFilled(currentAnswer))
 
   const handleNext = useCallback(() => {
-    if (step < 2) {
+    if (step < questions.length - 1) {
       setStep((s) => s + 1)
     } else {
       handleSubmit()
     }
-  }, [step, handleSubmit])
+  }, [step, questions.length, handleSubmit])
 
-  if (!user || user.role !== 'seller') return null
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (!nextOpen) {
+      handleSkip()
+      return
+    }
+    setOpen(true)
+  }, [handleSkip])
+
+  if (!user || user.role !== 'seller' || !currentQuestion) return null
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -128,24 +147,23 @@ export function DailyCheckinModal() {
             Check-in do dia
           </DialogTitle>
           <DialogDescription>
-            {step === 0 && 'Como você está hoje?'}
-            {step === 1 && 'Qual seu objetivo principal hoje?'}
-            {step === 2 && 'Tem algum obstáculo hoje?'}
+            {currentQuestion.description || 'Responda em poucos segundos para calibrar seu dia.'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          {/* Step 0 — Energia */}
-          {step === 0 && (
+        <div className="space-y-4 py-4">
+          <p className="text-base font-semibold leading-snug">{currentQuestion.title}</p>
+
+          {currentQuestion.type === 'energy' && (
             <div className="flex justify-center gap-3">
               {ENERGY_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setEnergy(opt.value)}
+                  onClick={() => setAnswer(currentQuestion.id, opt.value)}
                   className={cn(
                     'flex flex-col items-center gap-1 rounded-xl p-3 transition-all',
                     'hover:bg-accent/50',
-                    energy === opt.value
+                    currentAnswer === opt.value
                       ? 'bg-primary/15 ring-2 ring-primary scale-110'
                       : 'bg-card'
                   )}
@@ -157,19 +175,18 @@ export function DailyCheckinModal() {
             </div>
           )}
 
-          {/* Step 1 — Intenção */}
-          {step === 1 && (
+          {currentQuestion.type === 'single_choice' && (
             <div className="flex flex-col gap-2">
-              {INTENTION_OPTIONS.map((opt) => (
+              {(currentQuestion.options ?? []).map((opt) => (
                 <button
                   key={opt}
-                  onClick={() => setIntention(opt)}
+                  onClick={() => setAnswer(currentQuestion.id, opt)}
                   className={cn(
-                    'rounded-lg px-4 py-3 text-left text-sm transition-all',
+                    'rounded-lg border px-4 py-3 text-left text-sm transition-all',
                     'hover:bg-accent/50',
-                    intention === opt
-                      ? 'bg-primary/15 ring-2 ring-primary font-medium'
-                      : 'bg-card border border-border'
+                    currentAnswer === opt
+                      ? 'border-primary bg-primary/15 ring-2 ring-primary font-medium'
+                      : 'border-border bg-card'
                   )}
                 >
                   {opt}
@@ -178,61 +195,24 @@ export function DailyCheckinModal() {
             </div>
           )}
 
-          {/* Step 2 — Obstáculo */}
-          {step === 2 && (
-            <div className="flex flex-col gap-2">
-              {OBSTACLE_OPTIONS.map((opt) => (
-                <button
-                  key={opt}
-                  onClick={() => {
-                    setObstacle(opt)
-                    setCustomObstacle('')
-                  }}
-                  className={cn(
-                    'rounded-lg px-4 py-3 text-left text-sm transition-all',
-                    'hover:bg-accent/50',
-                    obstacle === opt
-                      ? 'bg-primary/15 ring-2 ring-primary font-medium'
-                      : 'bg-card border border-border'
-                  )}
-                >
-                  {opt}
-                </button>
-              ))}
-              <button
-                onClick={() => setObstacle('outro')}
-                className={cn(
-                  'rounded-lg px-4 py-3 text-left text-sm transition-all',
-                  'hover:bg-accent/50',
-                  obstacle === 'outro'
-                    ? 'bg-primary/15 ring-2 ring-primary font-medium'
-                    : 'bg-card border border-border'
-                )}
-              >
-                Outro...
-              </button>
-              {obstacle === 'outro' && (
-                <input
-                  type="text"
-                  placeholder="Descreva o obstáculo..."
-                  value={customObstacle}
-                  onChange={(e) => setCustomObstacle(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  autoFocus
-                />
-              )}
-            </div>
+          {currentQuestion.type === 'text' && (
+            <input
+              type="text"
+              value={String(currentAnswer || '')}
+              onChange={(event) => setAnswer(currentQuestion.id, event.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              autoFocus
+            />
           )}
         </div>
 
-        {/* Progress dots */}
         <div className="flex justify-center gap-2 pb-2">
-          {[0, 1, 2].map((i) => (
+          {questions.map((question, index) => (
             <div
-              key={i}
+              key={question.id}
               className={cn(
                 'h-2 w-2 rounded-full transition-all',
-                i === step ? 'bg-primary w-6' : i < step ? 'bg-primary/50' : 'bg-muted'
+                index === step ? 'bg-primary w-6' : index < step ? 'bg-primary/50' : 'bg-muted'
               )}
             />
           ))}
@@ -244,13 +224,10 @@ export function DailyCheckinModal() {
           </Button>
           <Button
             onClick={handleNext}
-            disabled={
-              (step === 0 && !energy) ||
-              saving
-            }
+            disabled={currentRequiredMissing || saving}
             className="flex-1"
           >
-            {saving ? 'Salvando...' : step < 2 ? 'Próximo' : 'Concluir'}
+            {saving ? 'Salvando...' : step < questions.length - 1 ? 'Proximo' : 'Concluir'}
           </Button>
         </div>
       </DialogContent>

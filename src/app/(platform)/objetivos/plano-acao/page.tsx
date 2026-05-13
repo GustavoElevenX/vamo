@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowLeft, CheckCircle2, Filter, Plus, Target, User, Zap } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, BarChart3, CheckCircle2, Clock, Filter, Plus, Target, User, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -42,9 +42,26 @@ const STATUS_LABEL: Record<string, string> = {
   skipped: 'Ignorada',
 }
 
-export default function PlanoAcaoPage() {
+type MissionManagementVariant = 'goals' | 'team'
+
+function isMissionOverdue(mission: Pick<Mission, 'deadline' | 'status'>) {
+  return Boolean(
+    mission.deadline &&
+      !['completed', 'expired', 'cancelled', 'skipped'].includes(mission.status) &&
+      new Date(mission.deadline).getTime() < Date.now(),
+  )
+}
+
+function executionRate(missions: Mission[]) {
+  const considered = missions.filter((mission) => !['cancelled', 'skipped'].includes(mission.status))
+  if (considered.length === 0) return 0
+  return Math.round((considered.filter((mission) => mission.status === 'completed').length / considered.length) * 100)
+}
+
+export function MissionManagementPage({ variant = 'goals' }: { variant?: MissionManagementVariant }) {
   const router = useRouter()
   const [missions, setMissions] = useState<Mission[]>([])
+  const [approvals, setApprovals] = useState<Mission[]>([])
   const [sellers, setSellers] = useState<Seller[]>([])
   const [kpis, setKpis] = useState<Kpi[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,18 +85,25 @@ export default function PlanoAcaoPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [missionsRes, sellersRes, kpisRes] = await Promise.all([
+      const approvalsRequest = variant === 'team'
+        ? fetch('/api/missions/approvals', { credentials: 'same-origin' }).then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+        : Promise.resolve({ ok: true, data: { approvals: [] } })
+
+      const [missionsRes, sellersRes, kpisRes, approvalsRes] = await Promise.all([
         fetch('/api/missions', { credentials: 'same-origin' }).then((res) => res.json().then((data) => ({ ok: res.ok, data }))),
         fetch('/api/team/sellers', { credentials: 'same-origin' }).then((res) => res.json().then((data) => ({ ok: res.ok, data }))),
         fetch('/api/kpis', { credentials: 'same-origin' }).then((res) => res.json().then((data) => ({ ok: res.ok, data }))),
+        approvalsRequest,
       ])
       if (!missionsRes.ok) throw new Error(missionsRes.data.error || 'Erro ao carregar missoes')
       if (!sellersRes.ok) throw new Error(sellersRes.data.error || 'Erro ao carregar vendedores')
       if (!kpisRes.ok) throw new Error(kpisRes.data.error || 'Erro ao carregar indicadores')
+      if (!approvalsRes.ok) throw new Error(approvalsRes.data.error || 'Erro ao carregar aprovacoes')
 
       const sellerList = sellersRes.data.sellers ?? []
       const kpiList = (kpisRes.data.kpis ?? []) as Kpi[]
       setMissions(missionsRes.data.missions ?? [])
+      setApprovals(approvalsRes.data.approvals ?? [])
       setSellers(sellerList)
       setKpis(kpiList)
       setForm((prev) => ({
@@ -93,19 +117,37 @@ export default function PlanoAcaoPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [variant])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
   const selectedKpi = kpis.find((kpi) => kpi.id === form.kpiId)
+  const isTeamView = variant === 'team'
+  const backHref = isTeamView ? '/monitoramento' : '/objetivos'
+  const pageTitle = isTeamView ? 'Missões da Equipe' : 'Plano de acao'
+  const pageDescription = isTeamView
+    ? 'Acompanhe, filtre, aprove e crie missões reais para os vendedores do time.'
+    : 'Crie missoes verificaveis por KPI, evento, prazo e validacao.'
+  const createTitle = isTeamView ? 'Nova missao operacional' : 'Nova missao para vendedor'
 
   const filtered = useMemo(() => missions.filter((mission) => {
     if (filterStatus !== 'all' && mission.status !== filterStatus) return false
     if (filterSeller !== 'all' && mission.user_id !== filterSeller) return false
     return true
   }), [missions, filterSeller, filterStatus])
+
+  const summary = useMemo(() => {
+    const awaiting = approvals.length || missions.filter((mission) => mission.status === 'awaiting_approval').length
+    return {
+      active: missions.filter((mission) => ['pending', 'in_progress', 'rejected'].includes(mission.status)).length,
+      awaiting,
+      overdue: missions.filter(isMissionOverdue).length,
+      completed: missions.filter((mission) => mission.status === 'completed').length,
+      execution: executionRate(missions),
+    }
+  }, [approvals.length, missions])
 
   const createMission = async () => {
     if (!form.title.trim() || !form.userId) {
@@ -186,22 +228,88 @@ export default function PlanoAcaoPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/objetivos')}>
+          <Button variant="ghost" size="icon" onClick={() => router.push(backHref)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Plano de acao</h1>
-            <p className="text-sm text-muted-foreground">Crie missoes verificaveis por KPI, evento, prazo e validacao.</p>
+            <h1 className="text-xl font-semibold tracking-tight">{pageTitle}</h1>
+            <p className="text-sm text-muted-foreground">{pageDescription}</p>
           </div>
         </div>
         <Badge variant="secondary">{missions.length} missoes</Badge>
       </div>
 
+      {isTeamView && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <Card>
+            <CardContent className="pt-4">
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><Zap className="h-3.5 w-3.5" />Ativas</p>
+              <p className="mt-1 text-2xl font-semibold">{summary.active}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><Clock className="h-3.5 w-3.5" />Aguardando aprovacao</p>
+              <p className="mt-1 text-2xl font-semibold">{summary.awaiting}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><AlertTriangle className="h-3.5 w-3.5" />Atrasadas</p>
+              <p className="mt-1 text-2xl font-semibold">{summary.overdue}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5" />Concluidas</p>
+              <p className="mt-1 text-2xl font-semibold">{summary.completed}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><BarChart3 className="h-3.5 w-3.5" />Taxa de execucao</p>
+              <p className="mt-1 text-2xl font-semibold">{summary.execution}%</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {isTeamView && approvals.length > 0 && (
+        <Card className="border-amber-500/25 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-amber-500" />
+              Missoes aguardando aprovacao
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            {approvals.map((mission) => (
+              <div key={mission.id} className="rounded-lg border border-amber-500/20 bg-background/70 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{mission.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{mission.user?.name || 'Vendedor'} - {mission.kpi?.name || mission.type}</p>
+                  </div>
+                  <Badge variant="outline">+{mission.xp_reward} XP</Badge>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" onClick={() => approve(mission.id, true)} disabled={saving}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Aprovar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => approve(mission.id, false)} disabled={saving}>Reprovar</Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
             <Plus className="h-4 w-4" />
-            Nova missao para vendedor
+            {createTitle}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -360,4 +468,8 @@ export default function PlanoAcaoPage() {
       )}
     </div>
   )
+}
+
+export default function PlanoAcaoPage() {
+  return <MissionManagementPage />
 }

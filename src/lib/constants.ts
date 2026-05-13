@@ -153,7 +153,6 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       items: [
         { label: 'Converse com Vamo IA', href: '/chat-ia', icon: 'MessageSquare' },
         { label: 'Meu PDI', href: '/desenvolvimento/pdi', icon: 'ClipboardCheck' },
-        { label: 'Feedback da Vamo IA', href: '/desenvolvimento/feedback-ia', icon: 'Bot' },
         { label: 'Simulador de proposta', href: '/simulador', icon: 'Swords' },
         { label: 'Performance', href: '/performance', icon: 'LayoutDashboard' },
         { label: 'Indicadores', href: '/performance/indicadores', icon: 'BarChart3' },

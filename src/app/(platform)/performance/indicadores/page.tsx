@@ -83,17 +83,23 @@ export default function IndicadoresPage() {
         label="Performance"
         labelIcon={<Target className="h-3 w-3" />}
         title={<>Meus <TitleHighlight>Indicadores</TitleHighlight></>}
-        description="KPIs reais do ciclo, conectados aos lancamentos registrados e ao plano de ganhos."
+        description="Indicadores sao metas operacionais configuradas pelo gestor para medir sua execucao comercial."
         actions={<span className="pill-glow">{data?.period.label ?? 'Ciclo atual'}</span>}
       />
+
+      <Card className="border-blue-500/20 bg-blue-500/5">
+        <CardContent className="pt-4 text-sm text-muted-foreground">
+          <strong className="text-foreground">Indicador mede.</strong> Aqui aparecem metas diarias, semanais ou mensais configuradas pelo gestor. Performance e a leitura geral da Vamo sobre resultado, execucao, pipeline e risco comercial.
+        </CardContent>
+      </Card>
 
       {indicators.length === 0 ? (
         <Card className="border-border/50">
           <CardContent className="py-8 text-center">
             <Target className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm font-medium">Nenhum KPI ativo para acompanhar.</p>
+            <p className="text-sm font-medium">Nenhum indicador ativo configurado pelo gestor.</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              O gestor precisa configurar KPIs em Criterios ou Configuracoes de KPIs.
+              Assim que houver indicadores ativos, voce vera meta, executado, restante e fonte do indicador.
             </p>
           </CardContent>
         </Card>
@@ -116,7 +122,7 @@ export default function IndicadoresPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{kpi.name}</p>
-                        <p className="text-[10px] text-muted-foreground">Fonte: {kpi.source}</p>
+                        <p className="text-[10px] text-muted-foreground">Fonte do indicador: {kpi.source} | Configurado pelo gestor</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -132,11 +138,14 @@ export default function IndicadoresPage() {
                   <div>
                     <div className="mb-1.5 flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        {formatValue(kpi.current, kpi.unit)} / {formatValue(kpi.target, kpi.unit)}
+                        Executado: {formatValue(kpi.current, kpi.unit)} / Meta: {formatValue(kpi.target, kpi.unit)}
                       </span>
                       <span className={`text-[10px] font-medium ${statusColor}`}>{kpi.status}</span>
                     </div>
                     <Progress value={pct} className={`h-2 ${progressColor}`} />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Restante: {formatValue(Math.max(0, kpi.target - kpi.current), kpi.unit)}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -172,7 +181,7 @@ export default function IndicadoresPage() {
               <div className="flex-1">
                 <p className="text-sm font-medium">Foco recomendado para hoje</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Priorize <strong className="text-foreground">{focus.name}</strong>: e o indicador com melhor relacao entre lacuna restante e ganho potencial neste ciclo.
+                  Priorize <strong className="text-foreground">{focus.name}</strong>: e o indicador com melhor relacao entre meta restante e potencial de recompensa neste ciclo.
                 </p>
                 <Button size="sm" variant="outline" className="mt-2 h-7 gap-1.5 text-xs" render={<Link href="/performance/missoes" />}>
                   <Sparkles className="h-3 w-3" />

@@ -14,6 +14,7 @@ import { PageHeader, TitleHighlight } from '@/components/shared/page-header'
 import { ContextualRecommendationCard, type ContextualRecommendation } from '@/components/performance-os/ContextualRecommendationCard'
 import {
   buildCommissionEntries,
+  calculateCommissionEntriesForSale,
   formatCurrency,
   formatD1Message,
   formatDatePtBr,
@@ -33,6 +34,10 @@ interface DealRow {
   title: string
   value: number | string
   received_amount?: number | string | null
+  stage?: string | null
+  probability?: number | string | null
+  next_action_title?: string | null
+  next_action_due_at?: string | null
   expected_close: string | null
   updated_at: string | null
   account_id: string | null
@@ -43,6 +48,18 @@ interface DealRow {
   commercial_table_id?: string | null
   commercial_table_name?: string | null
   crm_accounts?: { name?: string | null } | null
+}
+
+interface PotentialCommission {
+  dealId: string
+  title: string
+  customerName: string
+  dealValue: number
+  probability: number
+  commissionAmount: number
+  weightedCommission: number
+  nextActionTitle: string | null
+  nextActionDueAt: string | null
 }
 
 const reasons = [
@@ -82,6 +99,7 @@ export default function ComissaoPage() {
   const [loading, setLoading] = useState(true)
   const [entries, setEntries] = useState<CommissionEntryDraft[]>([])
   const [disputes, setDisputes] = useState<CommissionDispute[]>([])
+  const [potentialCommissions, setPotentialCommissions] = useState<PotentialCommission[]>([])
   const [statusFilter, setStatusFilter] = useState<'all' | CommissionEntryStatus>('all')
   const [search, setSearch] = useState('')
   const [contestReason, setContestReason] = useState<Record<string, string>>({})
@@ -118,7 +136,7 @@ export default function ComissaoPage() {
     if (!user) return
     setLoading(true)
     try {
-      const [{ data: persistedEntries }, { data: disputeRows }, { data: ruleRows }, { data: dealRows }, recommendationsRes] = await Promise.all([
+      const [{ data: persistedEntries }, { data: disputeRows }, { data: ruleRows }, { data: dealRows }, { data: openDealRows }, recommendationsRes] = await Promise.all([
         supabase
           .from('commission_entries')
           .select('*')
@@ -140,10 +158,18 @@ export default function ComissaoPage() {
           .order('priority', { ascending: true }),
         supabase
           .from('crm_deals')
-          .select('id, owner_id, title, value, received_amount, expected_close, updated_at, account_id, product_id, product_name, category_id, category_name, commercial_table_id, commercial_table_name, crm_accounts(name)')
+          .select('id, owner_id, title, value, received_amount, stage, probability, next_action_title, next_action_due_at, expected_close, updated_at, account_id, product_id, product_name, category_id, category_name, commercial_table_id, commercial_table_name, crm_accounts(name)')
           .eq('organization_id', user.organization_id)
           .eq('owner_id', user.id)
           .eq('stage', 'closed_won'),
+        supabase
+          .from('crm_deals')
+          .select('id, owner_id, title, value, received_amount, stage, probability, next_action_title, next_action_due_at, expected_close, updated_at, account_id, product_id, product_name, category_id, category_name, commercial_table_id, commercial_table_name, crm_accounts(name)')
+          .eq('organization_id', user.organization_id)
+          .eq('owner_id', user.id)
+          .not('stage', 'in', '("closed_won","closed_lost")')
+          .order('value', { ascending: false })
+          .limit(5),
         fetch('/api/action-recommendations'),
       ])
 
@@ -156,6 +182,42 @@ export default function ComissaoPage() {
       } else {
         setEntries(buildCommissionEntries(buildSales((dealRows ?? []) as DealRow[]), (ruleRows ?? []) as CommissionRule[], getD1Date()))
       }
+      const rules = (ruleRows ?? []) as CommissionRule[]
+      const potential = ((openDealRows ?? []) as DealRow[]).map((deal) => {
+        const sale: CommissionSaleInput = {
+          id: deal.id,
+          organization_id: user.organization_id,
+          seller_id: user.id,
+          seller_name: user.name,
+          customer_id: deal.account_id,
+          customer_name: deal.crm_accounts?.name ?? 'Cliente sem nome',
+          product_id: deal.product_id ?? deal.product_name ?? null,
+          product_name: deal.product_name ?? deal.title,
+          category_id: deal.category_id ?? deal.category_name ?? null,
+          category_name: deal.category_name ?? 'Sem categoria',
+          commercial_table_id: deal.commercial_table_id ?? deal.commercial_table_name ?? null,
+          commercial_table_name: deal.commercial_table_name ?? 'Tabela padrao',
+          sale_amount: toNumber(deal.value),
+          received_amount: 0,
+          sale_date: deal.expected_close ?? deal.updated_at ?? new Date().toISOString(),
+          title: deal.title,
+        }
+        const commissionAmount = calculateCommissionEntriesForSale(sale, rules)
+          .reduce((sum, entry) => sum + entry.commission_amount, 0)
+        const probability = toNumber(deal.probability)
+        return {
+          dealId: deal.id,
+          title: deal.title,
+          customerName: deal.crm_accounts?.name ?? 'Cliente sem nome',
+          dealValue: toNumber(deal.value),
+          probability,
+          commissionAmount,
+          weightedCommission: commissionAmount * probability / 100,
+          nextActionTitle: deal.next_action_title ?? null,
+          nextActionDueAt: deal.next_action_due_at ?? null,
+        }
+      }).filter((item) => item.commissionAmount > 0)
+      setPotentialCommissions(potential)
       setDisputes((disputeRows ?? []) as CommissionDispute[])
       if (recommendationsRes.ok) {
         const body = await recommendationsRes.json().catch(() => ({ recommendations: [] }))
@@ -185,8 +247,9 @@ export default function ComissaoPage() {
     const pending = entries.filter((entry) => entry.status === 'pending').reduce((sum, entry) => sum + entry.commission_amount, 0)
     const disputed = entries.filter((entry) => entry.status === 'disputed').reduce((sum, entry) => sum + entry.commission_amount, 0)
     const estimated = entries.reduce((sum, entry) => sum + entry.commission_amount, 0)
-    return { confirmed, pending, disputed, estimated, accumulated: confirmed + pending + disputed }
-  }, [entries])
+    const potential = potentialCommissions.reduce((sum, entry) => sum + entry.weightedCommission, 0)
+    return { confirmed, pending, disputed, estimated, potential, accumulated: confirmed + pending + disputed }
+  }, [entries, potentialCommissions])
 
   const disputeByEntry = useMemo(() => new Map(disputes.map((dispute) => [dispute.commission_entry_id, dispute])), [disputes])
 
@@ -293,19 +356,55 @@ export default function ComissaoPage() {
         actions={<Badge className="border-0 bg-primary/10 text-primary">Atualizacao D-1</Badge>}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <Card className="border-emerald-500/20 bg-emerald-500/5">
+        <CardContent className="pt-4 text-sm text-muted-foreground">
+          <strong className="text-foreground">Comissao recompensa.</strong> Sua comissao e calculada com base nas regras definidas pela empresa. Valores potenciais sao estimativas de oportunidades abertas e nao sao garantidos.
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <Summary icon={TrendingUp} label="Comissao acumulada ate ontem" value={formatCurrency(summary.accumulated)} tone="text-primary bg-primary/10" />
         <Summary icon={CheckCircle2} label="Comissao confirmada" value={formatCurrency(summary.confirmed)} tone="text-emerald-700 bg-emerald-500/10" />
         <Summary icon={Clock} label="Comissao pendente" value={formatCurrency(summary.pending)} tone="text-amber-700 bg-amber-500/10" />
+        <Summary icon={TrendingUp} label="Comissao potencial" value={formatCurrency(summary.potential)} tone="text-blue-700 bg-blue-500/10" />
         <Summary icon={ShieldAlert} label="Em contestacao" value={formatCurrency(summary.disputed)} tone="text-red-700 bg-red-500/10" />
         <Summary icon={ReceiptText} label="Total estimado do mes" value={formatCurrency(summary.estimated)} tone="text-blue-700 bg-blue-500/10" />
       </div>
 
       <Card className="border-border/50">
         <CardContent className="pt-5 text-sm text-muted-foreground">
-          Os valores exibidos representam uma parcial e podem mudar ate o fechamento do periodo.
+          Confirmada ja foi reconhecida pela regra da empresa. Pendente depende de recebimento, validacao ou regra interna. Potencial e estimativa de oportunidades abertas se a venda for ganha.
         </CardContent>
       </Card>
+
+      {potentialCommissions.length > 0 && (
+        <Card className="border-blue-500/20 bg-blue-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <TrendingUp className="h-4 w-4 text-blue-500" />
+              Oportunidades que podem destravar comissao
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {potentialCommissions.map((item) => (
+              <div key={item.dealId} className="rounded-lg border border-blue-500/20 bg-background/70 p-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">{item.customerName} - {item.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Valor: {formatCurrency(item.dealValue)} | Probabilidade: {item.probability}% | Proxima acao: {item.nextActionTitle || 'definir proxima acao'}
+                    </p>
+                  </div>
+                  <div className="text-sm md:text-right">
+                    <p className="font-semibold text-blue-600">{formatCurrency(item.weightedCommission)} potencial ponderado</p>
+                    <p className="text-xs text-muted-foreground">{formatCurrency(item.commissionAmount)} se a venda for ganha</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {commissionRecommendation && (
         <ContextualRecommendationCard recommendation={commissionRecommendation} />

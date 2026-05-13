@@ -110,6 +110,7 @@ interface HojeCache {
   lastRecognition: string | null
   deals: SellerDeal[]
   managerNudges: ManagerNudge[]
+  commissionRate: number
 }
 
 type Priority =
@@ -140,6 +141,7 @@ export default function HojePage() {
   const [lastRecognition, setLastRecognition] = useState<string | null>(initialCache?.lastRecognition ?? null)
   const [deals, setDeals] = useState<SellerDeal[]>(initialCache?.deals ?? [])
   const [managerNudges, setManagerNudges] = useState<ManagerNudge[]>(initialCache?.managerNudges ?? [])
+  const [commissionRate, setCommissionRate] = useState(initialCache?.commissionRate ?? 0)
   const [recommendations, setRecommendations] = useState<ContextualRecommendation[]>([])
 
   useEffect(() => {
@@ -166,11 +168,12 @@ export default function HojePage() {
           .limit(5),
         supabase
           .from('kpi_definitions')
-          .select('id, name, unit, targets')
+          .select('id, name, unit, targets, target_daily, period')
           .eq('organization_id', user.organization_id)
           .eq('active', true)
-          .limit(1)
-          .maybeSingle(),
+          .or('period.eq.daily,target_daily.gt.0')
+          .order('target_daily', { ascending: false })
+          .limit(3),
         supabase
           .from('kpi_entries')
           .select('value, kpi_id')
@@ -206,6 +209,13 @@ export default function HojePage() {
           .limit(3),
         fetch('/api/crm/deals').then(async (res) => (res.ok ? res.json() : { deals: [] })),
         fetch('/api/action-recommendations').then(async (res) => (res.ok ? res.json() : { recommendations: [] })),
+        supabase
+          .from('commission_rules')
+          .select('percentage, priority')
+          .eq('organization_id', user.organization_id)
+          .eq('active', true)
+          .order('priority', { ascending: true })
+          .limit(1),
       ])
 
       const timeout = new Promise<never>((_, reject) =>
@@ -216,7 +226,7 @@ export default function HojePage() {
 
       const xpData = results[0].status === 'fulfilled' ? results[0].value.data : null
       const missions = results[1].status === 'fulfilled' ? results[1].value.data : null
-      const kpiDefs = results[2].status === 'fulfilled' ? results[2].value.data : null
+      const dailyKpiDefs = results[2].status === 'fulfilled' ? results[2].value.data : []
       const todayEntries = results[3].status === 'fulfilled' ? results[3].value.data : null
       const monthEntries = results[4].status === 'fulfilled' ? results[4].value.data : null
       const checkin = results[5].status === 'fulfilled' ? results[5].value.data : null
@@ -224,6 +234,7 @@ export default function HojePage() {
       const nudgesData = results[7].status === 'fulfilled' ? results[7].value.data : null
       const dealBody = results[8].status === 'fulfilled' ? results[8].value : { deals: [] }
       const recommendationBody = results[9].status === 'fulfilled' ? results[9].value : { recommendations: [] }
+      const commissionRules = results[10].status === 'fulfilled' ? results[10].value.data : []
 
       if (cancelled) return
 
@@ -232,15 +243,20 @@ export default function HojePage() {
       const newActiveMissionCount = missions?.length ?? 0
 
       let newDailyKpi: KpiProgress | null = null
-      if (kpiDefs && todayEntries) {
+      const selectedDailyKpi = (dailyKpiDefs ?? []).find((kpi: any) => {
+        const dailyTarget = Number(kpi.target_daily ?? kpi.targets?.daily ?? 0)
+        return dailyTarget > 0
+      }) ?? null
+
+      if (selectedDailyKpi && todayEntries) {
         const todayTotal = todayEntries
-          .filter((entry: { kpi_id: string }) => entry.kpi_id === kpiDefs.id)
+          .filter((entry: { kpi_id: string }) => entry.kpi_id === selectedDailyKpi.id)
           .reduce((sum: number, entry: { value?: number }) => sum + (entry.value || 0), 0)
         newDailyKpi = {
-          name: kpiDefs.name,
+          name: selectedDailyKpi.name,
           current: todayTotal,
-          target: (kpiDefs.targets as { daily?: number } | null)?.daily || 0,
-          unit: kpiDefs.unit,
+          target: Number(selectedDailyKpi.target_daily ?? selectedDailyKpi.targets?.daily ?? 0),
+          unit: selectedDailyKpi.unit,
         }
       }
 
@@ -267,6 +283,7 @@ export default function HojePage() {
         sender_name: nudge.sender?.name ?? 'Gestor',
       }))
       const newRecommendations = ((recommendationBody.recommendations ?? []) as ContextualRecommendation[]).slice(0, 3)
+      const newCommissionRate = Number(commissionRules?.[0]?.percentage ?? 0)
 
       setStreak(newStreak)
       setPriorityMission(newPriorityMission)
@@ -278,6 +295,7 @@ export default function HojePage() {
       setLastRecognition(newRecognition)
       setDeals(newDeals)
       setManagerNudges(newManagerNudges)
+      setCommissionRate(newCommissionRate)
       setRecommendations(newRecommendations)
       setLoading(false)
 
@@ -292,6 +310,7 @@ export default function HojePage() {
         lastRecognition: newRecognition,
         deals: newDeals,
         managerNudges: newManagerNudges,
+        commissionRate: newCommissionRate,
       }, 3 * 60 * 1000)
     }
 
@@ -363,6 +382,9 @@ export default function HojePage() {
     amber: 'border-amber-500/25 bg-amber-500/10 text-amber-500',
     green: 'border-primary/25 bg-primary/10 text-primary',
   }[priority.tone]
+  const priorityPotentialCommission = priority.kind === 'deal' && commissionRate > 0
+    ? (priority.gain * commissionRate) / 100
+    : 0
 
   return (
     <div className="space-y-6">
@@ -386,7 +408,7 @@ export default function HojePage() {
           <div>
             <p className="font-bold">VAMO IA - Briefing de hoje</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Priorize <span className="font-semibold text-primary">{priority.title}</span>. Isso protege forecast, ganho potencial e ritmo de execucao.
+              Priorize <span className="font-semibold text-primary">{priority.title}</span>. Isso protege forecast, execucao e possivel comissao sem tratar estimativa como valor garantido.
             </p>
           </div>
         </div>
@@ -437,8 +459,15 @@ export default function HojePage() {
                 <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{priority.description}</p>
               </div>
               <div className="rounded-2xl border border-primary/20 bg-background/50 p-4 text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ganho potencial</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {priority.kind === 'deal' ? 'Forecast ponderado' : 'Ganho potencial'}
+                </p>
                 <p className="mt-1 text-3xl font-black tabular-nums text-primary">{priority.gain ? compactCurrency(priority.gain) : '+XP'}</p>
+                {priorityPotentialCommission > 0 && (
+                  <p className="mt-2 max-w-[13rem] text-xs leading-relaxed text-muted-foreground">
+                    Comissao potencial ponderada: {compactCurrency(priorityPotentialCommission)} se a venda avancar conforme a probabilidade.
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-3">

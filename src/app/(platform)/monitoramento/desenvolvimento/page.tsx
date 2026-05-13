@@ -287,7 +287,7 @@ export default function ManagerDevelopmentPage() {
           <div className="section-label"><Brain className="h-3.5 w-3.5" />Gestao</div>
           <h1 className="mt-2 text-2xl font-black tracking-tight">Desenvolvimento da Equipe</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Gaps, PDIs, aplicacoes reais e ROI do desenvolvimento vistos como decisao comercial, nao biblioteca de cursos.
+            Gaps, feedback da VamoAI, PDIs, aplicacoes reais e ROI vistos como decisao comercial do gestor.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -304,6 +304,15 @@ export default function ManagerDevelopmentPage() {
           </Button>
         </div>
       </div>
+
+      <Card className="border-blue-500/25 bg-blue-500/10">
+        <CardContent className="space-y-2 p-5">
+          <div className="section-label"><Brain className="h-3.5 w-3.5" />Regra de responsabilidade</div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            A VamoAI apoia o diagnostico, mas nao decide sozinha. O gestor interpreta gaps, aprova PDI, transforma recomendacao em missao pratica, valida evidencia e acompanha impacto no resultado.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-5">
         <PdiEvidenceCard label="Gaps criticos" value={String(gaps.filter((gap) => ['critical', 'high'].includes(gap.severity)).length)} hint="Priorizados por impacto e confianca" />

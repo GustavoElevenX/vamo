@@ -29,7 +29,7 @@ export async function GET() {
 
     const { data, error } = await adminClient
       .from('ai_missions')
-      .select('*, kpi:kpi_definitions(id,name,unit,source_event), pdi_plan:pdi_plans(id,status)')
+      .select('*, kpi:kpi_definitions(id,name,unit,source_event), pdi_plan:pdi_plans(id,title,status)')
       .eq('organization_id', appUser.organization_id)
       .eq('user_id', appUser.id)
       .in('status', ['pending', 'in_progress', 'awaiting_approval', 'rejected', 'completed', 'expired'])

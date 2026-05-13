@@ -27,6 +27,8 @@ type Mission = {
   validationLabel: string
   primaryCta: string
   kpi?: { id: string; name: string; unit: string | null; source_event: string | null } | null
+  pdi_plan_id?: string | null
+  pdi_plan?: { id: string; title: string | null; status: string | null } | null
 }
 
 const STATUS_STYLE: Record<string, { label: string; className: string }> = {
@@ -147,6 +149,13 @@ export default function MissoesPage() {
             </div>
           </div>
 
+          {mission.pdi_plan && (
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-muted-foreground">
+              <strong className="text-foreground">PDI relacionado:</strong> {mission.pdi_plan.title || 'Plano de desenvolvimento'}.
+              {' '}Ao concluir a missao, a aplicacao pratica fica registrada para validacao do gestor.
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <Progress value={mission.progressPct} className="h-2" />
             <span className="w-12 text-right text-xs text-muted-foreground">{mission.progressPct}%</span>
@@ -185,6 +194,12 @@ export default function MissoesPage() {
         title={<>Missoes <TitleHighlight>de Execucao</TitleHighlight></>}
         description={missions.length ? `${missions.length} missoes com progresso real` : 'Nenhuma missao ativa no momento'}
       />
+
+      <Card className="border-amber-500/20 bg-amber-500/5">
+        <CardContent className="pt-4 text-sm text-muted-foreground">
+          <strong className="text-foreground">Missao executa.</strong> Missões sao desafios praticos criados pelo gestor ou sugeridos pela VamoAI para melhorar sua execucao comercial. Algumas sao validadas automaticamente; outras precisam de aprovacao do gestor.
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Em execucao</p><p className="text-2xl font-semibold">{grouped.active.length}</p></CardContent></Card>

@@ -127,8 +127,11 @@ interface PriorityAction {
   reason: string
   impact: string
   nextStep: string
-  href: string
-  secondaryHref: string
+  primaryLabel: string
+  primaryHref: string
+  secondaryLabel?: string
+  secondaryHref?: string
+  aiHref?: string
   tone: 'red' | 'amber' | 'green'
 }
 
@@ -626,8 +629,11 @@ export default function PerformancePage() {
           ? `Pode destravar ${impactPct}% da sua meta mensal.`
           : `Pode destravar ${formatCurrency(weightedDealValue(deal))} de forecast ponderado.`,
         nextStep: deal.next_action_title || 'Enviar follow-up com pergunta de decisao.',
-        href: `/crm/${deal.id}`,
+        primaryLabel: 'Abrir oportunidade',
+        primaryHref: `/crm/${deal.id}`,
+        secondaryLabel: 'Registrar acao manual',
         secondaryHref: '/kpis/registrar',
+        aiHref: '/chat-ia',
         tone: isOverdue(deal) ? 'red' : 'amber',
       }
     }
@@ -639,8 +645,11 @@ export default function PerformancePage() {
         reason: 'Missao ativa pode melhorar sua evolucao comercial e gerar XP.',
         impact: `${mission.xp_reward ?? 0} XP de recompensa vinculada a execucao.`,
         nextStep: 'Abra a missao, registre a acao e solicite validacao quando concluir.',
-        href: '/performance/missoes',
-        secondaryHref: '/kpis/registrar',
+        primaryLabel: 'Abrir missao',
+        primaryHref: '/performance/missoes',
+        secondaryLabel: 'Registrar evidencia',
+        secondaryHref: '/desenvolvimento/pdi',
+        aiHref: '/chat-ia',
         tone: 'green',
       }
     }
@@ -650,8 +659,11 @@ export default function PerformancePage() {
       reason: 'Ainda nao existe uma oportunidade critica priorizada pela Vamo.',
       impact: 'Aumenta seu ritmo de execucao e melhora a leitura da performance.',
       nextStep: 'Registre follow-up, ligacao, reuniao ou proposta enviada.',
-      href: '/kpis/registrar',
+      primaryLabel: 'Registrar acao',
+      primaryHref: '/kpis/registrar',
+      secondaryLabel: 'Ver pipeline',
       secondaryHref: '/crm',
+      aiHref: '/chat-ia',
       tone: 'green',
     }
   }, [activeMissions, goalTarget, openDeals, riskDeals])
@@ -675,7 +687,7 @@ export default function PerformancePage() {
       <PageHeader
         label="Performance"
         title={<>Minha <TitleHighlight>Performance Comercial</TitleHighlight></>}
-        description="Entenda seu resultado, sua execucao, seus riscos e a acao que mais impacta sua meta hoje."
+        description="Performance combina resultado, execucao, saude do pipeline e evolucao comercial para interpretar onde agir agora."
         actions={(
           <Badge className={statusTone}>{performanceStatus.label}</Badge>
         )}
@@ -769,11 +781,15 @@ export default function PerformancePage() {
               <p className="text-sm text-muted-foreground"><strong className="text-foreground">Proximo passo sugerido:</strong> {topImpactAction.nextStep}</p>
             </div>
             <div className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
-              <Button render={<Link href={topImpactAction.secondaryHref} />}>
-                Registrar acao <ArrowRight className="h-4 w-4" />
+              <Button render={<Link href={topImpactAction.primaryHref} />}>
+                {topImpactAction.primaryLabel} <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" render={<Link href={topImpactAction.href} />}>Abrir oportunidade</Button>
-              <Button variant="outline" render={<Link href="/chat-ia" />}>
+              {topImpactAction.secondaryHref && topImpactAction.secondaryLabel && (
+                <Button variant="outline" render={<Link href={topImpactAction.secondaryHref} />}>
+                  {topImpactAction.secondaryLabel}
+                </Button>
+              )}
+              <Button variant="outline" render={<Link href={topImpactAction.aiHref ?? '/chat-ia'} />}>
                 <MessageSquare className="h-4 w-4" />
                 Pedir ajuda da IA
               </Button>

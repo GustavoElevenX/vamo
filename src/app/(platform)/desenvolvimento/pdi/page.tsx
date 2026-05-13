@@ -184,7 +184,7 @@ export default function SellerPdiPage() {
 
       <Card className="border-blue-500/20 bg-blue-500/5">
         <CardContent className="pt-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">PDI desenvolve.</strong> A logica aqui e sempre: gap real, microtreino, aplicacao pratica, evidencia, validacao do gestor e evolucao acompanhada.
+          <strong className="text-foreground">PDI desenvolve.</strong> PDI desenvolve habilidade; missao forca aplicacao pratica. A logica aqui e sempre: gap real, microtreino, evidencia, validacao do gestor e evolucao acompanhada.
         </CardContent>
       </Card>
 
@@ -321,7 +321,7 @@ export default function SellerPdiPage() {
                   <div>
                     <p className="font-medium">{mission.title}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Esta missao transforma o PDI em aplicacao pratica. Concluir a missao nao conclui o PDI automaticamente quando houver validacao humana.
+                      Esta missao transforma o PDI em aplicacao pratica. Concluir a missao nao conclui o PDI automaticamente quando houver validacao humana; envie evidencia para o gestor validar sua evolucao.
                     </p>
                   </div>
                   <Badge variant="outline">{mission.status}</Badge>

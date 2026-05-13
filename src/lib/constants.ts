@@ -117,7 +117,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
         { label: 'Diagnostico', href: '/diagnostico', icon: 'Search' },
         { label: 'Objetivos e Metas', href: '/objetivos/metas', icon: 'Target' },
         { label: 'Comissionamento', href: '/configuracao/comissionamento', icon: 'DollarSign' },
-        { label: 'Programa', href: '/configuracao/kpis', icon: 'Settings' },
+        { label: 'Programa', href: '/configuracoes/kpis', icon: 'Settings' },
       ],
     },
   ],

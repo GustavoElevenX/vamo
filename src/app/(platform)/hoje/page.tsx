@@ -324,6 +324,14 @@ export default function HojePage() {
   const sortedDeals = useMemo(() => [...deals].sort((a, b) => scoreDeal(b) - scoreDeal(a)), [deals])
   const overdueDeals = useMemo(() => deals.filter((deal) => isOverdue(deal.next_action_due_at)), [deals])
   const noActionDeals = useMemo(() => deals.filter((deal) => !deal.next_action_title), [deals])
+  const sortedOverdueDeals = useMemo(
+    () => overdueDeals.slice().sort((a, b) => scoreDeal(b) - scoreDeal(a)),
+    [overdueDeals]
+  )
+  const sortedNoActionDeals = useMemo(
+    () => noActionDeals.slice().sort((a, b) => scoreDeal(b) - scoreDeal(a)),
+    [noActionDeals]
+  )
   const forecastLikely = useMemo(
     () => deals.reduce((sum, deal) => sum + (Number(deal.value || 0) * Number(deal.probability || 0)) / 100, 0),
     [deals]
@@ -341,25 +349,23 @@ export default function HojePage() {
   const kpiPct = dailyKpi?.target ? Math.min((dailyKpi.current / dailyKpi.target) * 100, 100) : 0
   const kpiRisk = !!dailyKpi?.target && dailyKpi.current < dailyKpi.target
   const topDeal = sortedDeals[0]
-  const priority: Priority = overdueDeals[0]
+  const priorityDeal = sortedOverdueDeals[0] ?? sortedNoActionDeals[0] ?? null
+  const priority: Priority = priorityDeal
     ? {
         kind: 'deal',
-        title: overdueDeals[0].next_action_title || `Retomar ${overdueDeals[0].account?.name || overdueDeals[0].title}`,
-        description: `Follow-up atrasado em ${overdueDeals[0].account?.name || overdueDeals[0].title}. Forecast impactado em ${compactCurrency(Number(overdueDeals[0].value || 0))}.`,
-        href: `/crm/${overdueDeals[0].id}`,
-        gain: Number(overdueDeals[0].value || 0) * Number(overdueDeals[0].probability || 0) / 100,
-        tone: 'rose',
+        title: priorityDeal.next_action_title || (
+          isOverdue(priorityDeal.next_action_due_at)
+            ? `Retomar ${priorityDeal.account?.name || priorityDeal.title}`
+            : `Definir proxima acao: ${priorityDeal.account?.name || priorityDeal.title}`
+        ),
+        description: isOverdue(priorityDeal.next_action_due_at)
+          ? `Follow-up atrasado em ${priorityDeal.account?.name || priorityDeal.title}. Forecast impactado em ${compactCurrency(Number(priorityDeal.value || 0))}.`
+          : 'Este deal esta aberto, mas ainda nao tem um proximo passo claro.',
+        href: `/crm/${priorityDeal.id}`,
+        gain: Number(priorityDeal.value || 0) * Number(priorityDeal.probability || 0) / 100,
+        tone: isOverdue(priorityDeal.next_action_due_at) ? 'rose' : 'amber',
       }
-    : noActionDeals[0]
-      ? {
-          kind: 'deal',
-          title: `Definir próxima ação: ${noActionDeals[0].account?.name || noActionDeals[0].title}`,
-          description: 'Este deal está aberto, mas ainda não tem um próximo passo claro.',
-          href: `/crm/${noActionDeals[0].id}`,
-          gain: Number(noActionDeals[0].value || 0) * Number(noActionDeals[0].probability || 0) / 100,
-          tone: 'amber',
-        }
-      : priorityMission
+    : priorityMission
         ? {
             kind: 'mission',
             title: priorityMission.title,
@@ -472,8 +478,13 @@ export default function HojePage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Button render={<Link href={priority.href} />}>
-                Executar agora <ArrowRight className="h-4 w-4" />
+                {priority.kind === 'deal' ? 'Abrir oportunidade' : 'Executar agora'} <ArrowRight className="h-4 w-4" />
               </Button>
+              {priority.kind === 'deal' && (
+                <Button variant="outline" render={<Link href="/kpis/registrar" />}>
+                  Registrar acao
+                </Button>
+              )}
               <Button variant="outline" render={<Link href="/chat-ia" />}>
                 <MessageSquare className="h-4 w-4" />
                 Pedir script a IA

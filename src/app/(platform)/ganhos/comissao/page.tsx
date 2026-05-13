@@ -358,7 +358,7 @@ export default function ComissaoPage() {
 
       <Card className="border-emerald-500/20 bg-emerald-500/5">
         <CardContent className="pt-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">Comissao recompensa.</strong> Sua comissao e calculada com base nas regras definidas pela empresa. Valores potenciais sao estimativas de oportunidades abertas e nao sao garantidos.
+          <strong className="text-foreground">Comissao recompensa.</strong> Comissao mostra o impacto financeiro do que ja foi vendido e do que ainda pode ser destravado. Valores potenciais sao estimativas de oportunidades abertas e nao sao garantidos.
         </CardContent>
       </Card>
 

@@ -125,6 +125,7 @@ export default function MissoesPage() {
                 <h2 className="text-sm font-semibold">{mission.title}</h2>
                 <Badge className={status.className}>{status.label}</Badge>
                 <Badge variant="outline">{mission.validationLabel}</Badge>
+                {mission.pdi_plan && <Badge className="bg-blue-500/10 text-blue-600 border-0">Missao de PDI</Badge>}
               </div>
               {mission.description && <p className="mt-1 text-xs text-muted-foreground">{mission.description}</p>}
             </div>
@@ -150,9 +151,16 @@ export default function MissoesPage() {
           </div>
 
           {mission.pdi_plan && (
-            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-muted-foreground">
-              <strong className="text-foreground">PDI relacionado:</strong> {mission.pdi_plan.title || 'Plano de desenvolvimento'}.
-              {' '}Ao concluir a missao, a aplicacao pratica fica registrada para validacao do gestor.
+            <div className="space-y-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-muted-foreground">
+              <p>
+                <strong className="text-foreground">Missao de PDI:</strong> Esta missao faz parte do seu PDI de {mission.pdi_plan.title || 'desenvolvimento'}.
+              </p>
+              <p>
+                Ela e a aplicacao pratica do treino. Concluir a missao ajuda a evoluir o plano, mas a validacao final depende do gestor quando houver aprovacao humana.
+              </p>
+              <Button size="sm" variant="outline" render={<Link href="/desenvolvimento/pdi" />}>
+                Abrir PDI
+              </Button>
             </div>
           )}
 
@@ -197,7 +205,7 @@ export default function MissoesPage() {
 
       <Card className="border-amber-500/20 bg-amber-500/5">
         <CardContent className="pt-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">Missao executa.</strong> Missões sao desafios praticos criados pelo gestor ou sugeridos pela VamoAI para melhorar sua execucao comercial. Algumas sao validadas automaticamente; outras precisam de aprovacao do gestor.
+          <strong className="text-foreground">Missao executa.</strong> Missoes transformam metas e gaps em acoes praticas para executar. Algumas sao validadas automaticamente; outras precisam de aprovacao do gestor.
         </CardContent>
       </Card>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useRequiredAuth } from '@/hooks/use-required-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -322,6 +323,7 @@ DISC_QUESTIONS.forEach((q) => {
 
 export default function PerfilComportamentalPage() {
   const { user } = useRequiredAuth()
+  const router = useRouter()
   const [step, setStep] = useState(0) // 0 = intro, 1..TOTAL_Q = questions, TOTAL_Q+1 = result
   const [answers, setAnswers] = useState<BehavioralAnswer[]>([])
   const [profile, setProfile] = useState<BehavioralProfile | null>(null)
@@ -331,22 +333,12 @@ export default function PerfilComportamentalPage() {
 
   useEffect(() => {
     if (!user) return
-    const loadProfile = async () => {
-      try {
-        const res = await fetch('/api/ai/behavioral-profile')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.profile) {
-            setProfile(data.profile)
-            setStep(TOTAL_Q + 1)
-          }
-        }
-      } catch {
-        // No existing profile, that's fine
-      }
-      setLoading(false)
-    }
-    loadProfile()
+    router.replace(user.role === 'seller' ? '/desenvolvimento/pdi' : '/monitoramento/desenvolvimento')
+  }, [router, user])
+
+  useEffect(() => {
+    if (!user) return
+    setLoading(false)
   }, [user])
 
   const handleSelectOption = (questionId: number, trait: BehavioralAnswer['selected_option']) => {
@@ -389,7 +381,7 @@ export default function PerfilComportamentalPage() {
   }
 
 
-  if (loading) {
+  if (loading || user.role === 'seller' || user.role === 'manager' || user.role === 'admin' || user.role === 'developer' || user.role === 'consultant') {
     return (
       <div className="flex justify-center py-12">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

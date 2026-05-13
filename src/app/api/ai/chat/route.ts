@@ -11,11 +11,11 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'analyze_operation',
-      description: 'Analisar a operacao comercial atual usando o Commercial Brain: forecast, gap, equipe em atencao, riscos e acoes recomendadas. Use para perguntas de diagnostico.',
+      description: 'Analisar a operação comercial atual usando o Commercial Brain: previsão, gap, equipe em atencao, riscos e ações recomendadas. Use para perguntas de diagnóstico.',
       parameters: {
         type: 'object',
         properties: {
-          focus: { type: 'string', description: 'Foco opcional: forecast, equipe, execucao, pdi, comissao ou geral' },
+          focus: { type: 'string', description: 'Foco opcional: previsão, equipe, execução, pdi, comissão ou geral' },
         },
       },
     },
@@ -24,12 +24,12 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'simulate_decision',
-      description: 'Simular uma decisao comercial sem alterar dados: comissao, meta, forecast, foco em pipeline parado, redistribuicao de esforco.',
+      description: 'Simular uma decisão comercial sem alterar dados: comissão, meta, previsão, foco em funil parado, redistribuicao de esforco.',
       parameters: {
         type: 'object',
         properties: {
           scenario: { type: 'string', description: 'Cenario a simular' },
-          variable: { type: 'string', description: 'Variavel principal: comissao, meta, forecast, pipeline, esforco' },
+          variable: { type: 'string', description: 'Variavel principal: comissão, meta, previsão, funil, esforco' },
           value: { type: 'number', description: 'Valor numerico opcional da mudanca' },
         },
         required: ['scenario'],
@@ -44,7 +44,7 @@ const MANAGER_TOOLS = [
       parameters: {
         type: 'object',
         properties: {
-          period: { type: 'string', enum: ['daily', 'weekly'], description: 'Periodo do briefing' },
+          period: { type: 'string', enum: ['daily', 'weekly'], description: 'Período do briefing' },
         },
       },
     },
@@ -53,7 +53,7 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'generate_meeting_agenda',
-      description: 'Gerar uma pauta de reuniao para time ou 1:1 com vendedor usando dados reais da operacao.',
+      description: 'Gerar uma pauta de reuniao para time ou 1:1 com vendedor usando dados reais da operação.',
       parameters: {
         type: 'object',
         properties: {
@@ -68,11 +68,11 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'create_action_plan',
-      description: 'Criar um plano de acao gerencial com itens rastreaveis. Use quando o gestor pedir plano de acao, plano semanal, recuperacao da operacao ou conjunto de acoes.',
+      description: 'Criar um plano de ação gerencial com itens rastreaveis. Use quando o gestor pedir plano de ação, plano semanal, recuperacao da operação ou conjunto de ações.',
       parameters: {
         type: 'object',
         properties: {
-          title: { type: 'string', description: 'Titulo do plano' },
+          title: { type: 'string', description: 'Título do plano' },
           summary: { type: 'string', description: 'Resumo executivo do plano' },
           items: {
             type: 'array',
@@ -98,14 +98,14 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'create_recovery_mission',
-      description: 'Criar missao de recuperacao de pipeline para um vendedor com base nos riscos atuais.',
+      description: 'Criar missão de recuperacao de funil para um vendedor com base nos riscos atuais.',
       parameters: {
         type: 'object',
         properties: {
           user_id: { type: 'string', description: 'ID do vendedor' },
           title: { type: 'string' },
           description: { type: 'string' },
-          target_value: { type: 'number', description: 'Meta numerica da missao' },
+          target_value: { type: 'number', description: 'Meta numerica da missão' },
           xp_reward: { type: 'number' },
           deadline: { type: 'string', description: 'Prazo ISO opcional' },
         },
@@ -122,7 +122,7 @@ const MANAGER_TOOLS = [
         type: 'object',
         properties: {
           user_id: { type: 'string', description: 'ID do vendedor' },
-          title: { type: 'string', description: 'Titulo do PDI' },
+          title: { type: 'string', description: 'Título do PDI' },
           description: { type: 'string', description: 'Descricao do desenvolvimento esperado' },
           due_date: { type: 'string', description: 'Data limite no formato YYYY-MM-DD' },
           target_kpi_key: { type: 'string', description: 'KPI alvo opcional' },
@@ -136,7 +136,7 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'create_manager_nudge',
-      description: 'Criar nudge gerencial para vendedor: cobranca, reconhecimento ou orientacao. Pode enviar notificacao real.',
+      description: 'Criar nudge gerencial para vendedor: cobrança, reconhecimento ou orientacao. Pode enviar notificacao real.',
       parameters: {
         type: 'object',
         properties: {
@@ -152,12 +152,12 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'mark_recommendation_done',
-      description: 'Marcar uma recomendacao aberta como concluida/fechada.',
+      description: 'Marcar uma recomendação aberta como concluida/fechada.',
       parameters: {
         type: 'object',
         properties: {
-          recommendation_id: { type: 'string', description: 'ID da recomendacao' },
-          note: { type: 'string', description: 'Observacao opcional' },
+          recommendation_id: { type: 'string', description: 'ID da recomendação' },
+          note: { type: 'string', description: 'Observação opcional' },
         },
         required: ['recommendation_id'],
       },
@@ -265,7 +265,7 @@ const MANAGER_TOOLS = [
     type: 'function' as const,
     function: {
       name: 'generate_briefing',
-      description: 'Gerar o briefing semanal da equipe com análise de performance. Use quando o gestor pedir briefing, resumo semanal, análise da semana.',
+      description: 'Gerar o briefing semanal da equipe com análise de desempenho. Use quando o gestor pedir briefing, resumo semanal, análise da semana.',
       parameters: { type: 'object', properties: {} },
     },
   },
@@ -476,15 +476,15 @@ const MANAGER_TOOLS = [
 ]
 
 const ACTION_LABELS: Record<string, string> = {
-  analyze_operation: 'Analisar Operacao',
-  simulate_decision: 'Simular Decisao',
+  analyze_operation: 'Analisar Operação',
+  simulate_decision: 'Simular Decisão',
   generate_manager_briefing: 'Gerar Briefing Gerencial',
   generate_meeting_agenda: 'Gerar Pauta',
-  create_action_plan: 'Criar Plano de Acao',
+  create_action_plan: 'Criar Plano de Ação',
   create_pdi_plan: 'Criar PDI',
-  create_recovery_mission: 'Criar Missao de Recuperacao',
+  create_recovery_mission: 'Criar Missão de Recuperacao',
   create_manager_nudge: 'Criar Nudge do Gestor',
-  mark_recommendation_done: 'Concluir Recomendacao',
+  mark_recommendation_done: 'Concluir Recomendação',
   add_seller: 'Cadastrar Vendedor',
   edit_seller: 'Editar Vendedor',
   remove_seller: 'Remover Vendedor',
@@ -499,7 +499,7 @@ const ACTION_LABELS: Record<string, string> = {
   generate_briefing: 'Gerar Briefing Semanal',
   generate_retrospective: 'Gerar Retrospectiva Mensal',
   create_challenge: 'Criar Desafio',
-  register_kpi_value: 'Registrar acao comercial',
+  register_kpi_value: 'Registrar ação comercial',
   notify_seller: 'Enviar Notificação',
   send_chat_message: 'Enviar Mensagem no Chat',
 }
@@ -638,7 +638,7 @@ export async function POST(req: NextRequest) {
       operationContext = commercialBrain.llmContext
     } catch (error) {
       console.error('Commercial Brain context error:', error)
-      operationContext = '\n\nCONTEXTO OPERACIONAL DO GESTOR: indisponivel nesta mensagem. Responda com base no contexto de negocio e equipe disponivel.'
+      operationContext = '\n\nCONTEXTO OPERACIONAL DO GESTOR: indisponível nesta mensagem. Responda com base no contexto de negócio e equipe disponível.'
     }
   }
 
@@ -883,7 +883,7 @@ Fluxo correto: texto opcional brevíssimo (1 frase, opcional) → tool call.
 Fluxo ERRADO: escrever um parágrafo descrevendo o que vai fazer sem chamar a tool.
 
 AÇÕES DISPONÍVEIS:
-Se ${firstName} pedir para adicionar vendedor, criar missão, definir KPI, dar XP, gerar briefing, criar desafio, registrar acao comercial — use a tool correspondente IMEDIATAMENTE.
+Se ${firstName} pedir para adicionar vendedor, criar missão, definir KPI, dar XP, gerar briefing, criar desafio, registrar ação comercial — use a tool correspondente IMEDIATAMENTE.
 Nunca diga "você pode fazer isso em tal página" — faça você mesma via tool.
 
 CHAT DA EQUIPE:

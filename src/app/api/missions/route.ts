@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ missions: data ?? [] })
   } catch (error) {
     console.error('GET /api/missions', error)
-    return NextResponse.json({ error: 'Erro ao carregar missoes' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao carregar missões' }, { status: 500 })
   }
 }
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const { adminClient, appUser } = auth
 
     if (!['manager', 'admin', 'developer'].includes(appUser.role)) {
-      return NextResponse.json({ error: 'Apenas gestor pode criar missoes' }, { status: 403 })
+      return NextResponse.json({ error: 'Apenas gestor pode criar missões' }, { status: 403 })
     }
 
     const input = await request.json()
@@ -72,11 +72,11 @@ export async function POST(request: Request) {
         }
 
     if (!title || !userId) {
-      return NextResponse.json({ error: 'Titulo e vendedor sao obrigatorios' }, { status: 400 })
+      return NextResponse.json({ error: 'Título e vendedor sao obrigatorios' }, { status: 400 })
     }
 
     if (!['manual_validation', 'pdi', 'recognition'].includes(type) && targetValue <= 0) {
-      return NextResponse.json({ error: 'Missao automatica precisa de meta numerica' }, { status: 400 })
+      return NextResponse.json({ error: 'Missão automatica precisa de meta numerica' }, { status: 400 })
     }
 
     const { data: seller } = await adminClient
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       .eq('active', true)
       .maybeSingle()
 
-    if (!seller) return NextResponse.json({ error: 'Vendedor nao encontrado' }, { status: 404 })
+    if (!seller) return NextResponse.json({ error: 'Vendedor não encontrado' }, { status: 404 })
 
     const { data, error } = await adminClient
       .from('ai_missions')
@@ -117,6 +117,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ mission: data }, { status: 201 })
   } catch (error) {
     console.error('POST /api/missions', error)
-    return NextResponse.json({ error: 'Erro ao criar missao' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao criar missão' }, { status: 500 })
   }
 }

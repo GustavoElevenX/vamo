@@ -47,11 +47,11 @@ export default function ConfiguracaoAvancadaPage() {
 
     fetch('/api/system/config', { credentials: 'same-origin' })
       .then(async (res) => {
-        if (!res.ok) throw new Error('Erro ao carregar configuracao')
+        if (!res.ok) throw new Error('Erro ao carregar configuração')
         return res.json() as Promise<{ config: SystemConfig }>
       })
       .then((data) => setConfig(data.config))
-      .catch(() => toast.error('Nao foi possivel carregar a configuracao avancada.'))
+      .catch(() => toast.error('Não foi possível carregar a configuração avancada.'))
       .finally(() => setLoading(false))
   }, [user])
 
@@ -71,9 +71,9 @@ export default function ConfiguracaoAvancadaPage() {
       if (!res.ok) throw new Error('Erro ao salvar')
       const data = await res.json() as { config: SystemConfig }
       setConfig(data.config)
-      toast.success('Configuracao avancada salva.')
+      toast.success('Configuração avancada salva.')
     } catch {
-      toast.error('Nao foi possivel salvar a configuracao.')
+      toast.error('Não foi possível salvar a configuração.')
     } finally {
       setSaving(false)
     }
@@ -91,9 +91,9 @@ export default function ConfiguracaoAvancadaPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Configuracao Avancada</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Configuração Avancada</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Parametros salvos em organizacao e registrados nos logs do sistema.
+            Parametros salvos em organização e registrados nos logs do sistema.
           </p>
         </div>
         <Badge variant="outline" className="text-[10px]">Persistente</Badge>
@@ -205,14 +205,14 @@ export default function ConfiguracaoAvancadaPage() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           {saving ? <Clock className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saving ? 'Salvando...' : 'Salvar configuracao'}
+          {saving ? 'Salvando...' : 'Salvar configuração'}
         </Button>
       </div>
 
       <Card className="border-border/50 bg-muted/30">
         <CardContent className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
           <Settings className="h-3.5 w-3.5" />
-          Alteracoes aparecem em Sistema / Logs e passam a ser usadas como configuracao oficial da organizacao.
+          Alteracoes aparecem em Sistema / Logs e passam a ser usadas como configuração oficial da organização.
         </CardContent>
       </Card>
     </div>

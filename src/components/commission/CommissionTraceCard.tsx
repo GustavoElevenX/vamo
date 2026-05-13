@@ -23,7 +23,7 @@ export function CommissionTraceCard({
       <CardContent className="space-y-4 pt-5">
         <div className="flex items-center gap-2 font-bold">
           <DollarSign className="h-5 w-5 text-primary" />
-          Comissao rastreavel
+          Comissão rastreavel
         </div>
         <div className="grid gap-2 sm:grid-cols-4">
           <Metric label="Prevista" value={money(expected)} />

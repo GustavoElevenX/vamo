@@ -22,12 +22,12 @@ const DIAGNOSTIC_ANALYSIS_CACHE_TTL = 12 * 60 * 60 * 1000
 
 const MISSION_TEMPLATES: Record<DiagnosticArea, { title: string; description: string; impact: 'alto' | 'medio' | 'baixo' }> = {
   lead_generation: {
-    title: 'Aumentar volume de leads qualificados',
-    description: 'Criar uma rotina de prospecção com meta diária e revisão semanal de qualidade dos leads.',
+    title: 'Aumentar volume de potenciais clientes qualificados',
+    description: 'Criar uma rotina de prospecção com meta diária e revisão semanal de qualidade dos potenciais clientes.',
     impact: 'alto',
   },
   sales_process: {
-    title: 'Reduzir perda em proposta e follow-up',
+    title: 'Reduzir perda em proposta e retorno',
     description: 'Padronizar retorno em até 24h para propostas abertas e medir conversão por etapa.',
     impact: 'alto',
   },
@@ -71,7 +71,7 @@ function parseMonthlyGoal(value: unknown): number | null {
 const ROADMAP: Record<string, { d30: string[]; d60: string[]; d90: string[] }> = {
   critical: {
     d30: ['Estabilizar o processo de vendas com missões corretivas', 'Convocar reunião 1:1 com todo o time', 'Mapear os 2 maiores gargalos financeiros'],
-    d60: ['Lançar missões gamificadas focadas em conversão e follow-up', 'Implementar script de proposta e follow-up padronizado', 'Revisão semanal de pipeline com todo o time'],
+    d60: ['Lançar missões gamificadas focadas em conversão e retorno', 'Implementar script de proposta e retorno padronizado', 'Revisão semanal de funil com todo o time'],
     d90: ['Medir ROI das intervenções vs. perda inicial identificada', 'Definir metas individuais para o próximo ciclo', 'Iniciar programa de desenvolvimento comportamental'],
   },
   at_risk: {
@@ -82,7 +82,7 @@ const ROADMAP: Record<string, { d30: string[]; d60: string[]; d90: string[] }> =
   developing: {
     d30: ['Escalar o que já funciona bem no processo', 'Criar desafios progressivos para manter engajamento', 'Missões de upsell e ticket médio para vendedores top'],
     d60: ['Lançar missões coletivas para fortalecer cultura de equipe', 'Implementar programa de mentoria interna', 'Revisar comissionamento para incluir bônus de qualidade'],
-    d90: ['Documentar e replicar as melhores práticas identificadas', 'Expandir para novos KPIs e métricas avançadas', 'Definir metas de Temporada de Alta Performance (90 dias)'],
+    d90: ['Documentar e replicar as melhores práticas identificadas', 'Expandir para novos KPIs e métricas avançadas', 'Definir metas de Temporada de Alta Desempenho (90 dias)'],
   },
   optimized: {
     d30: ['Manter ritmo e engajamento com novas missões desafiadoras', 'Identificar próximos níveis de crescimento', 'Introduzir missões de liderança para vendedores sênior'],
@@ -423,7 +423,7 @@ export default function RelatorioPage() {
             {[
               { label: '30 dias', sublabel: 'Impacto rápido', items: roadmap.d30, color: 'red' },
               { label: '60 dias', sublabel: 'Desenvolvimento de hábito', items: roadmap.d60, color: 'amber' },
-              { label: '90 dias', sublabel: 'Transformação de performance', items: roadmap.d90, color: 'emerald' },
+              { label: '90 dias', sublabel: 'Transformação de desempenho', items: roadmap.d90, color: 'emerald' },
             ].map((period) => (
               <div key={period.label} className={`rounded-lg border border-${period.color}-500/20 bg-${period.color}-500/5 p-3`}>
                 <p className={`text-xs font-semibold text-${period.color}-500 mb-0.5`}>{period.label}</p>

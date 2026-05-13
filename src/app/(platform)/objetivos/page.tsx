@@ -66,7 +66,7 @@ export default function ObjetivosPage() {
       <PageHeader
         label="Programa"
         title={<><TitleHighlight>Objetivos</TitleHighlight> do Programa</>}
-        description="Status real da configuracao: metas, missoes, recompensas e lancamento."
+        description="Status real da configuração: metas, missões, recompensas e lançamento."
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -136,7 +136,7 @@ export default function ObjetivosPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Progresso real da configuracao
+                Progresso real da configuração
               </p>
               <p className="mt-0.5 text-sm">
                 <strong className="text-emerald-500">{status?.completed ?? 0}</strong> de{' '}

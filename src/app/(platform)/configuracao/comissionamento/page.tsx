@@ -41,11 +41,11 @@ type RuleForm = {
 const ruleTypes: { value: CommissionRuleType; label: string; hint: string; priority: number }[] = [
   { value: 'seller_product', label: 'Vendedor + produto', hint: 'Regra mais especifica para uma venda.', priority: 1 },
   { value: 'seller_commercial_table', label: 'Vendedor + tabela', hint: 'Percentual por vendedor em uma tabela.', priority: 2 },
-  { value: 'product', label: 'Produto', hint: 'Comissao por produto ou servico.', priority: 3 },
-  { value: 'category', label: 'Categoria', hint: 'Comissao por categoria de produto.', priority: 4 },
-  { value: 'commercial_table', label: 'Tabela comercial', hint: 'Comissao por tabela de preco/margem.', priority: 5 },
+  { value: 'product', label: 'Produto', hint: 'Comissão por produto ou serviço.', priority: 3 },
+  { value: 'category', label: 'Categoria', hint: 'Comissão por categoria de produto.', priority: 4 },
+  { value: 'commercial_table', label: 'Tabela comercial', hint: 'Comissão por tabela de preço/margem.', priority: 5 },
   { value: 'seller', label: 'Vendedor', hint: 'Percentual geral do vendedor.', priority: 6 },
-  { value: 'company_default', label: 'Padrao da empresa', hint: 'Fallback quando nenhuma regra especifica se aplica.', priority: 7 },
+  { value: 'company_default', label: 'Padrão da empresa', hint: 'Fallback quando nenhuma regra especifica se aplica.', priority: 7 },
 ]
 
 const emptyForm: RuleForm = {
@@ -116,7 +116,7 @@ export default function ComissionamentoConfigPage() {
       if (error) throw error
       setRules((data ?? []) as CommissionRule[])
     } catch {
-      toast.error('Nao foi possivel carregar as regras de comissao')
+      toast.error('Não foi possível carregar as regras de comissão')
     } finally {
       setLoading(false)
     }
@@ -189,7 +189,7 @@ export default function ComissionamentoConfigPage() {
     if (!rule.id) return
     const { error } = await supabase.from('commission_rules').update({ active: !rule.active }).eq('id', rule.id)
     if (error) {
-      toast.error('Nao foi possivel alterar o status')
+      toast.error('Não foi possível alterar o status')
       return
     }
     toast.success(!rule.active ? 'Regra ativada' : 'Regra desativada')
@@ -212,9 +212,9 @@ export default function ComissionamentoConfigPage() {
             <SlidersHorizontal className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">Configuracao de Comissionamento</h2>
+            <h2 className="text-xl font-semibold tracking-tight">Configuração de Comissionamento</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Regras por vendedor, produto, categoria, tabela comercial e base de calculo.
+              Regras por vendedor, produto, categoria, tabela comercial e base de cálculo.
             </p>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function ComissionamentoConfigPage() {
               </Field>
             </div>
 
-            <Field label="Base de calculo">
+            <Field label="Base de cálculo">
               <div className="grid grid-cols-2 gap-2">
                 {(['sale_amount', 'received_amount'] as CommissionCalculationBase[]).map((base) => (
                   <button
@@ -321,8 +321,8 @@ export default function ComissionamentoConfigPage() {
             <CardContent>
               {rules.length === 0 ? (
                 <div className="py-10 text-center">
-                  <p className="text-sm font-medium">Nenhuma regra de comissao cadastrada ainda.</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Crie a primeira regra para comecar a calcular comissoes automaticamente.</p>
+                  <p className="text-sm font-medium">Nenhuma regra de comissão cadastrada ainda.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Crie a primeira regra para começar a calcular comissões automaticamente.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">

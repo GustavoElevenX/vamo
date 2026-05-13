@@ -57,7 +57,7 @@ export async function GET() {
     },
     {
       id: 'action_plan',
-      title: 'Plano de Acao',
+      title: 'Plano de Ação',
       href: '/objetivos/plano-acao',
       completed: (missionsResult.count ?? 0) > 0,
       evidence: `${missionsResult.count ?? 0} missoes criadas.`,
@@ -76,7 +76,7 @@ export async function GET() {
       title: 'Lancamento',
       href: '/objetivos/lancamento',
       completed: Boolean(launchResult.data),
-      evidence: launchResult.data ? 'Programa lancado e comunicado no chat.' : 'Lancamento ainda nao registrado.',
+      evidence: launchResult.data ? 'Programa lancado e comunicado no chat.' : 'Lancamento ainda não registrado.',
       updatedAt: launchResult.data?.created_at ?? null,
     },
   ]

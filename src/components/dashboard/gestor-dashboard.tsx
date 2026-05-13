@@ -226,8 +226,8 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
       {/* ── Header ── */}
       <PageHeader
         label="Visão Executiva"
-        title={<>Dashboard <TitleHighlight>Gestor</TitleHighlight></>}
-        description="Performance comercial da organização em tempo real"
+        title={<>Painel <TitleHighlight>Gestor</TitleHighlight></>}
+        description="Desempenho comercial da organização em tempo real"
         actions={
           <span className="pill-glow">
             <Users className="h-3 w-3" />
@@ -391,7 +391,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             <div>
               <div className="bento-label mb-1" style={{ color: 'oklch(0.55 0.18 215)' }}>
                 <Brain className="h-3 w-3" />
-                Insights IA
+                Análises da IA
               </div>
             </div>
             <div className="stat-icon stat-icon-blue h-8 w-8">
@@ -426,7 +426,7 @@ export function GestorDashboard({ user }: GestorDashboardProps) {
             <div>
               <div className="bento-label mb-1" style={{ color: 'oklch(0.65 0.18 70)' }}>
                 <Star className="h-3 w-3" />
-                Performance da equipe
+                Desempenho da equipe
               </div>
               <h3 className="text-lg font-bold tracking-tight">Ranking atual</h3>
             </div>

@@ -55,7 +55,7 @@ export default function ConquistasPage() {
       <div>
         <h2 className="text-2xl font-bold">Conquistas</h2>
         <p className="text-muted-foreground">
-          {earned.length} de {badges.length} badges conquistados
+          {earned.length} de {badges.length} selos conquistados
         </p>
       </div>
 

@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     .maybeSingle()
 
   if (!targetUser) {
-    return NextResponse.json({ error: 'Vendedor nao encontrado na organizacao' }, { status: 404 })
+    return NextResponse.json({ error: 'Vendedor não encontrado na organização' }, { status: 404 })
   }
 
   try {

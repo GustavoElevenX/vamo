@@ -52,7 +52,7 @@ export default function FeedRecompensasPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/feed', { credentials: 'same-origin' })
-      if (!res.ok) throw new Error('Erro ao carregar feed')
+      if (!res.ok) throw new Error('Erro ao carregar mural')
       const data = await res.json() as { events: FeedEvent[] }
       setFeed(data.events)
     } catch {
@@ -78,10 +78,10 @@ export default function FeedRecompensasPage() {
       })
       if (!res.ok) throw new Error('Erro ao publicar')
       setContent('')
-      toast.success('Publicado no feed.')
+      toast.success('Publicado no mural.')
       await loadFeed()
     } catch {
-      toast.error('Nao foi possivel publicar no feed.')
+      toast.error('Não foi possível publicar no mural.')
     } finally {
       setPosting(false)
     }
@@ -139,9 +139,9 @@ export default function FeedRecompensasPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight">Feed & Reconhecimento</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Mural e reconhecimento</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Eventos reais de missoes, badges e reconhecimentos publicados pela equipe.
+          Eventos reais de missões, selos e reconhecimentos publicados pela equipe.
         </p>
       </div>
 
@@ -188,7 +188,7 @@ export default function FeedRecompensasPage() {
       <div className="space-y-3">
         {loading ? (
           <Card className="border-border/50">
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">Carregando feed...</CardContent>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">Carregando mural...</CardContent>
           </Card>
         ) : filteredFeed.length === 0 ? (
           <Card className="border-border/50">
@@ -197,7 +197,7 @@ export default function FeedRecompensasPage() {
                 <Megaphone className="mb-2 h-8 w-8 text-muted-foreground/40" />
                 <p className="text-sm font-medium">Nenhuma atividade real nesta categoria.</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Conclua missoes, ganhe badges ou publique um reconhecimento para movimentar o feed.
+                  Conclua missões, ganhe selos ou publique um reconhecimento para movimentar o mural.
                 </p>
               </div>
             </CardContent>

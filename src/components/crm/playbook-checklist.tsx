@@ -55,7 +55,7 @@ export function PlaybookChecklist({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>Playbook do estagio</CardTitle>
+          <CardTitle>Roteiro da etapa</CardTitle>
           <span className="text-sm font-semibold tabular-nums">{pct}%</span>
         </div>
         <Progress value={pct} className="h-2" />
@@ -82,7 +82,7 @@ export function PlaybookChecklist({
         })}
         {steps.some((step) => step.id.startsWith('default-')) && (
           <p className="text-xs text-muted-foreground">
-            Passos padrao aparecem como guia. Para salvar aderencia, personalize o playbook da organizacao.
+            Passos padrão aparecem como guia. Para salvar aderência, personalize o roteiro da organização.
           </p>
         )}
       </CardContent>

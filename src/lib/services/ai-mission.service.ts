@@ -18,9 +18,9 @@ export async function completeMission(
     .eq('user_id', userId)
     .single()
 
-  if (error || !mission) throw new Error('Missao nao encontrada')
-  if (mission.status === 'completed') throw new Error('Missao ja completada')
-  if (mission.status === 'awaiting_approval') throw new Error('Missao aguardando aprovacao do gestor')
+  if (error || !mission) throw new Error('Missão não encontrada')
+  if (mission.status === 'completed') throw new Error('Missão já completada')
+  if (mission.status === 'awaiting_approval') throw new Error('Missão aguardando aprovação do gestor')
 
   const targetValue = Number(mission.target_value ?? mission.criteria?.target_value ?? 0)
   const currentValue = Number(mission.current_value ?? 0)
@@ -39,12 +39,12 @@ export async function completeMission(
       .eq('id', missionId)
       .eq('user_id', userId)
 
-    if (approvalError) throw new Error('Erro ao solicitar validacao da missao')
+    if (approvalError) throw new Error('Erro ao solicitar validação da missão')
     return { mission: { ...mission, status: 'awaiting_approval' }, xpResult: null, awaitingApproval: true }
   }
 
   if (hasStructuredCriteria && targetValue > 0 && currentValue < targetValue) {
-    throw new Error('A missao ainda nao atingiu a meta para conclusao automatica')
+    throw new Error('A missão ainda não atingiu a meta para conclusao automatica')
   }
 
   const { error: updateError } = await supabase
@@ -56,7 +56,7 @@ export async function completeMission(
     })
     .eq('id', missionId)
 
-  if (updateError) throw new Error('Erro ao atualizar status da missao')
+  if (updateError) throw new Error('Erro ao atualizar status da missão')
 
   const xpResult = await awardXp(supabase, {
     userId,
@@ -94,5 +94,5 @@ export async function updateMissionStatus(
     .maybeSingle()
 
   if (error) throw error
-  if (!data) throw new Error('Missao nao pode ser alterada neste status')
+  if (!data) throw new Error('Missão não pode ser alterada neste status')
 }

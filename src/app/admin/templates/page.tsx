@@ -26,7 +26,7 @@ export default function AdminTemplatesPage() {
           .order('version', { ascending: false })
         setTemplates(data ?? [])
       } catch (err) {
-        console.error('[Templates] Erro ao carregar dados:', err)
+        console.error('[Modelos] Erro ao carregar dados:', err)
       } finally {
         setLoading(false)
       }
@@ -39,7 +39,7 @@ export default function AdminTemplatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Templates de Diagnóstico</h2>
+        <h2 className="text-2xl font-bold">Modelos de Diagnóstico</h2>
         <p className="text-muted-foreground">Questionários de auditoria comercial</p>
       </div>
 

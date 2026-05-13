@@ -47,7 +47,7 @@ export function AiSuggestionCard({ dealId, auto = false }: { dealId: string; aut
           <Badge variant={urgency === 'high' ? 'destructive' : 'secondary'}>{urgency}</Badge>
         </div>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          {loading ? 'Analisando dados reais do deal...' : suggestion}
+          {loading ? 'Analisando dados reais da oportunidade...' : suggestion}
         </p>
       </CardContent>
     </Card>

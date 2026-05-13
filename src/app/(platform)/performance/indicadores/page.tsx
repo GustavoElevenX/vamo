@@ -80,7 +80,7 @@ export default function IndicadoresPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        label="Performance"
+        label="Desempenho"
         labelIcon={<Target className="h-3 w-3" />}
         title={<>Meus <TitleHighlight>Indicadores</TitleHighlight></>}
         description="Indicadores sao metas operacionais configuradas pelo gestor para medir sua execucao comercial."
@@ -89,7 +89,7 @@ export default function IndicadoresPage() {
 
       <Card className="border-blue-500/20 bg-blue-500/5">
         <CardContent className="pt-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">Indicador mede.</strong> Aqui aparecem metas diarias, semanais ou mensais configuradas pelo gestor. Performance e a leitura geral da Vamo sobre resultado, execucao, pipeline e risco comercial.
+          <strong className="text-foreground">Indicador mede.</strong> Aqui aparecem metas diarias, semanais ou mensais configuradas pelo gestor. Desempenho e a leitura geral da Vamo sobre resultado, execução, funil e risco comercial.
         </CardContent>
       </Card>
 
@@ -99,7 +99,7 @@ export default function IndicadoresPage() {
             <Target className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
             <p className="text-sm font-medium">Nenhum indicador ativo configurado pelo gestor.</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Assim que houver indicadores ativos, voce vera meta, executado, restante e fonte do indicador.
+              Assim que houver indicadores ativos, você vera meta, executado, restante e fonte do indicador.
             </p>
           </CardContent>
         </Card>
@@ -161,7 +161,7 @@ export default function IndicadoresPage() {
                   <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-accent/20 px-3 py-2">
                     <DollarSign className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                     <p className="text-[11px] text-muted-foreground">
-                      Meta batida libera ate <span className="font-medium text-emerald-500">R$ {kpi.targetBonus.toLocaleString('pt-BR')}</span> no modelo atual de ganhos.
+                      Meta batida libera até <span className="font-medium text-emerald-500">R$ {kpi.targetBonus.toLocaleString('pt-BR')}</span> no modelo atual de ganhos.
                     </p>
                   </div>
                 </CardContent>
@@ -185,7 +185,7 @@ export default function IndicadoresPage() {
                 </p>
                 <Button size="sm" variant="outline" className="mt-2 h-7 gap-1.5 text-xs" render={<Link href="/performance/missoes" />}>
                   <Sparkles className="h-3 w-3" />
-                  Ver missoes relacionadas
+                  Ver missões relacionadas
                 </Button>
               </div>
             </div>

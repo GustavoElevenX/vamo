@@ -58,7 +58,7 @@ export default function DiagnosticoPage() {
         label="Diagnóstico"
         labelIcon={<BarChart3 className="h-3 w-3" />}
         title={<><TitleHighlight>Diagnósticos</TitleHighlight> DISC</>}
-        description="Auditorias de performance comercial e perfil comportamental"
+        description="Auditorias de desempenho comercial e perfil comportamental"
         actions={
           (user.role === 'admin' || user.role === 'manager') ? (
             <Button render={<Link href="/diagnostico/novo" />}>

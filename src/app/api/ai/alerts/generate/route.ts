@@ -113,12 +113,12 @@ export async function POST() {
     }
 
     // ── Prompt para gerar alertas ──
-    const systemPrompt = `Você é a VAMO IA — analista de performance comercial. Sua tarefa é analisar dados reais de uma equipe de vendas e gerar alertas acionáveis para o gestor.
+    const systemPrompt = `Você é a VAMO IA — analista de desempenho comercial. Sua tarefa é analisar dados reais de uma equipe de vendas e gerar alertas acionáveis para o gestor.
 
 REGRAS DE ANÁLISE:
 - Vendedor inativo há 3+ dias → severity: critical, type: engagement, quick_action: "contact"
 - Vendedor sem missões ativas há 2+ dias → severity: warning, type: engagement, quick_action: "assign_mission"
-- KPI com tendência negativa (trend_pct < -10%) → severity: warning, type: performance, quick_action: "review_kpi"
+- KPI com tendência negativa (trend_pct < -10%) → severity: warning, type: desempenho, quick_action: "review_kpi"
 - Vendedor com streak 5+ dias → severity: positive, type: milestone, quick_action: "award_xp"
 - Vendedor com streak recorde (longest_streak >= 10) → severity: positive, type: milestone, quick_action: null
 - Vendedor com today_energy = 1 (energia crítica hoje no check-in) → severity: critical, type: engagement, quick_action: "contact"
@@ -131,7 +131,7 @@ REGRAS DE ANÁLISE:
 FORMATO DE RESPOSTA:
 Retorne APENAS um array JSON válido (sem markdown, sem explicações) com 3 a 8 alertas. Cada alerta tem:
 {
-  "type": "performance" | "engagement" | "opportunity" | "milestone" | "system",
+  "type": "desempenho" | "engagement" | "opportunity" | "milestone" | "system",
   "severity": "critical" | "warning" | "opportunity" | "positive",
   "title": "título curto (max 80 chars)",
   "description": "descrição com dado concreto (max 200 chars)",

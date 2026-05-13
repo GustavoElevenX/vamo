@@ -5,8 +5,8 @@ import { Sparkles } from 'lucide-react'
 
 const MESSAGES = [
   'Analisando seus dados com VAMO IA...',
-  'Identificando padrões de performance...',
-  'Gerando insights personalizados...',
+  'Identificando padrões de desempenho...',
+  'Gerando análises personalizados...',
   'Preparando recomendações...',
 ]
 

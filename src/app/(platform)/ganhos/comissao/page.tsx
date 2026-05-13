@@ -63,11 +63,11 @@ interface PotentialCommission {
 }
 
 const reasons = [
-  'venda nao apareceu no extrato',
-  'valor da venda esta errado',
-  'percentual de comissao esta errado',
+  'venda não apareceu no extrato',
+  'valor da venda está errado',
+  'percentual de comissão está errado',
   'venda esta atribuida ao vendedor errado',
-  'venda aparece como pendente, mas ja foi recebida',
+  'venda aparece como pendente, mas já foi recebida',
   'produto/tabela foi classificado de forma errada',
   'outro motivo',
 ]
@@ -124,7 +124,7 @@ export default function ComissaoPage() {
         category_id: deal.category_id ?? deal.category_name ?? null,
         category_name: deal.category_name ?? 'Sem categoria',
         commercial_table_id: deal.commercial_table_id ?? deal.commercial_table_name ?? null,
-        commercial_table_name: deal.commercial_table_name ?? 'Tabela padrao',
+        commercial_table_name: deal.commercial_table_name ?? 'Tabela padrão',
         sale_amount: toNumber(deal.value),
         received_amount: toNumber(deal.received_amount),
         sale_date: deal.expected_close ?? deal.updated_at ?? new Date().toISOString(),
@@ -196,7 +196,7 @@ export default function ComissaoPage() {
           category_id: deal.category_id ?? deal.category_name ?? null,
           category_name: deal.category_name ?? 'Sem categoria',
           commercial_table_id: deal.commercial_table_id ?? deal.commercial_table_name ?? null,
-          commercial_table_name: deal.commercial_table_name ?? 'Tabela padrao',
+          commercial_table_name: deal.commercial_table_name ?? 'Tabela padrão',
           sale_amount: toNumber(deal.value),
           received_amount: 0,
           sale_date: deal.expected_close ?? deal.updated_at ?? new Date().toISOString(),
@@ -226,7 +226,7 @@ export default function ComissaoPage() {
           .slice(0, 2))
       }
     } catch {
-      toast.error('Nao foi possivel carregar seus ganhos')
+      toast.error('Não foi possível carregar seus ganhos')
     } finally {
       setLoading(false)
     }
@@ -271,11 +271,11 @@ export default function ComissaoPage() {
     if (summary.pending > 0) {
       return {
         id: 'commission-pending',
-        title: 'Transformar comissao pendente em recebida',
-        description: 'Ha comissao aguardando entrada no caixa. Priorize deals com parcela pendente antes de considerar esse valor como ganho liberado.',
+        title: 'Transformar comissão pendente em recebida',
+        description: 'Há comissão aguardando entrada no caixa. Priorize oportunidades com parcela pendente antes de considerar esse valor como ganho liberado.',
         priority: 'medium',
         status: 'open',
-        suggested_action_label: 'Ver pipeline',
+        suggested_action_label: 'Ver funil',
         suggested_action_href: '/crm',
         recommendation_type: 'cash_collection',
         source_module: 'commission',
@@ -319,7 +319,7 @@ export default function ComissaoPage() {
   }
 
   const exportCsv = () => {
-    const header = ['Data', 'Cliente', 'Produto/Tabela', 'Valor base', 'Percentual', 'Comissao', 'Status', 'Regra']
+    const header = ['Data', 'Cliente', 'Produto/Tabela', 'Valor base', 'Percentual', 'Comissão', 'Status', 'Regra']
     const rows = visibleEntries.map((entry) => [
       formatDatePtBr(entry.competence_date),
       entry.customer_name ?? '',
@@ -358,22 +358,22 @@ export default function ComissaoPage() {
 
       <Card className="border-emerald-500/20 bg-emerald-500/5">
         <CardContent className="pt-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">Comissao recompensa.</strong> Comissao mostra o impacto financeiro do que ja foi vendido e do que ainda pode ser destravado. Valores potenciais sao estimativas de oportunidades abertas e nao sao garantidos.
+          <strong className="text-foreground">Comissão recompensa.</strong> Comissão mostra o impacto financeiro do que já foi vendido e do que ainda pode ser destravado. Valores potenciais sao estimativas de oportunidades abertas e não sao garantidos.
         </CardContent>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        <Summary icon={TrendingUp} label="Comissao acumulada ate ontem" value={formatCurrency(summary.accumulated)} tone="text-primary bg-primary/10" />
-        <Summary icon={CheckCircle2} label="Comissao confirmada" value={formatCurrency(summary.confirmed)} tone="text-emerald-700 bg-emerald-500/10" />
-        <Summary icon={Clock} label="Comissao pendente" value={formatCurrency(summary.pending)} tone="text-amber-700 bg-amber-500/10" />
-        <Summary icon={TrendingUp} label="Comissao potencial" value={formatCurrency(summary.potential)} tone="text-blue-700 bg-blue-500/10" />
+        <Summary icon={TrendingUp} label="Comissão acumulada até ontem" value={formatCurrency(summary.accumulated)} tone="text-primary bg-primary/10" />
+        <Summary icon={CheckCircle2} label="Comissão confirmada" value={formatCurrency(summary.confirmed)} tone="text-emerald-700 bg-emerald-500/10" />
+        <Summary icon={Clock} label="Comissão pendente" value={formatCurrency(summary.pending)} tone="text-amber-700 bg-amber-500/10" />
+        <Summary icon={TrendingUp} label="Comissão potencial" value={formatCurrency(summary.potential)} tone="text-blue-700 bg-blue-500/10" />
         <Summary icon={ShieldAlert} label="Em contestacao" value={formatCurrency(summary.disputed)} tone="text-red-700 bg-red-500/10" />
         <Summary icon={ReceiptText} label="Total estimado do mes" value={formatCurrency(summary.estimated)} tone="text-blue-700 bg-blue-500/10" />
       </div>
 
       <Card className="border-border/50">
         <CardContent className="pt-5 text-sm text-muted-foreground">
-          Confirmada ja foi reconhecida pela regra da empresa. Pendente depende de recebimento, validacao ou regra interna. Potencial e estimativa de oportunidades abertas se a venda for ganha.
+          Confirmada já foi reconhecida pela regra da empresa. Pendente depende de recebimento, validação ou regra interna. Potencial é estimativa de oportunidades abertas se a venda for ganha.
         </CardContent>
       </Card>
 
@@ -382,7 +382,7 @@ export default function ComissaoPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <TrendingUp className="h-4 w-4 text-blue-500" />
-              Oportunidades que podem destravar comissao
+              Oportunidades que podem destravar comissão
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -392,7 +392,7 @@ export default function ComissaoPage() {
                   <div>
                     <p className="text-sm font-semibold">{item.customerName} - {item.title}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Valor: {formatCurrency(item.dealValue)} | Probabilidade: {item.probability}% | Proxima acao: {item.nextActionTitle || 'definir proxima acao'}
+                      Valor: {formatCurrency(item.dealValue)} | Probabilidade: {item.probability}% | Próxima ação: {item.nextActionTitle || 'definir próxima ação'}
                     </p>
                   </div>
                   <div className="text-sm md:text-right">
@@ -437,14 +437,14 @@ export default function ComissaoPage() {
           {visibleEntries.length === 0 ? (
             <div className="py-10 text-center">
               <AlertCircle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Nenhuma comissao encontrada para este periodo.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma comissão encontrada para este período.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/50">
-                    {['Data', 'Cliente', 'Produto/Tabela', 'Valor base', '%', 'Comissao', 'Status', ''].map((head) => (
+                    {['Data', 'Cliente', 'Produto/Tabela', 'Valor base', '%', 'Comissão', 'Status', ''].map((head) => (
                       <th key={head} className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{head}</th>
                     ))}
                   </tr>
@@ -496,12 +496,12 @@ export default function ComissaoPage() {
                                   <Textarea
                                     value={entry.id ? contestDescription[entry.id] ?? '' : ''}
                                     onChange={(event) => entry.id && setContestDescription((prev) => ({ ...prev, [entry.id as string]: event.target.value }))}
-                                    placeholder="Observacao para o gestor"
+                                    placeholder="Observação para o gestor"
                                     className="text-xs"
                                   />
                                   <Button size="sm" onClick={() => contestEntry(entry)} disabled={!entry.id || sending === entry.id} className="w-full">
                                     <Send className="mr-1 h-3.5 w-3.5" />
-                                    {sending === entry.id ? 'Enviando...' : 'Contestar comissao'}
+                                    {sending === entry.id ? 'Enviando...' : 'Contestar comissão'}
                                   </Button>
                                   {!entry.id && <p className="text-xs text-muted-foreground">A contestacao fica disponivel depois que o gestor recalcula a parcial.</p>}
                                 </div>

@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     const targetMonthly = num(input.targetMonthly ?? input.target_monthly ?? input.target, 0)
 
     if (!name) {
-      return NextResponse.json({ error: 'Nome do indicador e obrigatorio' }, { status: 400 })
+      return NextResponse.json({ error: 'Nome do indicador é obrigatório' }, { status: 400 })
     }
     if (source !== 'manual' && !sourceEvent) {
       return NextResponse.json({ error: 'Indicador automatico precisa de evento de origem' }, { status: 400 })

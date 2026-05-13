@@ -8,7 +8,7 @@ export async function getAppUser() {
   const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
   if (authError || !authUser) {
-    return { error: NextResponse.json({ error: 'Nao autorizado' }, { status: 401 }) }
+    return { error: NextResponse.json({ error: 'Não autorizado' }, { status: 401 }) }
   }
 
   const adminClient = createAdminClient()
@@ -19,7 +19,7 @@ export async function getAppUser() {
     .single()
 
   if (error || !appUser?.organization_id) {
-    return { error: NextResponse.json({ error: 'Perfil nao encontrado' }, { status: 404 }) }
+    return { error: NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 }) }
   }
 
   return {

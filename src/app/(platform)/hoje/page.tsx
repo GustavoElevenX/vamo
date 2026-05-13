@@ -360,7 +360,7 @@ export default function HojePage() {
         ),
         description: isOverdue(priorityDeal.next_action_due_at)
           ? `Follow-up atrasado em ${priorityDeal.account?.name || priorityDeal.title}. Forecast impactado em ${compactCurrency(Number(priorityDeal.value || 0))}.`
-          : 'Este deal esta aberto, mas ainda nao tem um proximo passo claro.',
+          : 'esta oportunidade está aberto, mas ainda não tem um próximo passo claro.',
         href: `/crm/${priorityDeal.id}`,
         registerHref: `/kpis/registrar?dealId=${encodeURIComponent(priorityDeal.id)}&action=crm_activity_follow_up`,
         gain: Number(priorityDeal.value || 0) * Number(priorityDeal.probability || 0) / 100,
@@ -415,7 +415,7 @@ export default function HojePage() {
           <div>
             <p className="font-bold">VAMO IA - Briefing de hoje</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Priorize <span className="font-semibold text-primary">{priority.title}</span>. Isso protege forecast, execucao e possivel comissao sem tratar estimativa como valor garantido.
+              Priorize <span className="font-semibold text-primary">{priority.title}</span>. Isso protege previsão, execução e possível comissão sem tratar estimativa como valor garantido.
             </p>
           </div>
         </div>
@@ -439,7 +439,7 @@ export default function HojePage() {
                     Ver oportunidades
                   </Button>
                   <Button size="sm" variant="outline" render={<Link href="/kpis/registrar" />}>
-                    Registrar acao
+                    Registrar ação
                   </Button>
                 </div>
               </div>
@@ -450,7 +450,7 @@ export default function HojePage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={DollarSign} label="Ganho do mês" value={formatCurrency(monthlyEarnings)} hint={projectedBonus ? `+${formatCurrency(projectedBonus)} se cumprir a missão` : 'parcial acumulada'} />
-        <StatCard icon={TrendingUp} label="Forecast provável" value={compactCurrency(forecastLikely)} hint={`${deals.length} deals em movimento`} />
+        <StatCard icon={TrendingUp} label="Previsão provável" value={compactCurrency(forecastLikely)} hint={`${deals.length} deals em movimento`} />
         <StatCard icon={AlertTriangle} label="Risco hoje" value={`${overdueDeals.length + noActionDeals.length}`} hint="ações atrasadas ou sem próximo passo" />
         <StatCard icon={Target} label="KPI diário" value={dailyKpi ? `${Math.round(kpiPct)}%` : '0%'} hint={dailyKpi ? `${dailyKpi.current}/${dailyKpi.target} ${dailyKpi.unit}` : 'sem meta configurada'} />
       </div>
@@ -467,12 +467,12 @@ export default function HojePage() {
               </div>
               <div className="rounded-2xl border border-primary/20 bg-background/50 p-4 text-right">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  {priority.kind === 'deal' ? 'Forecast ponderado' : 'Ganho potencial'}
+                  {priority.kind === 'deal' ? 'Previsão ponderado' : 'Ganho potencial'}
                 </p>
                 <p className="mt-1 text-3xl font-black tabular-nums text-primary">{priority.gain ? compactCurrency(priority.gain) : '+XP'}</p>
                 {priorityPotentialCommission > 0 && (
                   <p className="mt-2 max-w-[13rem] text-xs leading-relaxed text-muted-foreground">
-                    Comissao potencial ponderada: {compactCurrency(priorityPotentialCommission)} se a venda avancar conforme a probabilidade.
+                    Comissão potencial ponderada: {compactCurrency(priorityPotentialCommission)} se a venda avancar conforme a probabilidade.
                   </p>
                 )}
               </div>
@@ -483,7 +483,7 @@ export default function HojePage() {
               </Button>
               {priority.kind === 'deal' && (
                 <Button variant="outline" render={<Link href={priority.registerHref} />}>
-                  Registrar follow-up
+                  Registrar retorno
                 </Button>
               )}
               <Button variant="outline" render={<Link href="/chat-ia" />}>
@@ -508,7 +508,7 @@ export default function HojePage() {
                 </div>
                 <Progress value={kpiPct} className="h-3" />
                 <Button variant="outline" className="w-full" render={<Link href="/kpis/registrar" />}>
-                  Registrar acao
+                  Registrar ação
                 </Button>
               </>
             ) : (
@@ -523,7 +523,7 @@ export default function HojePage() {
           <CardContent className="space-y-4 pt-6">
             <div className="flex items-center justify-between gap-3">
               <div className="section-label"><span className="h-1.5 w-1.5 rounded-full bg-current" />Próximas ações</div>
-              <Button variant="ghost" size="sm" render={<Link href="/crm" />}>Ver pipeline</Button>
+              <Button variant="ghost" size="sm" render={<Link href="/crm" />}>Ver funil</Button>
             </div>
             {sortedDeals.length ? (
               <div className="space-y-3">
@@ -547,7 +547,7 @@ export default function HojePage() {
                 ))}
               </div>
             ) : (
-              <EmptyLine icon={CalendarClock} title="Pipeline limpo" description="Cadastre oportunidades para a VAMO priorizar suas próximas ações." />
+              <EmptyLine icon={CalendarClock} title="Funil limpo" description="Cadastre oportunidades para a VAMO priorizar suas próximas ações." />
             )}
           </CardContent>
         </Card>
@@ -556,7 +556,7 @@ export default function HojePage() {
           {recommendations.length > 0 && (
             <Card>
               <CardContent className="space-y-3 pt-6">
-                <div className="section-label"><Sparkles className="h-3.5 w-3.5" />Recomendacoes contextuais</div>
+                <div className="section-label"><Sparkles className="h-3.5 w-3.5" />Recomendações contextuais</div>
                 {recommendations.map((recommendation) => (
                   <ContextualRecommendationCard key={recommendation.id} recommendation={recommendation} />
                 ))}
@@ -566,16 +566,16 @@ export default function HojePage() {
 
           <Card className="border-blue-500/20 bg-blue-500/5">
             <CardContent className="space-y-4 pt-6">
-              <div className="section-label"><Sparkles className="h-3.5 w-3.5" />Coach IA</div>
+              <div className="section-label"><Sparkles className="h-3.5 w-3.5" />Mentoria IA</div>
               <CoachLine
                 icon={overdueDeals.length ? AlertTriangle : CheckCircle2}
-                title={overdueDeals.length ? 'Recupere follow-ups atrasados' : 'Ritmo comercial saudavel'}
-                description={overdueDeals.length ? 'Comece pelos deals vencidos: eles tem maior chance de virar perda silenciosa.' : 'Sem follow-up vencido. Use a IA para preparar abordagens dos deals com maior valor.'}
+                title={overdueDeals.length ? 'Recupere retornos atrasados' : 'Ritmo comercial saudavel'}
+                description={overdueDeals.length ? 'Comece pelos oportunidades vencidos: eles tem maior chance de virar perda silenciosa.' : 'Sem retorno vencido. Use a IA para preparar abordagens dos oportunidades com maior valor.'}
               />
               <CoachLine
                 icon={Sparkles}
                 title="Script contextual"
-                description={topDeal ? `Peça um script para ${topDeal.account?.name || topDeal.title} antes de abordar.` : 'Quando houver deals, a IA sugere scripts por etapa.'}
+                description={topDeal ? `Peça um script para ${topDeal.account?.name || topDeal.title} antes de abordar.` : 'Quando houver oportunidades, a IA sugere scripts por etapa.'}
               />
               <Button variant="outline" className="w-full" render={<Link href="/chat-ia" />}>
                 Abrir VAMO IA

@@ -44,7 +44,7 @@ export default function AdminAnalyticsPage() {
           totalXpAwarded: totalXp,
         })
       } catch (err) {
-        console.error('[Analytics] Erro ao carregar dados:', err)
+        console.error('[Análises] Erro ao carregar dados:', err)
       } finally {
         setLoading(false)
       }
@@ -64,7 +64,7 @@ export default function AdminAnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Analytics</h2>
+        <h2 className="text-2xl font-bold">Análises</h2>
         <p className="text-muted-foreground">Métricas gerais da plataforma</p>
       </div>
 

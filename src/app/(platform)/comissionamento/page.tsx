@@ -133,7 +133,7 @@ export default function ComissionamentoPage() {
         category_id: deal.category_id ?? deal.category_name ?? null,
         category_name: deal.category_name ?? 'Sem categoria',
         commercial_table_id: deal.commercial_table_id ?? deal.commercial_table_name ?? null,
-        commercial_table_name: deal.commercial_table_name ?? 'Tabela padrao',
+        commercial_table_name: deal.commercial_table_name ?? 'Tabela padrão',
         sale_amount: toNumber(deal.value),
         received_amount: toNumber(deal.received_amount),
         sale_date: deal.expected_close ?? deal.updated_at ?? new Date().toISOString(),
@@ -188,7 +188,7 @@ export default function ComissionamentoPage() {
       setEntries(persisted.length > 0 ? persisted : preview)
       setDisputes((disputeRows ?? []) as CommissionDispute[])
     } catch {
-      toast.error('Nao foi possivel carregar o comissionamento')
+      toast.error('Não foi possível carregar o comissionamento')
     } finally {
       setLoading(false)
     }
@@ -295,7 +295,7 @@ export default function ComissionamentoPage() {
           closed_at: new Date().toISOString(),
           total_bonus: summary.confirmed,
           total_payroll: summary.confirmed,
-          notes: 'Fechamento considera apenas comissoes confirmadas, salvo ajustes manuais.',
+          notes: 'Fechamento considera apenas comissões confirmadas, salvo ajustes manuais.',
         })
         .eq('organization_id', user.organization_id)
         .eq('reference', reference)
@@ -314,10 +314,10 @@ export default function ComissionamentoPage() {
         action: 'period_closed_confirmed_only',
         details: { reference, confirmed_total: summary.confirmed },
       })
-      toast.success('Fechamento aberto com comissoes confirmadas')
+      toast.success('Fechamento aberto com comissões confirmadas')
       fetchData()
     } catch {
-      toast.error('Erro ao fechar periodo')
+      toast.error('Erro ao fechar período')
     } finally {
       setClosing(false)
     }
@@ -363,7 +363,7 @@ export default function ComissionamentoPage() {
   }
 
   const exportCsv = () => {
-    const header = ['Data', 'Vendedor', 'Cliente', 'Produto/Tabela', 'Valor base', 'Percentual', 'Comissao', 'Status', 'Regra']
+    const header = ['Data', 'Vendedor', 'Cliente', 'Produto/Tabela', 'Valor base', 'Percentual', 'Comissão', 'Status', 'Regra']
     const rows = visibleEntries.map((entry) => [
       formatDatePtBr(entry.competence_date),
       entry.seller_name ?? '',
@@ -396,8 +396,8 @@ export default function ComissionamentoPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Gestao de Comissoes</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{formatD1Message()} Valores podem mudar ate o fechamento.</p>
+          <h2 className="text-xl font-semibold tracking-tight">Gestao de Comissões</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{formatD1Message()} Valores podem mudar até o fechamento.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={exportCsv}>
@@ -416,8 +416,8 @@ export default function ComissionamentoPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4 xl:grid-cols-7">
-        <Summary icon={CheckCircle2} label="Comissao confirmada" value={formatCurrency(summary.confirmed)} tone="text-emerald-700 bg-emerald-500/10" />
-        <Summary icon={Clock} label="Comissao pendente" value={formatCurrency(summary.pending)} tone="text-amber-700 bg-amber-500/10" />
+        <Summary icon={CheckCircle2} label="Comissão confirmada" value={formatCurrency(summary.confirmed)} tone="text-emerald-700 bg-emerald-500/10" />
+        <Summary icon={Clock} label="Comissão pendente" value={formatCurrency(summary.pending)} tone="text-amber-700 bg-amber-500/10" />
         <Summary icon={AlertCircle} label="Contestada" value={formatCurrency(summary.disputed)} tone="text-red-700 bg-red-500/10" />
         <Summary icon={FileText} label="Total estimado" value={formatCurrency(summary.estimated)} tone="text-blue-700 bg-blue-500/10" />
         <Summary icon={Users} label="Vendedores" value={String(sellerSummaries.length)} tone="text-violet-700 bg-violet-500/10" />
@@ -428,7 +428,7 @@ export default function ComissionamentoPage() {
       {rules.length === 0 && (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="pt-5 text-sm text-amber-800">
-            Nenhuma regra ativa encontrada. Cadastre uma regra em Configuracao de Comissionamento para gerar comissoes automaticamente.
+            Nenhuma regra ativa encontrada. Cadastre uma regra em Configuração de Comissionamento para gerar comissões automaticamente.
           </CardContent>
         </Card>
       )}
@@ -455,7 +455,7 @@ export default function ComissionamentoPage() {
       {tab === 'extrato' && (
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Extrato de Comissao</CardTitle>
+            <CardTitle className="text-sm font-medium">Extrato de Comissão</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
@@ -499,7 +499,7 @@ export default function ComissionamentoPage() {
                           <Badge className={`border-0 text-[10px] ${disputeTone[dispute.status]}`}>{statusLabel(dispute.status)}</Badge>
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">{dispute.reason}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{dispute.description || 'Sem observacao adicional.'}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{dispute.description || 'Sem observação adicional.'}</p>
                         {entry && (
                           <p className="mt-2 text-xs">
                             {entry.customer_name} - {entry.product_name} - {formatCurrency(entry.commission_amount)} pela regra {entry.rule_name}
@@ -551,7 +551,7 @@ function Summary({ icon: Icon, label, value, tone }: { icon: typeof CheckCircle2
 }
 
 function SellerTable({ summaries, entries }: { summaries: CommissionSellerSummary[]; entries: CommissionEntryDraft[] }) {
-  if (summaries.length === 0) return <Empty text="Nenhuma comissao encontrada para este periodo. Assim que houver vendas ou recebimentos elegiveis, os valores aparecem aqui." />
+  if (summaries.length === 0) return <Empty text="Nenhuma comissão encontrada para este período. Assim que houver vendas ou recebimentos elegíveis, os valores aparecem aqui." />
 
   return (
     <Card className="border-border/50">
@@ -609,14 +609,14 @@ function SellerTable({ summaries, entries }: { summaries: CommissionSellerSummar
 }
 
 function EntryTable({ entries }: { entries: CommissionEntryDraft[] }) {
-  if (entries.length === 0) return <Empty text="Nenhuma comissao encontrada para os filtros selecionados." />
+  if (entries.length === 0) return <Empty text="Nenhuma comissão encontrada para os filtros selecionados." />
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border/50">
-            {['Data', 'Vendedor', 'Cliente', 'Produto/Tabela', 'Valor base', '%', 'Comissao', 'Status', 'Regra aplicada'].map((head) => (
+            {['Data', 'Vendedor', 'Cliente', 'Produto/Tabela', 'Valor base', '%', 'Comissão', 'Status', 'Regra aplicada'].map((head) => (
               <th key={head} className="px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{head}</th>
             ))}
           </tr>

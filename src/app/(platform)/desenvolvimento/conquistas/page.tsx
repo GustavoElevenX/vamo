@@ -211,7 +211,7 @@ export default function ConquistasPage() {
       {/* Badge Grid */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Badges</CardTitle>
+          <CardTitle className="text-sm font-medium">Selos</CardTitle>
         </CardHeader>
         <CardContent>
           {sortedBadges.length === 0 ? (
@@ -269,7 +269,7 @@ export default function ConquistasPage() {
       {recentEarned.length > 0 && (
         <Card className="border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Ultimas Conquistas</CardTitle>
+            <CardTitle className="text-sm font-medium">Últimas Conquistas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {recentEarned.map((badge) => (

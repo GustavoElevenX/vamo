@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     .eq('organization_id', appUser.organization_id)
     .maybeSingle()
   if (!deal || (appUser.role === 'seller' && deal.owner_id !== appUser.id)) {
-    return NextResponse.json({ error: 'Deal nao encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'oportunidade não encontrado' }, { status: 404 })
   }
 
   const { data, error } = await adminClient
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     .eq('organization_id', appUser.organization_id)
     .maybeSingle()
   if (!deal || (appUser.role === 'seller' && deal.owner_id !== appUser.id)) {
-    return NextResponse.json({ error: 'Deal nao encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'oportunidade não encontrado' }, { status: 404 })
   }
 
   if (completed) {

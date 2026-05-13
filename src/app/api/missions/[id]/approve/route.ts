@@ -14,7 +14,7 @@ export async function POST(_request: Request, { params }: Params) {
     const { adminClient, appUser } = auth
 
     if (!['manager', 'admin', 'developer'].includes(appUser.role)) {
-      return NextResponse.json({ error: 'Apenas gestor pode aprovar missao' }, { status: 403 })
+      return NextResponse.json({ error: 'Apenas gestor pode aprovar missão' }, { status: 403 })
     }
 
     const result = await approveMission(adminClient, {
@@ -27,7 +27,7 @@ export async function POST(_request: Request, { params }: Params) {
   } catch (error) {
     console.error('POST /api/missions/[id]/approve', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro ao aprovar missao' },
+      { error: error instanceof Error ? error.message : 'Erro ao aprovar missão' },
       { status: 500 },
     )
   }

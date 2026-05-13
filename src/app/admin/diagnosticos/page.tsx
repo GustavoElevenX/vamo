@@ -29,7 +29,7 @@ export default function AdminDiagnosticosPage() {
           .order('created_at', { ascending: false })
         setSessions(data ?? [])
       } catch (err) {
-        console.error('[Diagnosticos] Erro ao carregar dados:', err)
+        console.error('[Diagnósticos] Erro ao carregar dados:', err)
       } finally {
         setLoading(false)
       }

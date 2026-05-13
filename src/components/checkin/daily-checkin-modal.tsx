@@ -227,7 +227,7 @@ export function DailyCheckinModal() {
             disabled={currentRequiredMissing || saving}
             className="flex-1"
           >
-            {saving ? 'Salvando...' : step < questions.length - 1 ? 'Proximo' : 'Concluir'}
+            {saving ? 'Salvando...' : step < questions.length - 1 ? 'Próximo' : 'Concluir'}
           </Button>
         </div>
       </DialogContent>

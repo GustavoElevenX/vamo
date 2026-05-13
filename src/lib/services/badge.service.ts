@@ -25,7 +25,7 @@ export async function checkAndAwardBadges(
       .eq('active', true)
 
     if (badgesError) {
-      console.error('Error fetching badges:', badgesError)
+      console.error('Error fetching selos:', badgesError)
       return []
     }
 
@@ -132,7 +132,7 @@ export async function checkAndAwardBadges(
                 criteria: badge.criteria,
                 ...(context?.evidence ?? {}),
               },
-              impactExpected: 'Badge concedido por evidencia operacional real',
+              impactExpected: 'Badge concedido por evidência operacional real',
               description: `Badge conquistado: ${badge.name}`,
             })
           } catch (xpErr) {

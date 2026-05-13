@@ -132,7 +132,7 @@ export interface CommercialSellerPerformance {
   streak: number
   checkin_energy: number | null
   commercial_score: number
-  commercial_score_label: 'Alta performance' | 'No caminho' | 'Atencao' | 'Risco'
+  commercial_score_label: 'Alto desempenho' | 'No caminho' | 'Atenção' | 'Risco'
   status: 'accelerating' | 'selling_with_risk' | 'executing_not_converting' | 'low_execution'
   status_label: string
   status_message: string
@@ -210,7 +210,7 @@ export function resolveCommercialPeriod(input: PeriodInput = {}) {
     start.setHours(0, 0, 0, 0)
     end = new Date(now)
     end.setHours(23, 59, 59, 999)
-    label = 'Ultimos 7 dias'
+    label = 'Últimos 7 dias'
   } else if (requested === 'quarter') {
     const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3
     start = new Date(now.getFullYear(), quarterStartMonth, 1)
@@ -277,12 +277,12 @@ function buildActionForSeller(seller: Omit<CommercialSellerPerformance, 'recomme
   if (seller.activities_count === 0 || seller.kpi_execution_pct < 30) {
     return {
       status: 'low_execution' as const,
-      status_label: 'Baixa execucao',
-      status_message: 'Precisa de cobranca, missao objetiva ou alinhamento rapido.',
+      status_label: 'Baixa execução',
+      status_message: 'Precisa de cobrança, missão objetiva ou alinhamento rápido.',
       action: {
         type: 'execution' as const,
         label: 'Enviar nudge',
-        reason: 'Baixo volume de acoes comerciais registradas no periodo.',
+        reason: 'Baixo volume de ações comerciais registradas no período.',
         href: `/equipe/${seller.id}`,
       },
     }
@@ -291,12 +291,12 @@ function buildActionForSeller(seller: Omit<CommercialSellerPerformance, 'recomme
   if (seller.activities_count >= 8 && seller.conversion_rate < 15 && seller.won_deals_count === 0) {
     return {
       status: 'executing_not_converting' as const,
-      status_label: 'Executando, mas nao convertendo',
+      status_label: 'Executando, mas não convertendo',
       status_message: 'Precisa de ajuda em proposta, negociacao ou fechamento.',
       action: {
         type: 'coaching' as const,
         label: 'Gerar PDI com IA',
-        reason: 'Ha execucao comercial, mas a conversao em vendas esta baixa.',
+        reason: 'Há execução comercial, mas a conversão em vendas esta baixa.',
         href: '/monitoramento/desenvolvimento',
       },
     }
@@ -306,11 +306,11 @@ function buildActionForSeller(seller: Omit<CommercialSellerPerformance, 'recomme
     return {
       status: 'selling_with_risk' as const,
       status_label: 'Vendendo, mas com risco',
-      status_message: 'Tem potencial de bater meta, mas precisa organizar pipeline.',
+      status_message: 'Tem potencial de bater meta, mas precisa organizar funil.',
       action: {
         type: 'risk' as const,
-        label: 'Criar missao de correcao',
-        reason: 'Existe pipeline em risco apesar de resultado comercial no periodo.',
+        label: 'Criar missão de correcao',
+        reason: 'Existe funil em risco apesar de resultado comercial no período.',
         href: `/objetivos/plano-acao?seller=${seller.id}`,
       },
     }
@@ -330,9 +330,9 @@ function buildActionForSeller(seller: Omit<CommercialSellerPerformance, 'recomme
 }
 
 function scoreLabel(score: number): CommercialSellerPerformance['commercial_score_label'] {
-  if (score >= 80) return 'Alta performance'
+  if (score >= 80) return 'Alto desempenho'
   if (score >= 60) return 'No caminho'
-  if (score >= 40) return 'Atencao'
+  if (score >= 40) return 'Atenção'
   return 'Risco'
 }
 
@@ -346,7 +346,7 @@ function priorityFromImpact(type: CommercialActionQueueItem['type'], impact: num
 
 function nudgeMessage(seller: CommercialSellerPerformance, type: CommercialActionQueueItem['type'], impact: number) {
   if (type === 'risk') {
-    return `${seller.name}, voce tem ${impact.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em oportunidades com risco comercial. Atualize o proximo passo dos deals prioritarios hoje.`
+    return `${seller.name}, voce tem ${impact.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em oportunidades com risco comercial. Atualize o próximo passo dos deals prioritarios hoje.`
   }
   if (type === 'execution') {
     return `${seller.name}, ainda ha baixa execucao comercial registrada no periodo. Priorize follow-ups e atualize o pipeline antes de abrir novas frentes.`
@@ -647,9 +647,9 @@ export async function getTeamCommercialPerformance(
         title: `${seller.name} tem pipeline em risco`,
         reason: `${seller.deals_without_next_action} deals sem proxima acao, ${seller.overdue_followups} follow-ups atrasados e ${seller.stalled_deals} deals parados.`,
         impact_value: seller.pipeline_at_risk,
-        suggested_action: 'Criar missao de correcao e cobrar atualizacao do pipeline.',
+        suggested_action: 'Criar missão de correcao e cobrar atualizacao do funil.',
         message: nudgeMessage(seller, 'risk', seller.pipeline_at_risk),
-        cta: { label: 'Ver pipeline', action: 'open_pipeline', href: `/crm?owner_id=${seller.id}` },
+        cta: { label: 'Ver funil', action: 'open_pipeline', href: `/crm?owner_id=${seller.id}` },
         context: { value_at_risk: seller.pipeline_at_risk, deals_without_next_action: seller.deals_without_next_action, overdue_followups: seller.overdue_followups },
       })
     }
@@ -663,7 +663,7 @@ export async function getTeamCommercialPerformance(
         title: `${seller.name} esta com baixa execucao`,
         reason: `${seller.activities_count} acoes comerciais registradas no periodo e ${seller.kpi_execution_pct}% de execucao medida.`,
         impact_value: 0,
-        suggested_action: 'Enviar nudge de execucao e criar missao simples de follow-up.',
+        suggested_action: 'Enviar nudge de execução e criar missão simples de retorno.',
         message: nudgeMessage(seller, 'execution', 0),
         cta: { label: 'Enviar nudge', action: 'send_nudge', href: `/equipe/${seller.id}` },
         context: { activities_count: seller.activities_count, kpi_execution_pct: seller.kpi_execution_pct },
@@ -695,7 +695,7 @@ export async function getTeamCommercialPerformance(
         title: `${seller.name} merece reconhecimento`,
         reason: `${seller.revenue_won.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} vendido e score comercial ${seller.commercial_score}.`,
         impact_value: seller.revenue_won,
-        suggested_action: 'Reconhecer no feed ou enviar nudge positivo.',
+        suggested_action: 'Reconhecer no mural ou enviar nudge positivo.',
         message: nudgeMessage(seller, 'recognition', seller.revenue_won),
         cta: { label: 'Reconhecer', action: 'recognize', href: `/equipe/${seller.id}` },
         context: { revenue_won: seller.revenue_won, commercial_score: seller.commercial_score },
@@ -708,12 +708,12 @@ export async function getTeamCommercialPerformance(
   }).slice(0, 12)
 
   const executionByEvent = [
-    { event: 'crm_activity_follow_up', label: 'Follow-ups' },
+    { event: 'crm_activity_follow_up', label: 'retornos' },
     { event: 'crm_activity_call', label: 'Ligacoes' },
     { event: 'crm_activity_whatsapp', label: 'WhatsApps' },
     { event: 'crm_activity_meeting', label: 'Reunioes' },
     { event: 'crm_activity_proposal_sent', label: 'Propostas' },
-    { event: 'crm_deal_updated', label: 'Deals atualizados' },
+    { event: 'crm_deal_updated', label: 'oportunidades atualizados' },
     { event: 'crm_deal_won', label: 'Vendas ganhas' },
   ].map((item) => {
     const relatedKpis = kpis.filter((kpi) => kpi.source_event === item.event)
@@ -783,23 +783,23 @@ export async function getTeamCommercialPerformance(
     title: 'VAMO IA - Leitura da equipe',
     summary: summary.revenue_won > 0
       ? `O time vendeu ${summary.revenue_won.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} no periodo e tem ${summary.forecast_weighted.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} de forecast provavel.`
-      : 'Nenhuma venda ganha registrada no periodo. Comece pelos deals em proposta, follow-ups atrasados e vendedores sem acao comercial.',
+      : 'Nenhuma venda ganha registrada no período. Comece pelos oportunidades em proposta, retornos atrasados e vendedores sem ação comercial.',
     goal: monthlyGoal
       ? `Meta comercial: ${monthlyGoal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Gap real: ${summary.gap_real.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`
-      : 'Meta comercial do periodo ainda nao foi cadastrada.',
+      : 'Meta comercial do período ainda não foi cadastrada.',
     risk: summary.pipeline_at_risk > 0
       ? `Principal risco: ${summary.pipeline_at_risk.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em pipeline com pendencias comerciais.`
-      : 'Pipeline sem risco comercial relevante pelos criterios atuais.',
+      : 'Funil sem risco comercial relevante pelos critérios atuais.',
     opportunity: topRevenueSeller
       ? `${topRevenueSeller.name} lidera em receita vendida no periodo.`
-      : 'Ainda nao ha lider comercial claro no periodo.',
+      : 'Ainda não há líder comercial claro no período.',
     attention: attentionSeller
       ? `${attentionSeller.name} precisa de atencao: ${attentionSeller.status_message}`
       : 'Nenhum vendedor em atencao critica no momento.',
     recognition: recognitionSeller
       ? `${recognitionSeller.name} merece reconhecimento ou reforco positivo.`
-      : 'Reconhecimento sera sugerido assim que houver resultado comercial no periodo.',
-    priority: actionQueue[0]?.suggested_action ?? 'Comece criando proximas acoes para oportunidades abertas e missao simples de follow-up.',
+      : 'Reconhecimento será sugerido assim que houver resultado comercial no período.',
+    priority: actionQueue[0]?.suggested_action ?? 'Comece criando próximas ações para oportunidades abertas e missão simples de retorno.',
   }
 
   const sellerProfile = input.sellerId && sellers[0]

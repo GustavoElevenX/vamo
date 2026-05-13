@@ -129,7 +129,7 @@ export default function MemberDetailPage() {
   if (!profile) {
     return (
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold">Perfil comercial nao encontrado</h2>
+        <h2 className="text-2xl font-bold">Perfil comercial não encontrado</h2>
         <Button variant="outline" onClick={() => router.push('/monitoramento/equipe')}>Voltar</Button>
       </div>
     )
@@ -158,22 +158,22 @@ export default function MemberDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" render={<Link href={`/crm?owner_id=${seller.id}`} />}>Ver pipeline</Button>
-          <Button render={<Link href={`/objetivos/plano-acao?seller=${seller.id}`} />}>Criar missao</Button>
+          <Button variant="outline" render={<Link href={`/crm?owner_id=${seller.id}`} />}>Ver funil</Button>
+          <Button render={<Link href={`/objetivos/plano-acao?seller=${seller.id}`} />}>Criar missão</Button>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <Metric icon={DollarSign} label="Vendido" value={currency(seller.revenue_won)} hint={`${seller.goal_pct}% da meta`} />
-        <Metric icon={LineChart} label="Forecast" value={currency(seller.forecast_weighted)} hint={`${currency(seller.open_pipeline)} pipeline`} />
+        <Metric icon={LineChart} label="Previsão" value={currency(seller.forecast_weighted)} hint={`${currency(seller.open_pipeline)} pipeline`} />
         <Metric icon={Target} label="Meta" value={currency(seller.individual_goal)} hint={`gap ${currency(Math.max(0, seller.individual_goal - seller.revenue_won))}`} />
         <Metric icon={Briefcase} label="Ticket medio" value={currency(seller.avg_ticket)} hint={`${seller.won_deals_count} vendas`} />
-        <Metric icon={CheckCircle2} label="Conversao" value={`${seller.conversion_rate}%`} hint={`${seller.activities_count} acoes`} />
-        <Metric icon={Zap} label="Execucao" value={`${seller.kpi_execution_pct}%`} hint={`${seller.missions_completed} missoes concluidas`} />
+        <Metric icon={CheckCircle2} label="Conversão" value={`${seller.conversion_rate}%`} hint={`${seller.activities_count} acoes`} />
+        <Metric icon={Zap} label="Execução" value={`${seller.kpi_execution_pct}%`} hint={`${seller.missions_completed} missoes concluidas`} />
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">Diagnostico comercial</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">Diagnóstico comercial</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -188,7 +188,7 @@ export default function MemberDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card ref={pdiRef}>
-          <CardHeader><CardTitle className="text-sm">Pipeline</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm">Funil</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <MiniStat label="Abertos" value={openDeals.length} />
@@ -200,7 +200,7 @@ export default function MemberDetailPage() {
                 <div className="flex justify-between gap-3">
                   <div>
                     <p className="font-medium">{deal.title}</p>
-                    <p className="text-xs text-muted-foreground">{deal.next_action_title || 'Sem proxima acao'} · {dueLabel(deal.next_action_due_at)}</p>
+                    <p className="text-xs text-muted-foreground">{deal.next_action_title || 'Sem próxima ação'} · {dueLabel(deal.next_action_due_at)}</p>
                   </div>
                   <p className="text-sm font-semibold">{currency(Number(deal.value || 0))}</p>
                 </div>
@@ -210,10 +210,10 @@ export default function MemberDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-sm">Execucao e missoes</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-sm">Execução e missões</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
-              <MiniStat label="Follow-ups" value={seller.followups_done} />
+              <MiniStat label="retornos" value={seller.followups_done} />
               <MiniStat label="Reunioes" value={seller.meetings_booked} />
               <MiniStat label="Propostas" value={seller.proposals_sent} />
             </div>
@@ -247,7 +247,7 @@ export default function MemberDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Bell className="h-4 w-4" />Historico de nudges</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Bell className="h-4 w-4" />Histórico de nudges</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {profile.nudges.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum nudge enviado ainda.</p>
@@ -262,10 +262,10 @@ export default function MemberDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><MessageSquare className="h-4 w-4" />Recomendacoes e 1:1</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><MessageSquare className="h-4 w-4" />Recomendações e 1:1</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {profile.recommendations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma recomendacao aberta.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma recomendação aberta.</p>
             ) : profile.recommendations.slice(0, 8).map((recommendation) => (
               <div key={recommendation.id} className="rounded-md border p-3">
                 <div className="flex items-center justify-between gap-3">

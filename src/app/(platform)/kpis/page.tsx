@@ -59,14 +59,14 @@ export default function KpisPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        label="Performance"
+        label="Desempenho"
         labelIcon={<Target className="h-3 w-3" />}
-        title={<>Minha <TitleHighlight>Execucao</TitleHighlight></>}
-        description="Acompanhe indicadores gerados pelas suas acoes comerciais do dia"
+        title={<>Minha <TitleHighlight>Execução</TitleHighlight></>}
+        description="Acompanhe indicadores gerados pelas suas ações comerciais do dia"
         actions={
           <Button render={<Link href="/kpis/registrar" />}>
             <Plus className="mr-2 h-4 w-4" />
-            Registrar acao
+            Registrar ação
           </Button>
         }
       />

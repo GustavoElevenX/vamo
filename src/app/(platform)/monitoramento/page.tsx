@@ -44,8 +44,8 @@ interface OverviewData {
 
 const QUICK_LINKS = [
   { label: 'Funil em Tempo Real',      href: '/monitoramento/funil',         icon: Filter },
-  { label: 'Performance da Equipe',    href: '/monitoramento/equipe',        icon: Users },
-  { label: 'Missoes da Equipe',        href: '/monitoramento/missoes',       icon: Swords },
+  { label: 'Desempenho da Equipe',    href: '/monitoramento/equipe',        icon: Users },
+  { label: 'Missões da Equipe',        href: '/monitoramento/missoes',       icon: Swords },
   { label: 'Alertas da VAMO IA',       href: '/monitoramento/alertas',       icon: AlertTriangle },
   { label: 'Saúde da Equipe',          href: '/monitoramento/saude-equipe',  icon: HeartPulse },
   { label: 'Comissionamento',          href: '/monitoramento/comissionamento',icon: DollarSign },
@@ -226,11 +226,11 @@ export default function MonitoramentoPage() {
       sub: `${d.meta_pct}% da meta comercial`,
       icon: DollarSign,
       color: 'stat-icon-green',
-      trend: d.receita_vendida_mes > 0 ? 'Venda real' : 'Sem venda no periodo',
+      trend: d.receita_vendida_mes > 0 ? 'Venda real' : 'Sem venda no período',
       trendUp: d.receita_vendida_mes > 0,
     },
     {
-      label: 'Pipeline em risco',
+      label: 'Funil em risco',
       value: d.pipeline_em_risco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }),
       sub: `${d.forecast_provavel.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })} forecast provavel`,
       icon: TrendingUp,
@@ -239,7 +239,7 @@ export default function MonitoramentoPage() {
       trendUp: d.pipeline_em_risco === 0,
     },
     {
-      label: 'Acoes comerciais hoje',
+      label: 'Ações comerciais hoje',
       value: d.kpi_entries_hoje,
       sub: `${d.dias_com_kpi_semana} dias com registro esta semana`,
       icon: Target,
@@ -272,7 +272,7 @@ export default function MonitoramentoPage() {
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Dados em tempo real da performance comercial e da plataforma
+            Dados em tempo real da desempenho comercial e da plataforma
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
@@ -326,7 +326,7 @@ export default function MonitoramentoPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              Acoes comerciais ? ultimos 7 dias
+              Ações comerciais ? últimos 7 dias
             </CardTitle>
             <Badge variant="secondary" className="text-[10px]">
               {d.dias_com_kpi_semana}/7 dias ativos
@@ -339,9 +339,9 @@ export default function MonitoramentoPage() {
               <div className="stat-icon stat-icon-blue h-10 w-10 mx-auto mb-3">
                 <Target className="h-5 w-5" />
               </div>
-              <p className="text-sm text-muted-foreground">Nenhuma acao comercial registrada nos ultimos 7 dias</p>
+              <p className="text-sm text-muted-foreground">Nenhuma ação comercial registrada nos últimos 7 dias</p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Os vendedores precisam registrar acoes comerciais reais no CRM
+                Os vendedores precisam registrar ações comerciais reais no CRM
               </p>
             </div>
           ) : (
@@ -395,7 +395,7 @@ export default function MonitoramentoPage() {
                         <span className="text-blue-600 dark:text-blue-400 font-semibold">
                           {d.missoes_concluidas_mes} missões concluídas
                         </span>{' '}
-                        este mês. Cada missão entregue gera valor direto no pipeline de vendas.
+                        este mês. Cada missão entregue gera valor direto no funil de vendas.
                       </>
                     : 'Nenhuma missão concluída este mês ainda. Incentive a equipe a completar as missões pendentes.'
                   }

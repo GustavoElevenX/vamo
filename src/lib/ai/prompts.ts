@@ -20,10 +20,10 @@ interface DiagnosticData {
   qa?: DiagnosticQuestionAnswer[]
 }
 
-const SALES_CONSULTANT_SYSTEM = `Voce e um consultor senior especializado em performance de equipes comerciais com mais de 15 anos de experiencia em diagnostico e desenvolvimento de times de vendas. Voce analisa dados detalhados de diagnostico e gera insights cirurgicos e acionaveis. Sempre responda em portugues brasileiro com linguagem profissional e direta.`
+const SALES_CONSULTANT_SYSTEM = `Você é um consultor sênior especializado em desempenho de equipes comerciais com mais de 15 anos de experiência em diagnóstico e desenvolvimento de times de vendas. Você analisa dados detalhados de diagnóstico e gera análises cirúrgicas e acionáveis. Sempre responda em português brasileiro com linguagem profissional e direta.`
 
 const QUADRANT_LABELS: Record<string, string> = {
-  critical: 'Critico',
+  critical: 'Crítico',
   at_risk: 'Em Risco',
   developing: 'Em Desenvolvimento',
   optimized: 'Otimizado',
@@ -31,9 +31,9 @@ const QUADRANT_LABELS: Record<string, string> = {
 
 export function buildDiagnosticAnalysisPrompt(data: DiagnosticData) {
   const areaLabels: Record<DiagnosticArea, string> = {
-    lead_generation: 'Geracao de Leads',
+    lead_generation: 'Geração de potenciais clientes',
     sales_process: 'Processo de Vendas',
-    team_management: 'Gestao de Equipe',
+    team_management: 'Gestão de Equipe',
     tools_technology: 'Ferramentas e Tecnologia',
   }
 
@@ -42,7 +42,7 @@ export function buildDiagnosticAnalysisPrompt(data: DiagnosticData) {
     .sort(([, a], [, b]) => a.pct - b.pct)
     .map(([area, scores]) => {
       const label = DIAGNOSTIC_AREAS[area as DiagnosticArea]
-      const status = scores.pct >= 75 ? 'Otimizado' : scores.pct >= 50 ? 'Em Desenvolvimento' : scores.pct >= 25 ? 'Em Risco' : 'Critico'
+      const status = scores.pct >= 75 ? 'Otimizado' : scores.pct >= 50 ? 'Em Desenvolvimento' : scores.pct >= 25 ? 'Em Risco' : 'Crítico'
       return `  ${label}: ${scores.pct}% [${status}] (${scores.score}/${scores.max} pts)`
     })
     .join('\n')
@@ -75,16 +75,16 @@ export function buildDiagnosticAnalysisPrompt(data: DiagnosticData) {
   return {
     system: `${SALES_CONSULTANT_SYSTEM}
 
-Analise o diagnostico comercial detalhado abaixo e gere uma analise impecavel e personalizada.
+Analise o diagnóstico comercial detalhado abaixo e gere uma análise impecável e personalizada.
 
-Responda EXCLUSIVAMENTE com JSON valido no seguinte formato (sem markdown, sem texto fora do JSON):
+Responda EXCLUSIVAMENTE com JSON válido no seguinte formato (sem markdown, sem texto fora do JSON):
 {
-  "executive_summary": "Resumo executivo em 2-3 frases descrevendo o estado atual da operacao comercial, os principais riscos e o potencial de melhoria. Seja especifico ao respondente e aos dados.",
+  "executive_summary": "Resumo executivo em 2-3 frases descrevendo o estado atual da operação comercial, os principais riscos e o potencial de melhoria. Seja específico ao respondente e aos dados.",
   "bottlenecks": [
-    "Gargalo especifico identificado nas respostas, nao generico. Ex: 'Ausencia de processo sistematizado de prospeccao: a equipe depende exclusivamente de indicacoes, limitando o crescimento previsivel de pipeline'"
+    "Gargalo específico identificado nas respostas, não genérico. Ex: 'Ausência de processo sistematizado de prospecção: a equipe depende exclusivamente de indicações, limitando o crescimento previsível de pipeline'"
   ],
   "strengths": [
-    "Ponto forte especifico baseado nas areas/respostas com maior pontuacao"
+    "Ponto forte específico baseado nas áreas/respostas com maior pontuação"
   ],
   "weaknesses": [
     "Fraqueza especifica identificada nas respostas, com contexto do porque impacta o resultado"
@@ -92,7 +92,7 @@ Responda EXCLUSIVAMENTE com JSON valido no seguinte formato (sem markdown, sem t
   "financial_implications": "Descricao em 2-3 frases do impacto financeiro estimado dos gargalos identificados. Mencione perda de oportunidades, ciclo de vendas longo, churn ou baixa conversao conforme os dados indicarem.",
   "priority_actions": [
     {
-      "action": "Acao especifica, pratica e implementavel em ate 30 dias. Nao teorica.",
+      "action": "Ação específica, prática e implementável em até 30 dias. Não teórica.",
       "area": "Nome da area relacionada",
       "impact": "alto"
     }
@@ -100,12 +100,12 @@ Responda EXCLUSIVAMENTE com JSON valido no seguinte formato (sem markdown, sem t
 }
 
 Regras obrigatorias:
-- executive_summary: 2-3 frases, direto ao ponto, especifico ao respondente
-- bottlenecks: 2-4 gargalos ESPECIFICOS baseados nas respostas de menor pontuacao, nunca genericos
-- strengths: 2-3 pontos fortes ESPECIFICOS das areas/respostas de maior pontuacao
+- executive_summary: 2-3 frases, direto ao ponto, específico ao respondente
+- bottlenecks: 2-4 gargalos ESPECIFICOS baseados nas respostas de menor pontuação, nunca genericos
+- strengths: 2-3 pontos fortes ESPECIFICOS das áreas/respostas de maior pontuação
 - weaknesses: 2-3 fraquezas especificas com contexto de impacto
 - financial_implications: impacto financeiro realista baseado nos gargalos identificados
-- priority_actions: 3-5 acoes PRATICAS e ESPECIFICAS, ordenadas por impacto (alto/medio/baixo)
+- priority_actions: 3-5 ações PRÁTICAS e ESPECIFICAS, ordenadas por impacto (alto/médio/baixo)
 - Use os dados das respostas individuais para personalizar tudo - nunca escreva analises genericas`,
 
     user: `DIAGNOSTICO COMERCIAL
@@ -116,7 +116,7 @@ PONTUACAO POR AREA (ordenado do pior para o melhor):
 ${areaSummary}
 ${detailedQA}
 
-Gere uma analise completa, especifica e acionavel baseada em TODOS os dados acima.`,
+Gere uma analise completa, especifica e acionável baseada em TODOS os dados acima.`,
   }
 }
 
@@ -140,7 +140,7 @@ Os 4 perfis DISC:
 - S (Estabilidade): Paciente, confiavel, cooperativo, orientado a equipe
 - C (Conformidade): Analitico, preciso, meticuloso, orientado a qualidade
 
-Responda EXCLUSIVAMENTE com JSON valido no seguinte formato:
+Responda EXCLUSIVAMENTE com JSON válido no seguinte formato:
 {
   "dominant_profile": "D",
   "profile_name": "nome do perfil em portugues",
@@ -192,21 +192,21 @@ Areas de desenvolvimento: ${data.behavioralProfile.development_areas.join(', ')}
   return {
     system: `${SALES_CONSULTANT_SYSTEM}
 
-Com base nos dados de diagnostico, gere missoes gamificadas personalizadas para melhorar a performance comercial.
+Com base nos dados de diagnostico, gere missões gamificadas personalizadas para melhorar a performance comercial.
 
-Responda EXCLUSIVAMENTE com JSON valido no seguinte formato:
+Responda EXCLUSIVAMENTE com JSON válido no seguinte formato:
 [
   {
-    "title": "titulo curto da missao",
+    "title": "título curto da missão",
     "description": "descricao detalhada do que fazer e por que",
     "area": "lead_generation",
     "difficulty": 1,
     "xp_reward": 50,
     "resources": [{"title": "nome do recurso", "url": ""}],
     "playbook_content": {
-      "por_que_voce_recebe": "Explicacao baseada no perfil DISC de por que essa missao e relevante",
-      "passos": ["Passo 1 pratico", "Passo 2 pratico", "Passo 3 pratico"],
-      "nao_fazer": "O erro mais comum que o perfil do vendedor comete nessa situacao",
+      "por_que_voce_recebe": "Explicação baseada no perfil DISC de por que essa missão é relevante",
+      "passos": ["Passo 1 prático", "Passo 2 prático", "Passo 3 prático"],
+      "nao_fazer": "O erro mais comum que o perfil do vendedor comete nessa situação",
       "frase_gatilho": "Frase especifica para usar no momento critico da venda",
       "simulador_link": true
     }
@@ -214,29 +214,29 @@ Responda EXCLUSIVAMENTE com JSON valido no seguinte formato:
 ]
 
 Regras:
-- Gere 4-5 missoes
-- Foque nas areas com menor pontuacao (maior necessidade de melhoria)
+- Gere 4-5 missões
+- Foque nas areas com menor pontuação (maior necessidade de melhoria)
 - area DEVE ser uma dessas: lead_generation, sales_process, team_management, tools_technology
 - difficulty: 1 (facil), 2 (medio), 3 (dificil)
 - xp_reward: 30-50 (facil), 60-100 (medio), 120-200 (dificil)
-- Cada missao deve ter 1-2 recursos sugeridos (podem ser genericos)
-- Missoes devem ser praticas e acionaveis, nao teoricas
+- Cada missão deve ter 1-2 recursos sugeridos (podem ser genéricos)
+- Missões devem ser práticas e acionáveis, não teóricas
 - Se houver perfil DISC, personalize as missoes e o playbook ao estilo do vendedor
-- O playbook_content DEVE ser preenchido para cada missao com instrucoes praticas e acionaveis
-- passos: 3 a 5 instrucoes claras e acionaveis com exemplos reais
+- O playbook_content DEVE ser preenchido para cada missao com instruções práticas e acionáveis
+- passos: 3 a 5 instrucoes claras e acionáveis com exemplos reais
 - nao_fazer: o erro mais comum associado ao perfil comportamental
 - frase_gatilho: uma frase especifica para o vendedor usar na hora critica
 - simulador_link: true se a missao pode ser praticada no simulador de roleplay
 - NAO inclua markdown, explicacoes ou texto fora do JSON`,
 
-    user: `Dados do diagnostico:
+    user: `Dados do diagnóstico:
 Score Geral: ${data.health_pct}% (${data.quadrant})
 
-Pontuacao por area:
+Pontuação por área:
 ${areaDetails}
 ${profileInfo}
 
-Gere missoes gamificadas personalizadas focando nas areas mais fracas.`,
+Gere missões gamificadas personalizadas focando nas areas mais fracas.`,
   }
 }
 
@@ -254,14 +254,14 @@ export function buildCoachTipPrompt(context: {
 
 Voce e um coach de vendas motivacional. Gere uma dica curta e personalizada para o vendedor com base no contexto.
 
-Responda EXCLUSIVAMENTE com JSON valido no seguinte formato:
+Responda EXCLUSIVAMENTE com JSON válido no seguinte formato:
 {
   "tip": "texto da dica em 1-2 frases, maximo 150 caracteres",
   "category": "motivacional"
 }
 
 category deve ser: motivacional, tecnica, comportamental ou estrategica.
-A dica deve ser especifica ao contexto do usuario, nao generica.
+A dica deve ser específica ao contexto do usuário, não genérica.
 NAO inclua markdown, explicacoes ou texto fora do JSON.`,
 
     user: `Contexto do vendedor:
@@ -270,7 +270,7 @@ NAO inclua markdown, explicacoes ou texto fora do JSON.`,
 - XP Total: ${context.totalXp}
 - Streak atual: ${context.streak} dias
 - KPIs registrados hoje: ${context.recentKpiCount}
-${context.latestDiagnosticQuadrant ? `- Ultimo diagnostico: ${context.latestDiagnosticHealthPct}% (${context.latestDiagnosticQuadrant})` : '- Sem diagnostico recente'}
+${context.latestDiagnosticQuadrant ? `- Último diagnóstico: ${context.latestDiagnosticHealthPct}% (${context.latestDiagnosticQuadrant})` : '- Sem diagnóstico recente'}
 
 Gere uma dica personalizada e motivacional.`,
   }

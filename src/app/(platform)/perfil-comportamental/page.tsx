@@ -84,7 +84,7 @@ const DISC_QUESTIONS: BehavioralQuestion[] = [
   },
   {
     id: 6, dimension: 'I',
-    question: 'No follow-up com clientes, você prefere...',
+    question: 'No retorno com clientes, você prefere...',
     options: [
       { label: 'Ser rápido e objetivo, focando no fechamento', trait: 'D' },
       { label: 'Manter contato frequente e construir relacionamento', trait: 'I' },
@@ -160,7 +160,7 @@ const DISC_QUESTIONS: BehavioralQuestion[] = [
     id: 13, dimension: 'C',
     question: 'Qual ferramenta de vendas é mais importante para você?',
     options: [
-      { label: 'Dashboard de resultados e metas', trait: 'D' },
+      { label: 'Painel de resultados e metas', trait: 'D' },
       { label: 'Chat e comunicação com a equipe', trait: 'I' },
       { label: 'CRM para organizar contatos e histórico', trait: 'S' },
       { label: 'Planilhas e relatórios analíticos', trait: 'C' },
@@ -292,11 +292,11 @@ const DISC_QUESTIONS: BehavioralQuestion[] = [
   },
   {
     id: 26, dimension: 'A',
-    question: 'Você consegue manter um pipeline saudável e bem qualificado?',
+    question: 'Você consegue manter um funil saudável e bem qualificado?',
     options: [
       { label: 'Sim — meu funil tem volume e qualidade consistentes', trait: 'A', score: 4 },
       { label: 'Na maioria — às vezes falta volume ou qualidade', trait: 'A', score: 3 },
-      { label: 'Raramente — meu pipeline oscila bastante', trait: 'A', score: 2 },
+      { label: 'Raramente — meu funil oscila bastante', trait: 'A', score: 2 },
       { label: 'Não — este é um desafio constante para mim', trait: 'A', score: 1 },
     ],
   },
@@ -310,7 +310,7 @@ const DIMENSION_INFO: Record<string, { label: string; icon: React.ReactNode; col
   S: { label: 'Estabilidade', icon: <CheckCircle className="h-4 w-4" />, color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300', description: 'Paciente, confiável, cooperativo' },
   C: { label: 'Conformidade', icon: <Brain className="h-4 w-4" />, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300', description: 'Analítico, preciso, meticuloso' },
   E: { label: 'Engajamento', icon: <HeartPulse className="h-4 w-4" />, color: 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300', description: 'Bem-estar, motivação e equilíbrio' },
-  A: { label: 'Autoavaliação', icon: <Target className="h-4 w-4" />, color: 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300', description: 'Percepção de performance e domínio técnico' },
+  A: { label: 'Autoavaliação', icon: <Target className="h-4 w-4" />, color: 'bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300', description: 'Percepção de desempenho e domínio técnico' },
 }
 
 // Group questions into blocks of 4 for the progress indicator
@@ -409,8 +409,8 @@ export default function PerfilComportamentalPage() {
               <div className="max-w-lg space-y-2">
                 <h3 className="text-lg font-semibold">Diagnóstico DISC Completo + Bem-estar</h3>
                 <p className="text-sm text-muted-foreground">
-                  Responda {TOTAL_Q} perguntas sobre seu estilo de trabalho, nível de engajamento e autoavaliação de performance.
-                  A VAMO IA gerará um perfil personalizado com insights acionáveis para sua evolução comercial.
+                  Responda {TOTAL_Q} perguntas sobre seu estilo de trabalho, nível de engajamento e autoavaliação de desempenho.
+                  A VAMO IA gerará um perfil personalizado com análises acionáveis para sua evolução comercial.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2 pt-2">
                   {DIMENSION_ORDER.map((dim) => (
@@ -554,7 +554,7 @@ export default function PerfilComportamentalPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
                   <Target className="h-4 w-4 text-violet-500" />
-                  Autoavaliação de Performance
+                  Autoavaliação de Desempenho
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">

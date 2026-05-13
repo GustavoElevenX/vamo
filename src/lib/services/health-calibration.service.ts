@@ -45,7 +45,7 @@ export async function calibrateHealthFromCheckin(
     .eq('organization_id', input.organizationId)
     .maybeSingle()
 
-  if (!checkin) throw new Error('Check-in nao encontrado')
+  if (!checkin) throw new Error('Check-in não encontrado')
 
   const since = new Date()
   since.setDate(since.getDate() - 7)
@@ -105,13 +105,13 @@ export async function calibrateHealthFromCheckin(
   })
 
   const sellerFocus = risk.riskLevel === 'critical' || risk.riskLevel === 'high'
-    ? 'Reduza para poucas acoes controlaveis: uma oportunidade prioritaria, um follow-up claro e uma pausa de replanejamento.'
+    ? 'Reduza para poucas ações controlaveis: uma oportunidade prioritaria, um retorno claro e uma pausa de replanejamento.'
     : risk.riskLevel === 'medium'
-      ? 'Priorize deals com proximo passo claro e evite abrir novas frentes hoje.'
-      : 'Mantenha ritmo normal e use energia para antecipar uma acao de alto impacto.'
+      ? 'Priorize oportunidades com próximo passo claro e evite abrir novas frentes hoje.'
+      : 'Mantenha ritmo normal e use energia para antecipar uma ação de alto impacto.'
 
   const managerAction = risk.riskLevel === 'critical'
-    ? 'Fazer 1:1 de apoio hoje, suspender missoes agressivas e remover bloqueio operacional.'
+    ? 'Fazer 1:1 de apoio hoje, suspender missões agressivas e remover bloqueio operacional.'
     : risk.riskLevel === 'high'
       ? 'Conversar em tom de apoio, reduzir intensidade e combinar duas entregas possiveis.'
       : risk.riskLevel === 'medium'
@@ -133,8 +133,8 @@ export async function calibrateHealthFromCheckin(
       one_on_one_agenda: [
         'O que esta drenando mais energia hoje?',
         'Qual resultado minimo ainda faz o dia valer?',
-        'Qual missao deve ser reduzida, pausada ou trocada?',
-        'Que apoio remove um bloqueio concreto nas proximas 24h?',
+        'Qual missão deve ser reduzida, pausada ou trocada?',
+        'Que apoio remove um bloqueio concreto nas próximas 24h?',
       ],
       metadata: {
         obstacle: checkin.obstacle,
@@ -189,8 +189,8 @@ export async function calibrateHealthFromCheckin(
       entityType: 'health_calibration',
       entityId: calibration.id,
       title: risk.riskLevel === 'critical' || risk.riskLevel === 'high'
-        ? 'Saude exigiu reducao de intensidade'
-        : 'Saude calibrada para foco do dia',
+        ? 'Saúde exigiu reducao de intensidade'
+        : 'Saúde calibrada para foco do dia',
       description: sellerFocus,
       impactScore: 50,
       priorityScore: risk.riskLevel === 'critical' ? 95 : risk.riskLevel === 'high' ? 85 : 50,
@@ -215,7 +215,7 @@ export async function calibrateHealthFromCheckin(
     sourceModule: 'health',
     recommendationType: risk.riskLevel === 'low' ? 'health_focus' : 'health_1on1',
     title: risk.riskLevel === 'critical' || risk.riskLevel === 'high'
-      ? 'Recalibrar missoes e fazer 1:1'
+      ? 'Recalibrar missões e fazer 1:1'
       : 'Ajustar foco do dia pela energia',
     description: managerAction,
     suggestedActionLabel: managerId ? 'Ver Hoje Gestor' : 'Ver foco de hoje',

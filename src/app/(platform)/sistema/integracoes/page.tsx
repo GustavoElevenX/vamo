@@ -75,7 +75,7 @@ const WEBHOOKS: WebhookConfig[] = [
 
 const RECENT_ERRORS: IntegrationError[] = [
   { id: 1, timestamp: '14:32:07', provider: 'Pipedrive', message: 'API rate limit exceeded - 429 Too Many Requests' },
-  { id: 2, timestamp: '14:28:55', provider: 'Pipedrive', message: 'Connection timeout after 30s - endpoint /deals' },
+  { id: 2, timestamp: '14:28:55', provider: 'Pipedrive', message: 'Connection timeout after 30s - endpoint /oportunidades' },
   { id: 3, timestamp: '13:45:22', provider: 'Pipedrive', message: 'Invalid API token - re-authentication required' },
   { id: 4, timestamp: '12:10:33', provider: 'RD Station', message: 'Webhook payload rejected - missing required field "contact_id"' },
   { id: 5, timestamp: '10:05:17', provider: 'HubSpot', message: 'Partial sync failure - 2 contacts skipped due to duplicate email' },
@@ -104,7 +104,7 @@ export default function IntegracoesPage() {
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Integrações API</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Health dashboard e webhooks</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Health painel e webhooks</p>
       </div>
 
       {/* Integration Health Cards */}

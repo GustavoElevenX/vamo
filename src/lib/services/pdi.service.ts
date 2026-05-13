@@ -216,22 +216,22 @@ function defaultPlanItems(skillArea: string) {
       metadata: { sequence: 1, required: true },
     },
     {
-      title: 'Roleplay no simulador',
+      title: 'Simulação no simulador',
       description: 'Praticar a habilidade em uma conversa simulada antes de aplicar em cliente real.',
       item_type: 'roleplay',
       due_at: tomorrowPlus(4),
       metadata: { sequence: 2, href: '/simulador', required: true },
     },
     {
-      title: 'Aplicacao em oportunidade real',
-      description: 'Usar a tecnica em deal, proposta ou follow-up e registrar evidencia.',
+      title: 'Aplicação em oportunidade real',
+      description: 'Usar a técnica em oportunidade, proposta ou retorno e registrar evidência.',
       item_type: 'real_case_application',
       due_at: tomorrowPlus(7),
       metadata: { sequence: 3, required: true },
     },
     {
-      title: 'Validacao do gestor',
-      description: 'Gestor revisa evidencia e confirma se houve mudanca de comportamento.',
+      title: 'Validação do gestor',
+      description: 'Gestor revisa evidência e confirma se houve mudança de comportamento.',
       item_type: 'manager_review',
       due_at: tomorrowPlus(9),
       metadata: { sequence: 4, required: true },
@@ -297,16 +297,16 @@ async function getOrCreateTrainingModule(
     .insert({
       organization_id: organizationId,
       title: `Treino aplicado: ${skillArea}`,
-      description: 'Modulo estruturado criado automaticamente para transformar gap em pratica, aplicacao real e evidencia.',
+      description: 'Módulo estruturado criado automaticamente para transformar gap em prática, aplicação real e evidência.',
       skill_area: skillArea,
       module_type: 'micro_training',
       estimated_minutes: 12,
       content: {
         steps: [
           'Entenda o comportamento esperado.',
-          'Pratique em simulacao curta.',
+          'Pratique em simulação curta.',
           'Aplique em uma oportunidade real.',
-          'Registre evidencia e resultado.',
+          'Registre evidência e resultado.',
         ],
       },
     })
@@ -367,7 +367,7 @@ export async function detectGapFromCrm(
     ...input,
     skillArea: input.skillArea ?? 'execucao_comercial',
     title: `Gap comercial: ${input.reason}`,
-    description: 'Sinal vindo do CRM pede treino pratico conectado ao comportamento observado.',
+    description: 'Sinal vindo do CRM pede treino prático conectado ao comportamento observado.',
     detectedFrom: 'crm',
     sourceEntityType,
     sourceEntityId,
@@ -474,7 +474,7 @@ export async function detectGap(supabase: SupabaseClient, input: DetectGapInput)
     sourceModule: 'pdi',
     recommendationType: 'pdi_plan',
     title: `Recomendar PDI: ${input.skillArea}`,
-    description: 'Converter o gap em microtreino, roleplay, aplicacao real e validacao.',
+    description: 'Converter o gap em microtreino, simulação, aplicação real e validação.',
     suggestedActionLabel: 'Gerar treinamento com IA',
     suggestedActionHref: '/monitoramento/desenvolvimento',
     priority: input.severity === 'critical' || input.severity === 'high' ? 'high' : 'medium',
@@ -656,7 +656,7 @@ export async function detectPdiGaps(supabase: SupabaseClient, input: DetectPdiGa
       if (withoutNextAction.length + overdue.length + stalled.length >= 2) {
         await registerGap({
           skillArea: overdue.length ? 'cadencia_comercial' : 'organizacao_de_pipeline',
-          title: `${seller.name} tem pipeline sem proximo passo claro`,
+          title: `${seller.name} tem pipeline sem próximo passo claro`,
           description: `${withoutNextAction.length} deals sem proxima acao, ${overdue.length} follow-ups atrasados e ${stalled.length} oportunidades paradas.`,
           detectedFrom: 'crm',
           sourceEntityType: 'crm_deal',
@@ -786,7 +786,7 @@ export async function detectPdiGaps(supabase: SupabaseClient, input: DetectPdiGa
         await registerGap({
           skillArea: 'disciplina_comercial',
           title: `${seller.name} acumula missoes comerciais atrasadas`,
-          description: `${overdueMissions.length} missoes atrasadas sugerem gap de rotina, priorizacao ou aplicacao pratica.`,
+          description: `${overdueMissions.length} missoes atrasadas sugerem gap de rotina, priorizacao ou aplicação pratica.`,
           detectedFrom: 'mission',
           sourceEntityType: 'ai_mission',
           sourceEntityId: overdueMissions[0]?.id ?? null,
@@ -804,7 +804,7 @@ export async function detectPdiGaps(supabase: SupabaseClient, input: DetectPdiGa
         await registerGap({
           skillArea: 'saude_operacional',
           title: `${seller.name} precisa de apoio de ritmo comercial`,
-          description: 'Energia baixa apareceu junto com risco de execucao, entao a recomendacao e pauta de 1:1, ajuste de carga ou missao simples.',
+          description: 'Energia baixa apareceu junto com risco de execução, então a recomendação é pauta de 1:1, ajuste de carga ou missão simples.',
           detectedFrom: 'health_checkin',
           sourceEntityType: 'daily_checkin',
           sourceEntityId: lowEnergy[0]?.id ?? null,
@@ -857,21 +857,21 @@ function fallbackTraining(gap: any, managerNotes?: string | null): GeneratedTrai
     title: `Treino aplicado de ${skill}`,
     problem_summary: gap.description ?? `Gap comercial em ${skill} detectado a partir de evidencias reais.`,
     sales_impact: `Esse comportamento reduz conversao, velocidade de pipeline ou retencao. Impacto estimado: ${num(gap.impact_value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`,
-    quick_concept: `Antes de agir, conecte dor, proximo passo e criterio de sucesso. O vendedor precisa transformar ${skill} em comportamento observavel no CRM ou cliente.`,
-    practical_example: 'Em um deal parado, retome o contato com uma pergunta de impacto, confirme prioridade e combine uma proxima acao com data.',
-    script: '1. Contextualize o ultimo contato. 2. Reforce dor e impacto. 3. Mostre o custo da inacao. 4. Combine o proximo passo com data. 5. Registre a evidencia no CRM.',
+    quick_concept: `Antes de agir, conecte dor, próximo passo e critério de sucesso. O vendedor precisa transformar ${skill} em comportamento observável no CRM ou cliente.`,
+    practical_example: 'Em uma oportunidade parada, retome o contato com uma pergunta de impacto, confirme prioridade e combine uma próxima ação com data.',
+    script: '1. Contextualize o último contato. 2. Reforce dor e impacto. 3. Mostre o custo da inação. 4. Combine o próximo passo com data. 5. Registre a evidência no CRM.',
     checklist: [
-      'Escolheu um deal ou cliente real.',
-      'Usou uma pergunta de diagnostico ou valor.',
-      'Definiu proximo passo claro.',
-      'Registrou evidencia e resultado.',
-      'Trouxe aprendizado para validacao do gestor.',
+      'Escolheu uma oportunidade ou cliente real.',
+      'Usou uma pergunta de diagnóstico ou valor.',
+      'Definiu próximo passo claro.',
+      'Registrou evidência e resultado.',
+      'Trouxe aprendizado para validação do gestor.',
     ],
     exercise: managerNotes?.trim() || `Reescreva uma abordagem real usando a habilidade ${skill} e aplique em uma oportunidade aberta.`,
-    roleplay_prompt: `Simule uma conversa em que o cliente resiste ao proximo passo e o vendedor precisa praticar ${skill}.`,
-    real_case_application: 'Aplicar a tecnica em 1 oportunidade ou cliente real e registrar resumo, proximo passo, outcome e evidencia.',
-    required_evidence: 'Resumo da conversa, deal/cliente selecionado, resultado obtido e print/link quando existir.',
-    validation_criteria: 'Gestor valida se houve uso claro da tecnica, proximo passo definido e evidencia conectada ao problema original.',
+    roleplay_prompt: `Simule uma conversa em que o cliente resiste ao próximo passo e o vendedor precisa praticar ${skill}.`,
+    real_case_application: 'Aplicar a técnica em 1 oportunidade ou cliente real e registrar resumo, próximo passo, outcome e evidência.',
+    required_evidence: 'Resumo da conversa, oportunidade/cliente selecionado, resultado obtido e print/link quando existir.',
+    validation_criteria: 'Gestor valida se houve uso claro da técnica, próximo passo definido e evidência conectada ao problema original.',
     recommended_deadline_days: 7,
     recommended_xp: 120,
   }
@@ -881,9 +881,9 @@ async function generateTrainingPayload(gap: any, seller: any, managerNotes?: str
   const fallback = fallbackTraining(gap, managerNotes)
   if (!isOpenAIConfigured() && !isOpenRouterConfigured()) return fallback
 
-  const systemPrompt = 'Voce e a VAMO IA. Gere microtreinamentos comerciais aplicados, especificos, sem curso generico, em JSON valido.'
+  const systemPrompt = 'Você é a VAMO IA. Gere microtreinamentos comerciais aplicados, específicos, sem curso genérico, em JSON válido.'
   const userPrompt = JSON.stringify({
-    regra: 'O PDI deve nascer de dados comerciais e terminar em aplicacao real validada pelo gestor.',
+    regra: 'O PDI deve nascer de dados comerciais e terminar em aplicação real validada pelo gestor.',
     vendedor: { id: seller?.id, nome: seller?.name },
     gap: {
       id: gap.id,
@@ -929,7 +929,7 @@ export async function generatePdiTraining(
     .maybeSingle()
 
   if (gapError) throw gapError
-  if (!gap) throw new Error('Gap nao encontrado')
+  if (!gap) throw new Error('Gap não encontrado')
 
   const seller = Array.isArray(gap.user) ? gap.user[0] : gap.user
   const sellerId = params.sellerId ?? gap.user_id
@@ -993,7 +993,7 @@ export async function generatePdiTraining(
     organizationId: params.organizationId,
     userId: params.managerId,
     senderId: params.managerId,
-    title: `PDI aguardando aprovacao: ${trainingPayload.title}`,
+    title: `PDI aguardando aprovação: ${trainingPayload.title}`,
     message: 'A VAMO IA gerou um treinamento aplicado. Revise, ajuste e aprove antes de liberar ao vendedor.',
     actionHref: '/monitoramento/desenvolvimento',
     context: { planId: result.plan.id, gapId: gap.id, missionId: mission?.id ?? null },
@@ -1053,14 +1053,14 @@ export async function recommendPdiPlan(supabase: SupabaseClient, input: Recommen
         metadata: { sequence: 2, required: true, checklist: generatedTraining.checklist },
       },
       {
-        title: 'Roleplay aplicado',
+        title: 'Simulação aplicada',
         description: generatedTraining.roleplay_prompt ?? generatedTraining.exercise,
         item_type: 'roleplay',
         due_at: tomorrowPlus(5),
         metadata: { sequence: 3, required: Boolean(generatedTraining.roleplay_prompt) },
       },
       {
-        title: 'Aplicacao em caso real',
+        title: 'Aplicação em caso real',
         description: generatedTraining.real_case_application,
         item_type: 'real_case_application',
         due_at: tomorrowPlus(dueDays),
@@ -1132,8 +1132,8 @@ export async function recommendPdiPlan(supabase: SupabaseClient, input: Recommen
     recommendationType: ['approved', 'active'].includes(plan.status) ? 'pdi_training' : 'pdi_approval',
     title: ['approved', 'active'].includes(plan.status) ? `Aplicar PDI: ${input.title}` : `Aprovar PDI: ${input.title}`,
     description: ['approved', 'active'].includes(plan.status)
-      ? 'Treino estruturado liberado para aplicacao real.'
-      : 'Revise, ajuste e aprove o plano antes da aplicacao em campo.',
+      ? 'Treino estruturado liberado para aplicação real.'
+      : 'Revise, ajuste e aprove o plano antes da aplicação em campo.',
     suggestedActionLabel: ['approved', 'active'].includes(plan.status) ? 'Abrir Meu PDI' : 'Revisar PDI',
     suggestedActionHref: ['approved', 'active'].includes(plan.status) ? '/desenvolvimento/pdi' : '/monitoramento/desenvolvimento',
     priority: 'high',
@@ -1233,7 +1233,7 @@ export async function approvePdiPlan(
       sourceModule: 'pdi',
       recommendationType: 'pdi_training',
       title: `Executar PDI aprovado: ${plan.title}`,
-      description: 'Concluir o treino e registrar uma aplicacao real com evidencia.',
+      description: 'Concluir o treino e registrar uma aplicação real com evidência.',
       suggestedActionLabel: 'Abrir Meu PDI',
       suggestedActionHref: '/desenvolvimento/pdi',
       priority: 'high',
@@ -1245,7 +1245,7 @@ export async function approvePdiPlan(
       userId: plan.user_id,
       senderId: params.managerId,
       title: `Novo PDI liberado: ${plan.title}`,
-      message: 'Seu gestor aprovou um PDI aplicado. Abra o treino, pratique e envie evidencia em uma oportunidade real.',
+      message: 'Seu gestor aprovou um PDI aplicado. Abra o treino, pratique e envie evidência em uma oportunidade real.',
       actionHref: '/desenvolvimento/pdi',
       context: { planId: plan.id, gapId: plan.gap_id ?? null },
     })
@@ -1262,8 +1262,8 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
     .eq('organization_id', input.organizationId)
     .maybeSingle()
 
-  if (!plan) throw new Error('PDI nao encontrado')
-  if (plan.user_id !== input.targetUserId) throw new Error('PDI pertence a outro usuario')
+  if (!plan) throw new Error('PDI não encontrado')
+  if (plan.user_id !== input.targetUserId) throw new Error('PDI pertence a outro usuário')
 
   let accountId = input.accountId ?? null
   if (input.dealId) {
@@ -1274,7 +1274,7 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
       .eq('organization_id', input.organizationId)
       .maybeSingle()
 
-    if (!deal) throw new Error('Oportunidade nao encontrada na organizacao')
+    if (!deal) throw new Error('Oportunidade não encontrada na organização')
     if (!accountId) accountId = deal.account_id ?? null
   }
 
@@ -1286,7 +1286,7 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
       .eq('organization_id', input.organizationId)
       .maybeSingle()
 
-    if (!account) throw new Error('Cliente nao encontrado na organizacao')
+    if (!account) throw new Error('Cliente não encontrado na organização')
   }
 
   const { data: application, error } = await supabase
@@ -1356,7 +1356,7 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
       sourceModule: 'pdi',
       entityType: 'pdi_application',
       entityId: application.id,
-      title: `Aplicacao real enviada: ${plan.title}`,
+      title: `Aplicação real enviada: ${plan.title}`,
       description: input.description,
       impactScore: 75,
       priorityScore: 60,
@@ -1379,9 +1379,9 @@ export async function submitPdiApplication(supabase: SupabaseClient, input: Subm
       createdByUserId: input.actorUserId,
       sourceModule: 'pdi',
       recommendationType: 'manager_alert',
-      title: 'Validar aplicacao de PDI',
-      description: 'Ha evidencia pratica aguardando validacao formal.',
-      suggestedActionLabel: 'Revisar evidencia',
+      title: 'Validar aplicação de PDI',
+      description: 'Há evidência prática aguardando validação formal.',
+      suggestedActionLabel: 'Revisar evidência',
       suggestedActionHref: '/monitoramento/desenvolvimento',
       priority: 'medium',
       metadata: { applicationId: application.id, planId: plan.id },
@@ -1399,7 +1399,7 @@ export async function validatePdiApplication(supabase: SupabaseClient, input: Va
     .eq('organization_id', input.organizationId)
     .maybeSingle()
 
-  if (!application) throw new Error('Aplicacao nao encontrada')
+  if (!application) throw new Error('Aplicação não encontrada')
 
   const { data: updated, error } = await supabase
     .from('pdi_applications')
@@ -1512,7 +1512,7 @@ export async function validatePdiApplication(supabase: SupabaseClient, input: Va
         sourceModule: 'pdi',
         entityType: 'pdi_application',
         entityId: application.id,
-        title: completed ? `PDI concluido com evidencia: ${plan.title}` : `Aplicacao validada: ${plan.title}`,
+        title: completed ? `PDI concluído com evidencia: ${plan.title}` : `Aplicação validada: ${plan.title}`,
         description: input.reviewNotes ?? null,
         impactScore: completed ? 90 : 75,
         priorityScore: completed ? 65 : 55,
@@ -1534,8 +1534,8 @@ export async function validatePdiApplication(supabase: SupabaseClient, input: Va
       sourceId: application.id,
       performanceEventId: event.id,
       evidence: { planId: plan.id, applicationId: application.id, evidenceId: data?.id ?? null, deltaValue },
-      impactExpected: completed ? 'PDI concluido com mudanca de comportamento comprovada' : 'Aplicacao validada em contexto real',
-      description: completed ? `PDI concluido: ${plan.title}` : `Aplicacao de PDI validada: ${plan.title}`,
+      impactExpected: completed ? 'PDI concluído com mudança de comportamento comprovada' : 'Aplicação validada em contexto real',
+      description: completed ? `PDI concluído: ${plan.title}` : `Aplicação de PDI validada: ${plan.title}`,
     })
 
     await checkAndAwardBadges(supabase, application.user_id, input.organizationId, {
@@ -1549,18 +1549,18 @@ export async function validatePdiApplication(supabase: SupabaseClient, input: Va
       author_id: input.managerId,
       target_user_id: application.user_id,
       content: completed
-        ? `concluiu o PDI "${plan.title}" com evidencia real de evolucao.`
-        : `validou aplicacao real do PDI "${plan.title}".`,
+        ? `concluiu o PDI "${plan.title}" com evidência real de evolução.`
+        : `validou aplicação real do PDI "${plan.title}".`,
     })
 
     await notifyUser(supabase, {
       organizationId: input.organizationId,
       userId: application.user_id,
       senderId: input.managerId,
-      title: 'Sua aplicacao de PDI foi aprovada',
+      title: 'Sua aplicação de PDI foi aprovada',
       message: completed
-        ? `Seu PDI "${plan.title}" foi concluido com evidencia real de evolucao.`
-        : `Sua aplicacao do PDI "${plan.title}" foi validada pelo gestor.`,
+        ? `Seu PDI "${plan.title}" foi concluido com evidência real de evolução.`
+        : `Sua aplicação do PDI "${plan.title}" foi validada pelo gestor.`,
       actionHref: '/desenvolvimento/pdi',
       context: { planId: plan.id, applicationId: application.id, completed },
     })
@@ -1597,9 +1597,9 @@ export async function validatePdiApplication(supabase: SupabaseClient, input: Va
     createdByUserId: input.managerId,
     sourceModule: 'pdi',
     recommendationType: 'pdi_retry',
-    title: `Ajustar aplicacao do PDI: ${plan.title}`,
-    description: input.reviewNotes ?? 'Gestor pediu ajuste na evidencia antes de validar evolucao.',
-    suggestedActionLabel: 'Reenviar evidencia',
+    title: `Ajustar aplicação do PDI: ${plan.title}`,
+    description: input.reviewNotes ?? 'Gestor pediu ajuste na evidência antes de validar evolução.',
+    suggestedActionLabel: 'Reenviar evidência',
     suggestedActionHref: '/desenvolvimento/pdi',
     priority: 'high',
     metadata: { planId: plan.id, applicationId: application.id },
@@ -1609,8 +1609,8 @@ export async function validatePdiApplication(supabase: SupabaseClient, input: Va
     organizationId: input.organizationId,
     userId: application.user_id,
     senderId: input.managerId,
-    title: input.status === 'rejected' ? 'Aplicacao de PDI reprovada' : 'Ajuste solicitado no PDI',
-    message: input.reviewNotes ?? 'Seu gestor pediu ajuste na evidencia antes de validar evolucao.',
+    title: input.status === 'rejected' ? 'Aplicação de PDI reprovada' : 'Ajuste solicitado no PDI',
+    message: input.reviewNotes ?? 'Seu gestor pediu ajuste na evidência antes de validar evolução.',
     actionHref: '/desenvolvimento/pdi',
     context: { planId: plan.id, applicationId: application.id, status: input.status },
   })

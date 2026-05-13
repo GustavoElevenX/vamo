@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   const status = params.get('status')
   let query = adminClient
     .from('pdi_applications')
-    .select('*, plan:pdi_plans(title), deal:crm_deals(title,value,stage), account:crm_accounts(id,name), user:users(name)')
+    .select('*, plan:pdi_plans(title), oportunidade:crm_deals(title,value,stage), account:crm_accounts(id,name), user:users(name)')
     .eq('organization_id', appUser.organization_id)
     .order('created_at', { ascending: false })
 

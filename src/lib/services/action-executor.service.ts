@@ -174,7 +174,7 @@ async function createActionPlan(adminClient: SupabaseClient, params: Record<stri
   const title = String(params.title || '')
   const summary = String(params.summary || '')
   const items = Array.isArray(params.items) ? params.items as Array<Record<string, unknown>> : []
-  if (!title || !summary || items.length === 0) return { success: false, message: 'Titulo, resumo e itens sao obrigatorios' }
+  if (!title || !summary || items.length === 0) return { success: false, message: 'Título, resumo e itens sao obrigatorios' }
 
   const targetUserIds = Array.from(new Set(items.map((item) => item.target_user_id).filter(Boolean).map(String)))
   const validSellerIds = new Set<string>()
@@ -197,7 +197,7 @@ async function createActionPlan(adminClient: SupabaseClient, params: Record<stri
 
   const { data: plan, error } = await adminClient.from('manager_action_plans').insert({ organization_id: orgId, manager_id: executorUserId, title, summary, status: 'active', source: 'chat_ia', created_by_ai: true }).select('id,title').single()
   if (error || !plan) return { success: false, message: `Erro ao criar plano de acao: ${error?.message}` }
-  const rows = items.map((item) => ({ plan_id: plan.id, organization_id: orgId, target_user_id: item.target_user_id || null, action_type: String(item.action_type || 'manager_action'), title: String(item.title || 'Acao do plano'), description: String(item.description || ''), priority: ['low', 'medium', 'high', 'critical'].includes(String(item.priority)) ? item.priority : 'medium', status: 'pending', due_at: item.due_at || null, metadata: item }))
+  const rows = items.map((item) => ({ plan_id: plan.id, organization_id: orgId, target_user_id: item.target_user_id || null, action_type: String(item.action_type || 'manager_action'), title: String(item.title || 'Ação do plano'), description: String(item.description || ''), priority: ['low', 'medium', 'high', 'critical'].includes(String(item.priority)) ? item.priority : 'medium', status: 'pending', due_at: item.due_at || null, metadata: item }))
   const { data: insertedItems, error: itemError } = await adminClient.from('manager_action_plan_items').insert(rows).select('id,title,target_user_id,action_type')
   if (itemError) return { success: false, message: `Plano criado, mas houve erro nos itens: ${itemError.message}`, data: { plan } }
   const executions: Array<Record<string, unknown>> = []
@@ -255,14 +255,14 @@ async function createActionPlan(adminClient: SupabaseClient, params: Record<stri
 
     if (execution) executions.push({ planItemId: insertedItem.id, actionType, success: execution.success, message: execution.message, data: execution.data ?? null })
   }
-  const event = await createPerformanceEventSafe(adminClient, { organizationId: orgId, actorUserId: executorUserId, eventType: 'manager_action_plan_created', sourceModule: 'chat_ia', entityType: 'manager_action_plan', entityId: plan.id, title: 'Plano de acao criado pela VAMO IA', description: `Plano "${title}" criado com ${insertedItems?.length ?? 0} item(ns).`, impactScore: 70, priorityScore: 75, riskScore: 30, metadata: { createdByAI: true, itemCount: insertedItems?.length ?? 0 } }, 'manager_action_plan_created')
-  return { success: true, message: `Plano criado, ${insertedItems?.length ?? 0} item(ns) vinculados, ${executions.filter((item) => item.success).length} acao(oes) executada(s) e ${event ? 'acao registrada no historico' : 'historico pendente'}.`, data: { entityType: 'manager_action_plan', entityId: plan.id, plan, items: insertedItems ?? [], executions, eventId: event?.id ?? null, verified: true } }
+  const event = await createPerformanceEventSafe(adminClient, { organizationId: orgId, actorUserId: executorUserId, eventType: 'manager_action_plan_created', sourceModule: 'chat_ia', entityType: 'manager_action_plan', entityId: plan.id, title: 'Plano de ação criado pela VAMO IA', description: `Plano "${title}" criado com ${insertedItems?.length ?? 0} item(ns).`, impactScore: 70, priorityScore: 75, riskScore: 30, metadata: { createdByAI: true, itemCount: insertedItems?.length ?? 0 } }, 'manager_action_plan_created')
+  return { success: true, message: `Plano criado, ${insertedItems?.length ?? 0} item(ns) vinculados, ${executions.filter((item) => item.success).length} acao(oes) executada(s) e ${event ? 'ação registrada no histórico' : 'histórico pendente'}.`, data: { entityType: 'manager_action_plan', entityId: plan.id, plan, items: insertedItems ?? [], executions, eventId: event?.id ?? null, verified: true } }
 }
 
 async function createPdiPlan(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
   const userId = params.user_id as string
   const title = String(params.title || 'PDI gerado pela VAMO IA')
-  if (!userId) return { success: false, message: 'ID do vendedor e obrigatorio' }
+  if (!userId) return { success: false, message: 'ID do vendedor é obrigatório' }
   const seller = await validateActiveSeller(adminClient, orgId, userId)
   if (!seller) return { success: false, message: 'Vendedor não encontrado, inativo ou fora desta organização. Escolha um vendedor ativo para receber o PDI.' }
 
@@ -364,24 +364,24 @@ async function createRecoveryMission(adminClient: SupabaseClient, params: Record
   const result = await createMission(adminClient, { ...params, area: params.area || 'sales_process', type: 'manual_validation', verification_type: 'manual', criteria: { type: 'pipeline_recovery', target_value: params.target_value ?? 1, source: 'chat_ia' } }, orgId, executorUserId)
   if (!result.success) return result
   const data = result.data as { id?: string; title?: string } | undefined
-  const event = await createPerformanceEventSafe(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: params.user_id as string | undefined, eventType: 'ai_recovery_mission_created', sourceModule: 'chat_ia', entityType: 'ai_mission', entityId: data?.id ?? null, title: 'Missao de recuperacao criada pela VAMO IA', description: data?.title ? `Missao "${data.title}" criada para recuperar pipeline.` : null, impactScore: 65, priorityScore: 75, riskScore: 35, metadata: { createdByAI: true, verified: true } }, 'ai_recovery_mission_created')
-  return { ...result, message: `${result.message}. ${event ? 'Evento operacional registrado' : 'Historico operacional pendente'}.`, data: { ...(data ?? {}), eventId: event?.id ?? null, verified: true } }
+  const event = await createPerformanceEventSafe(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: params.user_id as string | undefined, eventType: 'ai_recovery_mission_created', sourceModule: 'chat_ia', entityType: 'ai_mission', entityId: data?.id ?? null, title: 'Missão de recuperacao criada pela VAMO IA', description: data?.title ? `Missao "${data.title}" criada para recuperar pipeline.` : null, impactScore: 65, priorityScore: 75, riskScore: 35, metadata: { createdByAI: true, verified: true } }, 'ai_recovery_mission_created')
+  return { ...result, message: `${result.message}. ${event ? 'Evento operacional registrado' : 'Histórico operacional pendente'}.`, data: { ...(data ?? {}), eventId: event?.id ?? null, verified: true } }
 }
 
 async function createManagerNudge(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
   const result = await notifySeller(adminClient, params, orgId, executorUserId)
   if (!result.success) return result
   const event = await createPerformanceEventSafe(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: params.user_id as string | undefined, eventType: 'manager_nudge_created', sourceModule: 'chat_ia', entityType: 'notification', title: 'Nudge do gestor criado pela VAMO IA', description: String(params.message || ''), impactScore: 45, priorityScore: params.tone === 'charge' ? 70 : 50, riskScore: params.tone === 'charge' ? 40 : 15, metadata: { tone: params.tone || 'coaching', createdByAI: true, verified: true } }, 'manager_nudge_created')
-  return { ...result, message: `${result.message}. ${event ? 'Nudge registrado no historico' : 'Historico do nudge pendente'}.`, data: { eventId: event?.id ?? null, verified: true } }
+  return { ...result, message: `${result.message}. ${event ? 'Nudge registrado no histórico' : 'Histórico do nudge pendente'}.`, data: { eventId: event?.id ?? null, verified: true } }
 }
 
 async function markRecommendationDone(adminClient: SupabaseClient, params: Record<string, unknown>, orgId: string, executorUserId: string): Promise<ActionResult> {
   const recommendationId = params.recommendation_id as string
-  if (!recommendationId) return { success: false, message: 'ID da recomendacao e obrigatorio' }
+  if (!recommendationId) return { success: false, message: 'ID da recomendação é obrigatório' }
   const { data, error } = await adminClient.from('action_recommendations').update({ status: 'done', metadata: { completed_by_chat: true, note: params.note ?? null }, updated_at: new Date().toISOString() }).eq('id', recommendationId).eq('organization_id', orgId).select('id,title,target_user_id').single()
   if (error || !data) return { success: false, message: `Erro ao concluir recomendacao: ${error?.message}` }
-  const event = await createPerformanceEventSafe(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: data.target_user_id as string | null, eventType: 'action_recommendation_done', sourceModule: 'chat_ia', entityType: 'action_recommendation', entityId: data.id, title: 'Recomendacao concluida pela VAMO IA', description: String(data.title || ''), impactScore: 35, priorityScore: 40, riskScore: 10, metadata: { note: params.note ?? null, verified: true } }, 'action_recommendation_done')
-  return { success: true, message: `Recomendacao "${data.title}" marcada como concluida${event ? ' e registrada no historico' : ''}.`, data: { ...data, eventId: event?.id ?? null, verified: true } }
+  const event = await createPerformanceEventSafe(adminClient, { organizationId: orgId, actorUserId: executorUserId, targetUserId: data.target_user_id as string | null, eventType: 'action_recommendation_done', sourceModule: 'chat_ia', entityType: 'action_recommendation', entityId: data.id, title: 'Recomendação concluida pela VAMO IA', description: String(data.title || ''), impactScore: 35, priorityScore: 40, riskScore: 10, metadata: { note: params.note ?? null, verified: true } }, 'action_recommendation_done')
+  return { success: true, message: `Recomendacao "${data.title}" marcada como concluida${event ? ' e registrada no histórico' : ''}.`, data: { ...data, eventId: event?.id ?? null, verified: true } }
 }
 
 async function addSeller(

@@ -130,7 +130,7 @@ ${previousDiag ? `DIAGNÓSTICO ANTERIOR: Saúde ${previousDiag.health_pct}% — 
 ÁREAS DO DIAGNÓSTICO: ${latestDiag?.area_scores ? JSON.stringify(latestDiag.area_scores) : 'N/A'}
 `.trim()
 
-    const systemPrompt = `Você é um consultor sênior de performance comercial. Gere uma retrospectiva mensal completa para o gestor. A retrospectiva fecha o ciclo de 30 dias e prepara o próximo. Use dados concretos e seja direto.
+    const systemPrompt = `Você é um consultor sênior de desempenho comercial. Gere uma retrospectiva mensal completa para o gestor. A retrospectiva fecha o ciclo de 30 dias e prepara o próximo. Use dados concretos e seja direto.
 
 Responda em JSON com exatamente estes 5 campos (strings em português, com markdown leve):
 {

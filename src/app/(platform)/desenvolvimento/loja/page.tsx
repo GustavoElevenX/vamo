@@ -176,8 +176,8 @@ export default function LojaPage() {
         <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-accent/20 px-4 py-3">
           <Trophy className="h-4 w-4 text-amber-500 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Voce esta no <strong>Nivel {userXp.current_level}</strong> com {availableXp.toLocaleString('pt-BR')} pts acumulados.
-            Continue completando missoes para desbloquear mais recompensas.
+            Você esta no <strong>Nivel {userXp.current_level}</strong> com {availableXp.toLocaleString('pt-BR')} pts acumulados.
+            Continue completando missões para desbloquear mais recompensas.
           </p>
         </div>
       )}
@@ -333,8 +333,8 @@ export default function LojaPage() {
         <div className="flex items-start gap-3">
           <ShoppingBag className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Os resgates sao solicitacoes enviadas ao seu gestor para aprovacao. O pts
-            e descontado somente apos a confirmacao. Novas recompensas sao adicionadas
+            Os resgates sao solicitacoes enviadas ao seu gestor para aprovação. A pontuação
+            e descontado somente após a confirmacao. Novas recompensas sao adicionadas
             periodicamente conforme politicas da empresa.
           </p>
         </div>

@@ -244,7 +244,7 @@ export default function MinhasMetasPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Header */}
       <PageHeader
-        label="Performance"
+        label="Desempenho"
         labelIcon={<Target className="h-3 w-3" />}
         title={<>Minhas <TitleHighlight>Metas</TitleHighlight></>}
         description="Metas e missões do programa definidas pelo seu gestor"

@@ -23,7 +23,7 @@ const ACTIONS = [
   { value: 'crm_activity_call', label: 'Ligacao', activityType: 'call', icon: Phone },
   { value: 'crm_activity_whatsapp', label: 'WhatsApp', activityType: 'whatsapp', icon: MessageSquare },
   { value: 'crm_activity_email', label: 'E-mail', activityType: 'email', icon: Send },
-  { value: 'crm_activity_follow_up', label: 'Follow-up', activityType: 'follow_up', icon: CheckCircle2 },
+  { value: 'crm_activity_follow_up', label: 'retorno', activityType: 'follow_up', icon: CheckCircle2 },
   { value: 'crm_activity_meeting', label: 'Reuniao', activityType: 'meeting', icon: Target },
   { value: 'crm_activity_proposal_sent', label: 'Proposta enviada', activityType: 'proposal_sent', icon: Send },
 ] as const
@@ -108,7 +108,7 @@ export default function RegistrarAcaoComercialPage() {
           }),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Erro ao registrar acao')
+        if (!res.ok) throw new Error(data.error || 'Erro ao registrar ação')
       } else {
         const res = await fetch('/api/execution/events', {
           method: 'POST',
@@ -128,13 +128,13 @@ export default function RegistrarAcaoComercialPage() {
           }),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Erro ao registrar acao')
+        if (!res.ok) throw new Error(data.error || 'Erro ao registrar ação')
       }
 
-      toast.success('Acao comercial registrada')
+      toast.success('Ação comercial registrada')
       router.push('/performance/missoes')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao registrar acao')
+      toast.error(error instanceof Error ? error.message : 'Erro ao registrar ação')
     } finally {
       setSubmitting(false)
     }
@@ -147,20 +147,20 @@ export default function RegistrarAcaoComercialPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Registrar acao comercial</h1>
-          <p className="text-sm text-muted-foreground">A acao alimenta KPIs, missoes, XP e cockpit pelo evento de execucao.</p>
+          <h1 className="text-xl font-semibold tracking-tight">Registrar ação comercial</h1>
+          <p className="text-sm text-muted-foreground">A ação alimenta KPIs, missões, XP e cockpit pelo evento de execução.</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Dados da acao</CardTitle>
+          <CardTitle className="text-sm">Dados da ação</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Tipo de acao</Label>
+                <Label>Tipo de ação</Label>
                 <Select value={form.action} onValueChange={(value) => value && setForm({ ...form, action: value })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -173,9 +173,9 @@ export default function RegistrarAcaoComercialPage() {
               <div className="space-y-2">
                 <Label>Oportunidade vinculada</Label>
                 <Select value={form.dealId} onValueChange={(value) => value && setForm({ ...form, dealId: value })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um deal" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione uma oportunidade" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Sem deal vinculado</SelectItem>
+                    <SelectItem value="none">Sem oportunidade vinculado</SelectItem>
                     {deals.map((deal) => (
                       <SelectItem key={deal.id} value={deal.id}>{deal.title}</SelectItem>
                     ))}
@@ -194,7 +194,7 @@ export default function RegistrarAcaoComercialPage() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Titulo</Label>
+                <Label>Título</Label>
                 <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder={selectedAction.label} />
               </div>
               <div className="space-y-2">
@@ -204,13 +204,13 @@ export default function RegistrarAcaoComercialPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Resultado da acao</Label>
+              <Label>Resultado da ação</Label>
               <Textarea value={form.outcome} onChange={(event) => setForm({ ...form, outcome: event.target.value })} placeholder="Descreva objetivamente o que aconteceu com o cliente." />
             </div>
 
             <div className="space-y-2">
               <Label>Observacoes</Label>
-              <Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Contexto adicional, objeções, combinados ou proximos passos." />
+              <Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Contexto adicional, objeções, combinados ou próximos passos." />
             </div>
 
             {form.dealId === 'none' ? (
@@ -221,18 +221,18 @@ export default function RegistrarAcaoComercialPage() {
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Proxima acao no deal</Label>
+                  <Label>Próxima ação no oportunidade</Label>
                   <Input value={form.nextActionTitle} onChange={(event) => setForm({ ...form, nextActionTitle: event.target.value })} placeholder="Ex: Enviar proposta revisada" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Prazo da proxima acao</Label>
+                  <Label>Prazo da próxima ação</Label>
                   <Input type="datetime-local" value={form.nextActionDueAt} onChange={(event) => setForm({ ...form, nextActionDueAt: event.target.value })} />
                 </div>
               </div>
             )}
 
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Registrando...' : 'Registrar acao'}
+              {submitting ? 'Registrando...' : 'Registrar ação'}
             </Button>
           </form>
         </CardContent>

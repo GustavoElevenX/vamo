@@ -9,8 +9,8 @@ const defaultCriteria = {
   evaluationMode: 'mixed',
   alerts: [
     { id: 'crm_inactivity', label: 'dias sem atividade no CRM', enabled: true, value: '3', unit: 'dias' },
-    { id: 'conversion_drop', label: 'queda de conversao em janela movel', enabled: true, value: '20', value2: '14', unit: '%', unit2: 'dias' },
-    { id: 'mission_expiring', label: 'aviso antes do vencimento de missao', enabled: true, value: '2', unit: 'dias' },
+    { id: 'conversion_drop', label: 'queda de conversão em janela movel', enabled: true, value: '20', value2: '14', unit: '%', unit2: 'dias' },
+    { id: 'mission_expiring', label: 'aviso antes do vencimento de missão', enabled: true, value: '2', unit: 'dias' },
     { id: 'low_wellbeing', label: 'bem-estar abaixo do limite', enabled: true, value: '2', unit: '/5' },
   ],
   wellbeing: {
@@ -23,7 +23,7 @@ const defaultCriteria = {
 const defaultGamification = {
   ranking_publico: true,
   badges_no_feed: true,
-  level_titles: ['Recruta', 'Prospector', 'Negociador', 'Hunter', 'Closer', 'Elite', 'Campeao', 'Lenda'],
+  level_titles: ['Recruta', 'Prospector', 'Negociador', 'Caçador', 'Fechador', 'Especialista', 'Campeao', 'Lenda'],
 }
 
 function slugify(name: string) {
@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
     organization_id: appUser.organization_id,
     level: 'info',
     source: 'criteria',
-    message: 'Criterios comerciais, gamificacao e comissionamento atualizados',
+    message: 'Critérios comerciais, gamificacao e comissionamento atualizados',
     metadata: { user_id: appUser.id, kpis: kpis.length },
   })
 

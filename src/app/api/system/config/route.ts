@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     organization_id: appUser.organization_id,
     level: 'info',
     source: 'system',
-    message: 'Configuracao avancada atualizada',
+    message: 'Configuração avancada atualizada',
     metadata: { user_id: appUser.id, config },
   })
 

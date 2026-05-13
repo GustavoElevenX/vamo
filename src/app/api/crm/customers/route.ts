@@ -52,8 +52,8 @@ const OPEN_STAGES: DealStage[] = ['prospecting', 'qualification', 'proposal', 'n
 const statusLabels: Record<CustomerStatus, string> = {
   new_customer: 'Novo cliente',
   pending_receipt: 'Recebimento pendente',
-  without_post_sale: 'Sem pos-venda',
-  post_sale: 'Em pos-venda',
+  without_post_sale: 'Sem pós-venda',
+  post_sale: 'Em pós-venda',
   active: 'Ativo',
   expansion_open: 'Com expansao aberta',
   inactive: 'Inativo',
@@ -132,12 +132,12 @@ function calculatePriority(input: {
 
 function getSuggestedAction(status: CustomerStatus) {
   const actions: Record<CustomerStatus, string> = {
-    new_customer: 'Criar acao de onboarding ou check-in de pos-venda.',
-    pending_receipt: 'Revisar recebimento antes de liberar comissao.',
-    without_post_sale: 'Agendar contato de pos-venda e registrar a proxima acao.',
-    post_sale: 'Acompanhar a acao combinada e registrar resultado.',
+    new_customer: 'Criar ação de integração ou check-in de pós-venda.',
+    pending_receipt: 'Revisar recebimento antes de liberar comissão.',
+    without_post_sale: 'Agendar contato de pós-venda e registrar a próxima ação.',
+    post_sale: 'Acompanhar a ação combinada e registrar resultado.',
     active: 'Manter cadencia e buscar indicacao ou expansao.',
-    expansion_open: 'Atualizar proxima acao da oportunidade de expansao.',
+    expansion_open: 'Atualizar próxima ação da oportunidade de expansao.',
     inactive: 'Gerar mensagem de reativacao.',
     at_risk: 'Intervir hoje com contato direto ou alinhamento com responsavel.',
   }
@@ -179,7 +179,7 @@ export async function GET() {
     const { data: activitiesData, error: activitiesError } = accountIds.length
       ? await adminClient
         .from('crm_activities')
-        .select('id,deal_id,occurred_at,title,type,deal:crm_deals!inner(account_id,organization_id)')
+        .select('id,deal_id,occurred_at,title,type,oportunidade:crm_deals!inner(account_id,organization_id)')
         .eq('deal.organization_id', appUser.organization_id)
         .in('deal.account_id', accountIds)
       : { data: [], error: null }
@@ -370,7 +370,7 @@ export async function GET() {
       ? isSeller
         ? `Sua carteira tem ${totalCustomers} cliente${totalCustomers === 1 ? '' : 's'} e ${currency(wonRevenue)} em vendas ganhas. ${customersWithoutPostSale} cliente${customersWithoutPostSale === 1 ? '' : 's'} estao sem pos-venda e ${currency(pendingReceivables)} aparecem como recebimento pendente.`
         : `A base tem ${totalCustomers} cliente${totalCustomers === 1 ? '' : 's'} e ${currency(wonRevenue)} em vendas ganhas. ${customersWithoutPostSale} cliente${customersWithoutPostSale === 1 ? '' : 's'} estao sem pos-venda, ${currency(pendingReceivables)} estao pendentes de recebimento e ${customersWithOpenExpansion} tem expansao aberta.`
-      : 'Ainda nao existem contas com venda ganha para formar a carteira de clientes.'
+      : 'Ainda não existem contas com venda ganha para formar a carteira de clientes.'
 
     return NextResponse.json({
       summary: {
@@ -389,7 +389,7 @@ export async function GET() {
       briefing: {
         title: isSeller ? 'VAMO IA - Leitura da carteira' : 'VAMO IA - Leitura da base',
         description: briefingDescription,
-        recommended_action: criticalCustomers[0]?.suggested_action ?? 'Mantenha a carteira atualizada com pos-venda, recebimento e oportunidades de expansao.',
+        recommended_action: criticalCustomers[0]?.suggested_action ?? 'Mantenha a carteira atualizada com pós-venda, recebimento e oportunidades de expansao.',
         priority,
       },
       customers,

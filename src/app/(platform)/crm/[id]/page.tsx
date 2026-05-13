@@ -29,7 +29,7 @@ import { ArrowLeft, CalendarClock, CalendarDays, DollarSign, Save } from 'lucide
 
 const actionTypes: NextActionType[] = ['follow_up', 'call', 'email', 'proposal', 'meeting', 'review', 'other']
 const forecastCategories: ForecastCategory[] = ['pipeline', 'best_case', 'commit', 'closed']
-const lostReasons = ['Preco', 'Sem orcamento', 'Concorrente', 'Sem resposta', 'Proposta fraca', 'Timing', 'Nao viu valor', 'Nao era perfil', 'Outro']
+const lostReasons = ['Preço', 'Sem orçamento', 'Concorrente', 'Sem resposta', 'Proposta fraca', 'Timing', 'Não viu valor', 'Não era perfil', 'Outro']
 
 function money(value: number) {
   return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -136,7 +136,7 @@ export default function DealDetailPage() {
   }
 
   if (!deal) {
-    return <div className="space-y-3"><p>Lead não encontrado.</p><Link href="/crm"><Button variant="outline">Voltar</Button></Link></div>
+    return <div className="space-y-3"><p>Potencial cliente não encontrado.</p><Link href="/crm"><Button variant="outline">Voltar</Button></Link></div>
   }
 
   return (
@@ -144,7 +144,7 @@ export default function DealDetailPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <Link href="/crm" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Pipeline
+            <ArrowLeft className="h-4 w-4" /> Funil
           </Link>
           <h1 className="text-2xl font-bold">{deal.title}</h1>
           <div className="flex flex-wrap gap-2">
@@ -159,16 +159,16 @@ export default function DealDetailPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <Card>
-            <CardHeader><CardTitle>Informações do lead</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Informações do potencial cliente</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-3">
               <div><p className="text-xs text-muted-foreground">Valor</p><p className="flex items-center gap-1 text-xl font-bold"><DollarSign className="h-4 w-4" />{money(deal.value)}</p></div>
               <div><p className="text-xs text-muted-foreground">Probabilidade</p><p className="text-xl font-bold">{deal.probability}%</p></div>
               <div><p className="text-xs text-muted-foreground">Fechamento esperado</p><p className="flex items-center gap-1 text-sm"><CalendarDays className="h-4 w-4" />{deal.expected_close || 'Sem data'}</p></div>
-              <div><p className="text-xs text-muted-foreground">Forecast</p><p className="text-xl font-bold">{FORECAST_LABELS[deal.forecast_category] ?? 'Pipeline'}</p></div>
+              <div><p className="text-xs text-muted-foreground">Previsão</p><p className="text-xl font-bold">{FORECAST_LABELS[deal.forecast_category] ?? 'Funil'}</p></div>
               <div className="sm:col-span-2">
                 <p className="text-xs text-muted-foreground">Próxima ação</p>
                 <p className="flex items-center gap-1 text-sm"><CalendarClock className="h-4 w-4 text-primary" />{deal.next_action_title || 'Nenhuma ação definida'}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{deal.next_action_type ? NEXT_ACTION_LABELS[deal.next_action_type] : 'Follow-up'} - {dueText(deal.next_action_due_at)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{deal.next_action_type ? NEXT_ACTION_LABELS[deal.next_action_type] : 'retorno'} - {dueText(deal.next_action_due_at)}</p>
               </div>
             </CardContent>
           </Card>
@@ -210,7 +210,7 @@ export default function DealDetailPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deal-forecast">Forecast</Label>
+                  <Label htmlFor="deal-forecast">Previsão</Label>
                   <select id="deal-forecast" value={editForecastCategory} onChange={(event) => setEditForecastCategory(event.target.value as ForecastCategory)} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
                     {forecastCategories.map((category) => <option key={category} value={category}>{FORECAST_LABELS[category]}</option>)}
                   </select>
@@ -227,7 +227,7 @@ export default function DealDetailPage() {
               </div>
               <Button onClick={saveDeal} disabled={saving || !editTitle.trim() || (editStage === 'closed_lost' && !editLostReason)}>
                 <Save className="h-4 w-4" />
-                {saving ? 'Salvando...' : 'Salvar lead'}
+                {saving ? 'Salvando...' : 'Salvar potencial cliente'}
               </Button>
             </CardContent>
           </Card>

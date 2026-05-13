@@ -141,9 +141,9 @@ export default function DiagnosticoIndividualPage() {
           </Button>
         </Link>
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Diagnostico Individual</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Diagnóstico Individual</h2>
           <p className="text-sm text-muted-foreground">
-            Diagnostico comportamental e de performance de cada colaborador
+            Diagnóstico comportamental e de desempenho de cada colaborador
           </p>
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function DiagnosticoIndividualPage() {
             <CardContent className="py-12 text-center">
               <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
-                Nenhum vendedor encontrado na organizacao.
+                Nenhum vendedor encontrado na organização.
               </p>
             </CardContent>
           </Card>
@@ -280,7 +280,7 @@ export default function DiagnosticoIndividualPage() {
                             <div className="flex items-start gap-2">
                               <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                               <div>
-                                <p className="text-[11px] font-medium text-primary mb-1">Insight da VAMO IA</p>
+                                <p className="text-[11px] font-medium text-primary mb-1">Análise da VAMO IA</p>
                                 <p className="text-xs text-muted-foreground leading-relaxed">
                                   {collab.profile.performance_insight ||
                                     `Perfil ${collab.profile.dominant_profile} concluído. Use esse dado para calibrar comunicação, metas e missões sem presumir performance financeira ainda.`}
@@ -304,7 +304,7 @@ export default function DiagnosticoIndividualPage() {
                             </ul>
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-amber-500 mb-1.5">Areas de Desenvolvimento</p>
+                            <p className="text-xs font-medium text-amber-500 mb-1.5">Áreas de Desenvolvimento</p>
                             <ul className="space-y-1">
                               {collab.profile.development_areas.slice(0, 3).map((s, i) => (
                                 <li key={i} className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
@@ -320,7 +320,7 @@ export default function DiagnosticoIndividualPage() {
                       <div className="text-center py-6">
                         <Eye className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                         <p className="text-sm text-muted-foreground">
-                          Diagnostico comportamental ainda nao realizado.
+                          Diagnóstico comportamental ainda não realizado.
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">
                           O colaborador precisa responder o questionario de perfil comportamental.
@@ -338,7 +338,7 @@ export default function DiagnosticoIndividualPage() {
                         </p>
                       </div>
                       <div className="rounded-lg border border-border/50 p-3 text-center">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Missoes</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Missões</p>
                         <p className="text-lg font-bold mt-0.5">--</p>
                       </div>
                       <div className="rounded-lg border border-border/50 p-3 text-center">

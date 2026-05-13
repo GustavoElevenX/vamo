@@ -34,9 +34,9 @@ type Mission = {
 const STATUS_STYLE: Record<string, { label: string; className: string }> = {
   pending: { label: 'Pendente', className: 'bg-blue-500/10 text-blue-600 border-0' },
   in_progress: { label: 'Em andamento', className: 'bg-amber-500/10 text-amber-600 border-0' },
-  awaiting_approval: { label: 'Aguardando aprovacao', className: 'bg-violet-500/10 text-violet-600 border-0' },
+  awaiting_approval: { label: 'Aguardando aprovação', className: 'bg-violet-500/10 text-violet-600 border-0' },
   completed: { label: 'Concluida', className: 'bg-emerald-500/10 text-emerald-600 border-0' },
-  rejected: { label: 'Revisar evidencia', className: 'bg-red-500/10 text-red-600 border-0' },
+  rejected: { label: 'Revisar evidência', className: 'bg-red-500/10 text-red-600 border-0' },
   expired: { label: 'Expirada', className: 'bg-muted text-muted-foreground border-0' },
 }
 
@@ -60,10 +60,10 @@ export default function MissoesPage() {
     try {
       const res = await fetch('/api/missions/my', { credentials: 'same-origin' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao carregar missoes')
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar missões')
       setMissions(data.missions ?? [])
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao carregar missoes')
+      toast.error(error instanceof Error ? error.message : 'Erro ao carregar missões')
     } finally {
       setLoading(false)
     }
@@ -89,11 +89,11 @@ export default function MissoesPage() {
         body: JSON.stringify({ missionId, action }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao atualizar missao')
-      toast.success(action === 'start' ? 'Missao iniciada' : 'Validacao solicitada')
+      if (!res.ok) throw new Error(data.error || 'Erro ao atualizar missão')
+      toast.success(action === 'start' ? 'Missão iniciada' : 'Validação solicitada')
       await loadMissions()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao atualizar missao')
+      toast.error(error instanceof Error ? error.message : 'Erro ao atualizar missão')
     } finally {
       setBusy(null)
     }
@@ -125,7 +125,7 @@ export default function MissoesPage() {
                 <h2 className="text-sm font-semibold">{mission.title}</h2>
                 <Badge className={status.className}>{status.label}</Badge>
                 <Badge variant="outline">{mission.validationLabel}</Badge>
-                {mission.pdi_plan && <Badge className="bg-blue-500/10 text-blue-600 border-0">Missao de PDI</Badge>}
+                {mission.pdi_plan && <Badge className="bg-blue-500/10 text-blue-600 border-0">Missão de PDI</Badge>}
               </div>
               {mission.description && <p className="mt-1 text-xs text-muted-foreground">{mission.description}</p>}
             </div>
@@ -138,7 +138,7 @@ export default function MissoesPage() {
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <p className="text-xs text-muted-foreground">Indicador</p>
-              <p className="text-sm font-medium">{mission.kpi?.name || mission.type || 'Missao manual'}</p>
+              <p className="text-sm font-medium">{mission.kpi?.name || mission.type || 'Missão manual'}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Progresso</p>
@@ -153,10 +153,10 @@ export default function MissoesPage() {
           {mission.pdi_plan && (
             <div className="space-y-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-muted-foreground">
               <p>
-                <strong className="text-foreground">Missao de PDI:</strong> Esta missao faz parte do seu PDI de {mission.pdi_plan.title || 'desenvolvimento'}.
+                <strong className="text-foreground">Missão de PDI:</strong> Esta missão faz parte do seu PDI de {mission.pdi_plan.title || 'desenvolvimento'}.
               </p>
               <p>
-                Ela e a aplicacao pratica do treino. Concluir a missao ajuda a evoluir o plano, mas a validacao final depende do gestor quando houver aprovacao humana.
+                Ela e a aplicação prática do treino. Concluir a missão ajuda a evoluir o plano, mas a validação final depende do gestor quando houver aprovação humana.
               </p>
               <Button size="sm" variant="outline" render={<Link href="/desenvolvimento/pdi" />}>
                 Abrir PDI
@@ -179,13 +179,13 @@ export default function MissoesPage() {
             {canRequestApproval && (
               <Button size="sm" variant="outline" onClick={() => patchMission(mission.id, 'complete')} disabled={isBusy}>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Solicitar validacao
+                Solicitar validação
               </Button>
             )}
             {mission.status !== 'completed' && mission.status !== 'awaiting_approval' && (
               <Button size="sm" variant="outline" render={<Link href="/kpis/registrar" />}>
                 <Target className="mr-2 h-4 w-4" />
-                Registrar acao
+                Registrar ação
               </Button>
             )}
           </div>
@@ -197,29 +197,29 @@ export default function MissoesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        label="Performance"
+        label="Desempenho"
         labelIcon={<Swords className="h-3 w-3" />}
-        title={<>Missoes <TitleHighlight>de Execucao</TitleHighlight></>}
-        description={missions.length ? `${missions.length} missoes com progresso real` : 'Nenhuma missao ativa no momento'}
+        title={<>Missões <TitleHighlight>de Execução</TitleHighlight></>}
+        description={missions.length ? `${missions.length} missoes com progresso real` : 'Nenhuma missão ativa no momento'}
       />
 
       <Card className="border-amber-500/20 bg-amber-500/5">
         <CardContent className="pt-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">Missao executa.</strong> Missoes transformam metas e gaps em acoes praticas para executar. Algumas sao validadas automaticamente; outras precisam de aprovacao do gestor.
+          <strong className="text-foreground">Missão executa.</strong> Missões transformam metas e gaps em ações práticas para executar. Algumas sao validadas automaticamente; outras precisam de aprovação do gestor.
         </CardContent>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Em execucao</p><p className="text-2xl font-semibold">{grouped.active.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Em execução</p><p className="text-2xl font-semibold">{grouped.active.length}</p></CardContent></Card>
         <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Aguardando gestor</p><p className="text-2xl font-semibold">{grouped.waiting.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Concluidas/encerradas</p><p className="text-2xl font-semibold">{grouped.done.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Concluídas/encerradas</p><p className="text-2xl font-semibold">{grouped.done.length}</p></CardContent></Card>
       </div>
 
       {grouped.waiting.length > 0 && (
         <div className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Clock className="h-4 w-4" />
-            Aguardando aprovacao
+            Aguardando aprovação
           </h2>
           {grouped.waiting.map(renderMission)}
         </div>
@@ -239,8 +239,8 @@ export default function MissoesPage() {
         <Card className="border-border/50">
           <CardContent className="py-8 text-center">
             <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">Nenhuma missao encontrada.</p>
-            <Button className="mt-3" size="sm" render={<Link href="/kpis/registrar" />}>Registrar acao comercial</Button>
+            <p className="text-sm text-muted-foreground">Nenhuma missão encontrada.</p>
+            <Button className="mt-3" size="sm" render={<Link href="/kpis/registrar" />}>Registrar ação comercial</Button>
           </CardContent>
         </Card>
       )}
@@ -249,7 +249,7 @@ export default function MissoesPage() {
         <div className="space-y-3">
           <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <CheckCircle2 className="h-4 w-4" />
-            Historico recente
+            Histórico recente
           </h2>
           {grouped.done.slice(0, 8).map(renderMission)}
         </div>

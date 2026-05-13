@@ -63,7 +63,7 @@ export async function PATCH(request: Request, { params }: Params) {
     .maybeSingle()
 
   if (!previousDeal || (appUser.role === 'seller' && previousDeal.owner_id !== appUser.id)) {
-    return NextResponse.json({ error: 'Deal nao encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'oportunidade não encontrado' }, { status: 404 })
   }
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -167,13 +167,13 @@ export async function PATCH(request: Request, { params }: Params) {
         ? 'Revisar perda e detectar gap recorrente'
         : isWon
           ? 'Registrar recebimento e reconhecer comportamento'
-          : 'Definir proxima acao da nova etapa',
+          : 'Definir próxima ação da nova etapa',
       description: isLost
-        ? 'Use a perda como evidencia para PDI se houver padrao recorrente.'
+        ? 'Use a perda como evidência para PDI se houver padrão recorrente.'
         : isWon
-          ? 'Fechamento precisa conectar com comissao, feed e reconhecimento.'
-          : 'A mudanca de etapa precisa virar proximo passo, forecast e ganho previsto.',
-      suggestedActionLabel: 'Abrir deal',
+          ? 'Fechamento precisa conectar com comissão, mural e reconhecimento.'
+          : 'A mudanca de etapa precisa virar próximo passo, previsão e ganho previsto.',
+      suggestedActionLabel: 'Abrir oportunidade',
       suggestedActionHref: `/crm/${id}`,
       priority: isLost ? 'high' : 'medium',
       metadata: { dealId: id, eventType: 'crm_deal.stage_changed' },
@@ -195,7 +195,7 @@ export async function PATCH(request: Request, { params }: Params) {
         targetUserId: previousDeal.owner_id,
         skillArea,
         title: `Perda comercial: ${lostReason}`,
-        description: 'Esse deal perdido pode indicar um padrao de desenvolvimento se a causa se repetir.',
+        description: 'Esse oportunidade perdido pode indicar um padrão de desenvolvimento se a causa se repetir.',
         detectedFrom: 'lost_deal',
         sourceEntityType: 'crm_deal',
         sourceEntityId: id,
@@ -207,7 +207,7 @@ export async function PATCH(request: Request, { params }: Params) {
           title: previousDeal.title,
           lostReason,
           value: nextValue,
-          recommendation: 'Criar gap, gerar PDI ou abrir treinamento recomendado se o padrao se repetir.',
+          recommendation: 'Criar gap, gerar PDI ou abrir treinamento recomendado se o padrão se repetir.',
         },
       })
     }
@@ -264,7 +264,7 @@ export async function PATCH(request: Request, { params }: Params) {
     feedback: stageChanged
       ? {
           forecastImpact: ('value' in patch ? Number(patch.value || 0) : Number(previousDeal.value || 0)) * ('probability' in patch ? Number(patch.probability || 0) : Number(previousDeal.probability || 0)) / 100,
-          nextBestAction: 'Revise proxima acao, forecast e comissao prevista para esta etapa.',
+          nextBestAction: 'Revise próxima ação, previsão e comissão prevista para esta etapa.',
         }
       : null,
   })
@@ -276,7 +276,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (auth.error) return auth.error
   const { adminClient, appUser } = auth
   if (!['manager', 'admin'].includes(appUser.role)) {
-    return NextResponse.json({ error: 'Apenas gestor pode excluir deals' }, { status: 403 })
+    return NextResponse.json({ error: 'Apenas gestor pode excluir oportunidades' }, { status: 403 })
   }
 
   const { error } = await adminClient

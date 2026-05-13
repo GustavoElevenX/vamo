@@ -623,7 +623,7 @@ export default function MensagensPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{m.name}</p>
                         <p className="text-[11px] text-muted-foreground truncate">
-                          {m.role === 'manager' ? 'Gestor' : m.role === 'admin' ? 'Admin' : 'Vendedor'}
+                          {m.role === 'manager' ? 'Gestor' : m.role === 'admin' ? 'Administrador' : 'Vendedor'}
                           {' · '}
                           {m.email}
                         </p>

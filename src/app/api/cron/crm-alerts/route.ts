@@ -80,8 +80,8 @@ export async function GET(request: Request) {
       sourceModule: 'crm',
       recommendationType: 'forecast_risk',
       title: `Retomar deal parado: ${deal.title}`,
-      description: 'Use um follow-up objetivo, confirme criterio de decisao e registre a proxima acao no CRM.',
-      suggestedActionLabel: 'Abrir deal',
+      description: 'Use um retorno objetivo, confirme critério de decisão e registre a próxima ação no CRM.',
+      suggestedActionLabel: 'Abrir oportunidade',
       suggestedActionHref: `/crm/${deal.id}`,
       priority: 'high',
       metadata: { stuckDays, stage },
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
     if (prefs?.notify_deal_stuck !== false) {
       const owner = deal.owner as any
       if (prefs?.email_enabled && owner?.email) {
-        await sendEmail({ to: owner.email, subject: 'VAMO: deal parado', html: `<p>${message}</p>` }).catch(() => null)
+        await sendEmail({ to: owner.email, subject: 'VAMO: oportunidade parada', html: `<p>${message}</p>` }).catch(() => null)
         await admin.from('notification_send_log').insert({ user_id: deal.owner_id, type: 'crm_deal_stuck', reference, channel: 'email' })
         sent += 1
       }

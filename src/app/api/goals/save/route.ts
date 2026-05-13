@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         entityType: 'program_goal',
         entityId: savedGoal?.id ?? null,
         title: 'Metas comerciais atualizadas',
-        description: 'Meta da empresa, do time e metas individuais foram conectadas a rotina, ganho e forecast.',
+        description: 'Meta da empresa, do time e metas individuais foram conectadas a rotina, ganho e previsão.',
         impactScore: 70,
         priorityScore: 75,
         metadata: { company_goal, team_goal, individual_goals },

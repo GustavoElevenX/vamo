@@ -33,16 +33,16 @@ interface Bottleneck {
 }
 
 const AREA_LABELS: Record<DiagnosticArea, string> = {
-  lead_generation: 'Geração de Leads',
+  lead_generation: 'Geração de potenciais clientes',
   sales_process: 'Processo de Vendas',
   team_management: 'Gestão de Equipe',
   tools_technology: 'Ferramentas e Tecnologia',
 }
 
 const MISSION_BY_AREA: Record<DiagnosticArea, string> = {
-  lead_generation: 'Criar missão: prospecção diária com leads qualificados e revisão semanal de qualidade',
-  sales_process: 'Criar missão: follow-up em até 24h para propostas abertas e medição de conversão',
-  team_management: 'Criar missão: check-in semanal de performance com cada vendedor',
+  lead_generation: 'Criar missão: prospecção diária com potenciais clientes qualificados e revisão semanal de qualidade',
+  sales_process: 'Criar missão: retorno em até 24h para propostas abertas e medição de conversão',
+  team_management: 'Criar missão: check-in semanal de desempenho com cada vendedor',
   tools_technology: 'Criar missão: CRM atualizado no mesmo dia para todas as oportunidades',
 }
 

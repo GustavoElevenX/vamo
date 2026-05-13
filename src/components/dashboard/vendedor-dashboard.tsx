@@ -186,7 +186,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
 
       {/* ── Header ── */}
       <PageHeader
-        label="Minha Performance"
+        label="Minha Desempenho"
         title={<>Olá, <TitleHighlight>{user.name.split(' ')[0]}</TitleHighlight></>}
         description="Resumo completo do seu progresso em tempo real"
         actions={
@@ -283,7 +283,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Conquistas</span>
           </div>
           <p className="text-4xl font-black tabular-nums">{badgeCount}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">badges desbloqueadas</p>
+          <p className="text-[11px] text-muted-foreground mt-1">selos desbloqueadas</p>
         </div>
 
         {/* KPI hoje */}
@@ -491,7 +491,7 @@ export function VendedorDashboard({ user }: VendedorDashboardProps) {
               <TrendingUp className="h-6 w-6" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold">Feed & Recompensas</p>
+              <p className="text-sm font-bold">Mural e recompensas</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">Loja, conquistas e atividades</p>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition-all" />

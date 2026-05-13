@@ -9,7 +9,7 @@ const settingsSections = [
   { title: 'Perfil', description: 'Seus dados pessoais e avatar', href: '/configuracoes/perfil', icon: User },
   { title: 'Notificacoes', description: 'Canais, horarios e tipos de aviso', href: '/configuracoes/notificacoes', icon: Bell },
   { title: 'KPIs', description: 'Configurar indicadores da equipe', href: '/configuracoes/kpis', icon: Target, roles: ['admin', 'manager'] },
-  { title: 'Gamificação', description: 'Badges, desafios e recompensas', href: '/configuracoes/gamificacao', icon: Trophy, roles: ['admin', 'manager'] },
+  { title: 'Gamificação', description: 'Selos, desafios e recompensas', href: '/configuracoes/gamificacao', icon: Trophy, roles: ['admin', 'manager'] },
 ]
 
 export default function ConfiguracoesPage() {

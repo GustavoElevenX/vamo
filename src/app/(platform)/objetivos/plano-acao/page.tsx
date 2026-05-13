@@ -34,7 +34,7 @@ type Mission = {
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Pendente',
   in_progress: 'Em andamento',
-  awaiting_approval: 'Aguardando aprovacao',
+  awaiting_approval: 'Aguardando aprovação',
   completed: 'Concluida',
   rejected: 'Rejeitada',
   expired: 'Expirada',
@@ -95,7 +95,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
         fetch('/api/kpis', { credentials: 'same-origin' }).then((res) => res.json().then((data) => ({ ok: res.ok, data }))),
         approvalsRequest,
       ])
-      if (!missionsRes.ok) throw new Error(missionsRes.data.error || 'Erro ao carregar missoes')
+      if (!missionsRes.ok) throw new Error(missionsRes.data.error || 'Erro ao carregar missões')
       if (!sellersRes.ok) throw new Error(sellersRes.data.error || 'Erro ao carregar vendedores')
       if (!kpisRes.ok) throw new Error(kpisRes.data.error || 'Erro ao carregar indicadores')
       if (!approvalsRes.ok) throw new Error(approvalsRes.data.error || 'Erro ao carregar aprovacoes')
@@ -126,11 +126,11 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
   const selectedKpi = kpis.find((kpi) => kpi.id === form.kpiId)
   const isTeamView = variant === 'team'
   const backHref = isTeamView ? '/monitoramento' : '/objetivos'
-  const pageTitle = isTeamView ? 'Missões da Equipe' : 'Plano de acao'
+  const pageTitle = isTeamView ? 'Missões da Equipe' : 'Plano de ação'
   const pageDescription = isTeamView
     ? 'Acompanhe, filtre, aprove e crie missões reais para os vendedores do time.'
-    : 'Crie missoes verificaveis por KPI, evento, prazo e validacao.'
-  const createTitle = isTeamView ? 'Nova missao operacional' : 'Nova missao para vendedor'
+    : 'Crie missões verificaveis por KPI, evento, prazo e validação.'
+  const createTitle = isTeamView ? 'Nova missão operacional' : 'Nova missão para vendedor'
 
   const filtered = useMemo(() => missions.filter((mission) => {
     if (filterStatus !== 'all' && mission.status !== filterStatus) return false
@@ -151,7 +151,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
 
   const createMission = async () => {
     if (!form.title.trim() || !form.userId) {
-      toast.error('Titulo e vendedor sao obrigatorios')
+      toast.error('Título e vendedor sao obrigatorios')
       return
     }
 
@@ -184,13 +184,13 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao criar missao')
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar missão')
 
-      toast.success('Missao criada')
+      toast.success('Missão criada')
       setForm((prev) => ({ ...prev, title: '', description: '' }))
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao criar missao')
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar missão')
     } finally {
       setSaving(false)
     }
@@ -203,14 +203,14 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ reason: approveMission ? undefined : 'Evidencia insuficiente' }),
+        body: JSON.stringify({ reason: approveMission ? undefined : 'Evidência insuficiente' }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao revisar missao')
-      toast.success(approveMission ? 'Missao aprovada' : 'Missao rejeitada')
+      if (!res.ok) throw new Error(data.error || 'Erro ao revisar missão')
+      toast.success(approveMission ? 'Missão aprovada' : 'Missão rejeitada')
       await loadData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao revisar missao')
+      toast.error(error instanceof Error ? error.message : 'Erro ao revisar missão')
     } finally {
       setSaving(false)
     }
@@ -249,7 +249,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="flex items-center gap-2 text-xs text-muted-foreground"><Clock className="h-3.5 w-3.5" />Aguardando aprovacao</p>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><Clock className="h-3.5 w-3.5" />Aguardando aprovação</p>
               <p className="mt-1 text-2xl font-semibold">{summary.awaiting}</p>
             </CardContent>
           </Card>
@@ -261,13 +261,13 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="flex items-center gap-2 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5" />Concluidas</p>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5" />Concluídas</p>
               <p className="mt-1 text-2xl font-semibold">{summary.completed}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="flex items-center gap-2 text-xs text-muted-foreground"><BarChart3 className="h-3.5 w-3.5" />Taxa de execucao</p>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground"><BarChart3 className="h-3.5 w-3.5" />Taxa de execução</p>
               <p className="mt-1 text-2xl font-semibold">{summary.execution}%</p>
             </CardContent>
           </Card>
@@ -279,7 +279,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4 text-amber-500" />
-              Missoes aguardando aprovacao
+              Missões aguardando aprovação
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
@@ -315,8 +315,8 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Titulo</Label>
-              <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Realizar 5 follow-ups com proximas acoes" />
+              <Label>Título</Label>
+              <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Realizar 5 retornos com próximas ações" />
             </div>
             <div className="space-y-2">
               <Label>Vendedor</Label>
@@ -329,7 +329,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
             </div>
           </div>
 
-          <Textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Explique a entrega esperada e o criterio de sucesso." />
+          <Textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Explique a entrega esperada e o critério de sucesso." />
 
           <div className="grid gap-3 md:grid-cols-4">
             <div className="space-y-2">
@@ -338,9 +338,9 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="kpi_target">Meta de KPI</SelectItem>
-                  <SelectItem value="pipeline_cleanup">Limpeza de pipeline</SelectItem>
+                  <SelectItem value="pipeline_cleanup">Limpeza de funil</SelectItem>
                   <SelectItem value="revenue_target">Receita/fechamento</SelectItem>
-                  <SelectItem value="manual_validation">Validacao manual</SelectItem>
+                  <SelectItem value="manual_validation">Validação manual</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -377,7 +377,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
               <Input type="datetime-local" value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Validacao</Label>
+              <Label>Validação</Label>
               <Select value={form.verificationType} onValueChange={(value) => value && setForm({ ...form, verificationType: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -390,7 +390,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
           </div>
 
           <Button onClick={createMission} disabled={saving || sellers.length === 0}>
-            {saving ? 'Criando...' : 'Criar missao'}
+            {saving ? 'Criando...' : 'Criar missão'}
           </Button>
         </CardContent>
       </Card>
@@ -463,7 +463,7 @@ export function MissionManagementPage({ variant = 'goals' }: { variant?: Mission
 
       {filtered.length === 0 && (
         <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhuma missao com esses filtros.</CardContent>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhuma missão com esses filtros.</CardContent>
         </Card>
       )}
     </div>

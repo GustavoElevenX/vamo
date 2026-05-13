@@ -60,12 +60,12 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   meeting: 'Reunião',
   proposal_sent: 'Proposta',
   whatsapp: 'WhatsApp',
-  follow_up: 'Follow-up',
+  follow_up: 'retorno',
   note: 'Nota',
 }
 
 export const NEXT_ACTION_LABELS: Record<NextActionType, string> = {
-  follow_up: 'Follow-up',
+  follow_up: 'retorno',
   call: 'Ligação',
   email: 'E-mail',
   proposal: 'Proposta',
@@ -75,7 +75,7 @@ export const NEXT_ACTION_LABELS: Record<NextActionType, string> = {
 }
 
 export const FORECAST_LABELS: Record<ForecastCategory, string> = {
-  pipeline: 'Pipeline',
+  pipeline: 'Funil',
   best_case: 'Provável',
   commit: 'Comprometido',
   closed: 'Fechado',

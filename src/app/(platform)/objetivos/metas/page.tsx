@@ -113,7 +113,7 @@ export default function MetasPage() {
           : fetch('/api/ai/performance-insights', { credentials: 'same-origin' })
               .then(async (r) => {
                 const data = await r.json()
-                if (!r.ok) throw new Error(data.error || 'Erro ao carregar insight')
+                if (!r.ok) throw new Error(data.error || 'Erro ao carregar análise')
                 setCache(insightCacheKey, data.insight, INSIGHT_CACHE_TTL)
                 return data as { insight: PerformanceInsight }
               })
@@ -193,7 +193,7 @@ export default function MetasPage() {
 
         setAiSuggestion({
           text: insight.message,
-          kpi: recommendation?.name ?? insight.source.weakestArea ?? 'Performance comercial',
+          kpi: recommendation?.name ?? insight.source.weakestArea ?? 'Desempenho comercial',
           valorAtual: isPercent || !recommendation ? `${currentPct}%` : '',
           valorMeta: isPercent ? `${target}%` : `${target}${recommendation?.unit ? ` ${recommendation.unit}` : ''}`,
           days: Number(insight.source.healthPct ?? 0) < 50 ? 30 : 60,
@@ -383,7 +383,7 @@ export default function MetasPage() {
             <Input
               value={teamGoal.kpiComportamental}
               onChange={(e) => setTeamGoal((p) => ({ ...p, kpiComportamental: e.target.value }))}
-              placeholder="Ex: Taxa de conversão, Follow-up em 24h"
+              placeholder="Ex: Taxa de conversão, retorno em 24h"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">

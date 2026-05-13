@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   }
   const input = await request.json()
   const title = String(input.title ?? '').trim()
-  if (!title || !input.stage) return NextResponse.json({ error: 'Titulo e stage obrigatorios' }, { status: 400 })
+  if (!title || !input.stage) return NextResponse.json({ error: 'Título e stage obrigatorios' }, { status: 400 })
 
   const { data, error } = await adminClient
     .from('playbook_steps')

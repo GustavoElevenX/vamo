@@ -73,6 +73,6 @@ export async function GET() {
     return NextResponse.json({ members })
   } catch (error) {
     console.error('GET /api/execution/team', error)
-    return NextResponse.json({ error: 'Erro ao carregar execucao da equipe' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao carregar execução da equipe' }, { status: 500 })
   }
 }

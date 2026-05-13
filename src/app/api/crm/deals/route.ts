@@ -43,8 +43,8 @@ export async function GET(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ deals: data ?? [] })
   } catch (error) {
-    console.error('GET /api/crm/deals', error)
-    return NextResponse.json({ error: 'Erro ao carregar pipeline' }, { status: 500 })
+    console.error('GET /api/crm/oportunidades', error)
+    return NextResponse.json({ error: 'Erro ao carregar funil' }, { status: 500 })
   }
 }
 
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const forecastCategory = FORECAST_CATEGORIES.includes(input.forecast_category) ? input.forecast_category : 'pipeline'
     const priorityScore = Number(input.ai_priority_score ?? 0)
 
-    if (!title) return NextResponse.json({ error: 'Titulo e obrigatorio' }, { status: 400 })
+    if (!title) return NextResponse.json({ error: 'Título é obrigatório' }, { status: 400 })
     if (stage === 'closed_won' && !input.account_id) {
       return NextResponse.json(
         {
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ deal: data }, { status: 201 })
   } catch (error) {
-    console.error('POST /api/crm/deals', error)
-    return NextResponse.json({ error: 'Erro ao criar deal' }, { status: 500 })
+    console.error('POST /api/crm/oportunidades', error)
+    return NextResponse.json({ error: 'Erro ao criar oportunidade' }, { status: 500 })
   }
 }

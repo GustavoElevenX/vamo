@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('POST /api/execution/events', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro ao registrar execucao' },
+      { error: error instanceof Error ? error.message : 'Erro ao registrar execução' },
       { status: 500 },
     )
   }

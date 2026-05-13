@@ -62,7 +62,7 @@ export async function POST() {
     if (!latestDiagnostic) {
       return NextResponse.json({
         tip: {
-          tip: 'Faça o diagnóstico comercial para receber recomendações reais de performance e retorno financeiro.',
+          tip: 'Faça o diagnóstico comercial para receber recomendações reais de desempenho e retorno financeiro.',
           category: 'estrategica',
         },
       })
@@ -87,9 +87,9 @@ export async function POST() {
 
     return NextResponse.json({ tip })
   } catch (error: any) {
-    console.error('AI coach tip error:', error)
+    console.error('AI mentoria tip error:', error)
     return NextResponse.json(
-      { error: 'Coach VAMO IA indisponível no momento.' },
+      { error: 'Mentoria VAMO IA indisponível no momento.' },
       { status: 503 }
     )
   }

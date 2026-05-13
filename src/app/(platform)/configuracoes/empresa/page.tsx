@@ -81,7 +81,7 @@ export default function EmpresaPage() {
   }
 
   const roleConfig: Record<string, { label: string; color: string }> = {
-    admin: { label: 'Admin', color: 'text-red-500 bg-red-500/10' },
+    admin: { label: 'Administrador', color: 'text-red-500 bg-red-500/10' },
     manager: { label: 'Gestor', color: 'text-violet-500 bg-violet-500/10' },
     seller: { label: 'Vendedor', color: 'text-emerald-500 bg-emerald-500/10' },
     developer: { label: 'Developer', color: 'text-blue-500 bg-blue-500/10' },
@@ -195,7 +195,7 @@ export default function EmpresaPage() {
               <Crown className="h-4 w-4 text-amber-500" />
               Plano Atual
             </CardTitle>
-            <Badge className="bg-violet-500 text-white text-[10px]">Professional</Badge>
+            <Badge className="bg-violet-500 text-white text-[10px]">Profissional</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -209,7 +209,7 @@ export default function EmpresaPage() {
           </div>
           <Button variant="outline" size="sm" className="w-full sm:w-auto">
             <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
-            Upgrade para Enterprise
+            Upgrade para Empresarial
           </Button>
         </CardContent>
       </Card>
@@ -219,7 +219,7 @@ export default function EmpresaPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-amber-500" />
-            Progresso de Onboarding
+            Progresso de integração
           </CardTitle>
         </CardHeader>
         <CardContent>

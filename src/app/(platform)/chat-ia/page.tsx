@@ -47,7 +47,7 @@ const SELLER_SUGGESTIONS: Suggestion[] = [
   { icon: <MessageCircle className="h-4 w-4" />, label: 'Script de prospecção', prompt: 'Me dê um script eficaz para prospectar novos clientes por telefone ou WhatsApp.' },
   { icon: <TrendingUp className="h-4 w-4" />, label: 'Fechar venda difícil', prompt: 'Quais técnicas posso usar para fechar uma venda quando o cliente está indeciso?' },
   { icon: <BarChart3 className="h-4 w-4" />, label: 'Negociar melhor', prompt: 'Como negociar condições sem perder margem e sem parecer desesperado para vender?' },
-  { icon: <Users className="h-4 w-4" />, label: 'Follow-up eficiente', prompt: 'Como fazer um follow-up com cliente que sumiu sem ser chato ou inconveniente?' },
+  { icon: <Users className="h-4 w-4" />, label: 'retorno eficiente', prompt: 'Como fazer um retorno com cliente que sumiu sem ser chato ou inconveniente?' },
 ]
 
 const ACTION_DELIMITER = '\n---ACTION---\n'
@@ -120,8 +120,8 @@ export default function ChatIAPage() {
         }))
         setDynamicSuggestions([
           ...items,
-          { icon: <BarChart3 className="h-4 w-4" />, label: 'Analisar operacao', prompt: 'Analise a operacao atual e me diga o que devo fazer hoje.' },
-          { icon: <TrendingUp className="h-4 w-4" />, label: 'Criar plano', prompt: 'Crie um plano de acao priorizado para recuperar os principais riscos da operacao.' },
+          { icon: <BarChart3 className="h-4 w-4" />, label: 'Analisar operação', prompt: 'Analise a operação atual e me diga o que devo fazer hoje.' },
+          { icon: <TrendingUp className="h-4 w-4" />, label: 'Criar plano', prompt: 'Crie um plano de ação priorizado para recuperar os principais riscos da operação.' },
         ])
       })
       .catch(() => {})
@@ -467,7 +467,7 @@ export default function ChatIAPage() {
           <div>
             <p className="text-sm font-semibold leading-none tracking-tight">VAMO IA</p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              {role === 'manager' ? 'Consultora de Performance Comercial' : 'Coach Pessoal de Vendas'}
+              {role === 'manager' ? 'Consultora de Desempenho Comercial' : 'Mentora pessoal de vendas'}
             </p>
           </div>
         </div>
@@ -507,8 +507,8 @@ export default function ChatIAPage() {
                   </h1>
                   <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto leading-relaxed">
                     {role === 'manager'
-                      ? 'Sou sua consultora de performance comercial. Posso criar missões, adicionar vendedores, analisar KPIs e muito mais.'
-                      : 'Sou seu coach de vendas. Posso ajudar com scripts, técnicas de fechamento, negociação e estratégias para bater sua meta.'}
+                      ? 'Sou sua consultora de desempenho comercial. Posso criar missões, adicionar vendedores, analisar KPIs e muito mais.'
+                      : 'Sou seu mentora de vendas. Posso ajudar com scripts, técnicas de fechamento, negociação e estratégias para bater sua meta.'}
                   </p>
                 </div>
               </div>

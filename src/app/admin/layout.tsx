@@ -92,7 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
       <nav className="flex-1 overflow-y-auto py-2 px-2">
         <p className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-          Admin
+          Administrador
         </p>
         <div className="flex flex-col gap-0.5">
           {items.map((item) => {

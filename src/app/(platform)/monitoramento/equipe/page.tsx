@@ -154,10 +154,10 @@ export default function MonitoramentoEquipePage() {
     try {
       const res = await fetch(`/api/team/commercial-performance?period=${period}`, { credentials: 'same-origin' })
       const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'Erro ao carregar performance comercial')
+      if (!res.ok) throw new Error(body.error || 'Erro ao carregar desempenho comercial')
       setData(body)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao carregar performance comercial')
+      toast.error(error instanceof Error ? error.message : 'Erro ao carregar desempenho comercial')
     } finally {
       setLoading(false)
     }
@@ -195,7 +195,7 @@ export default function MonitoramentoEquipePage() {
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || 'Erro ao enviar nudge')
-      toast.success(nudgeMode === 'mission' ? 'Nudge enviado e missao criada' : nudgeMode === 'one_on_one' ? 'Nudge enviado e pauta criada' : 'Nudge enviado')
+      toast.success(nudgeMode === 'mission' ? 'Nudge enviado e missão criada' : nudgeMode === 'one_on_one' ? 'Nudge enviado é pauta criada' : 'Nudge enviado')
       setNudgeTarget(null)
       await loadData()
     } catch (error) {
@@ -236,7 +236,7 @@ export default function MonitoramentoEquipePage() {
       if (!trainingRes.ok) throw new Error(trainingBody.error || 'Erro ao gerar PDI')
       toast.success('PDI gerado para revisao em Desenvolvimento da Equipe.')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar PDI')
+      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar PDI')
     }
   }
 
@@ -251,7 +251,7 @@ export default function MonitoramentoEquipePage() {
   if (!data) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">Nao foi possivel carregar a performance comercial.</CardContent>
+        <CardContent className="py-8 text-center text-sm text-muted-foreground">Não foi possível carregar a desempenho comercial.</CardContent>
       </Card>
     )
   }
@@ -265,8 +265,8 @@ export default function MonitoramentoEquipePage() {
       <PageHeader
         label="Monitoramento"
         labelIcon={<LineChart className="h-3 w-3" />}
-        title={<>Performance Comercial da <TitleHighlight>Equipe</TitleHighlight></>}
-        description="Acompanhe vendas, forecast, execucao e riscos comerciais por vendedor."
+        title={<>Desempenho Comercial da <TitleHighlight>Equipe</TitleHighlight></>}
+        description="Acompanhe vendas, previsão, execução e riscos comerciais por vendedor."
         actions={(
           <Select value={period} onValueChange={(value) => value && setPeriod(value)}>
             <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
@@ -283,9 +283,9 @@ export default function MonitoramentoEquipePage() {
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Meta do mes</p><p className="mt-1 text-xl font-semibold">{currency(summary.monthly_goal)}</p></CardContent></Card>
         <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Vendido</p><p className="mt-1 text-xl font-semibold">{currency(summary.revenue_won)}</p><p className="text-xs text-muted-foreground">{goalPct}% da meta</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Forecast provavel</p><p className="mt-1 text-xl font-semibold">{currency(summary.forecast_weighted)}</p><p className="text-xs text-muted-foreground">Projeta {projectedPct}% da meta</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Previsão provavel</p><p className="mt-1 text-xl font-semibold">{currency(summary.forecast_weighted)}</p><p className="text-xs text-muted-foreground">Projeta {projectedPct}% da meta</p></CardContent></Card>
         <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Gap para meta</p><p className="mt-1 text-xl font-semibold">{currency(summary.gap_to_goal)}</p><p className="text-xs text-muted-foreground">Gap real {currency(summary.gap_real)}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Pipeline em risco</p><p className="mt-1 text-xl font-semibold">{currency(summary.pipeline_at_risk)}</p><p className="text-xs text-muted-foreground">{summary.deals_without_next_action} sem proxima acao</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Funil em risco</p><p className="mt-1 text-xl font-semibold">{currency(summary.pipeline_at_risk)}</p><p className="text-xs text-muted-foreground">{summary.deals_without_next_action} sem próxima ação</p></CardContent></Card>
         <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Ticket medio</p><p className="mt-1 text-xl font-semibold">{currency(summary.avg_ticket)}</p><p className="text-xs text-muted-foreground">{summary.won_deals_count} vendas ganhas</p></CardContent></Card>
       </div>
 
@@ -325,16 +325,16 @@ export default function MonitoramentoEquipePage() {
                     <th className="py-2 pr-3">Vendedor</th>
                     <th className="py-2 pr-3">Vendido</th>
                     <th className="py-2 pr-3">% meta</th>
-                    <th className="py-2 pr-3">Forecast</th>
-                    <th className="py-2 pr-3">Pipeline</th>
+                    <th className="py-2 pr-3">Previsão</th>
+                    <th className="py-2 pr-3">Funil</th>
                     <th className="py-2 pr-3">Risco</th>
                     <th className="py-2 pr-3">Vendas</th>
                     <th className="py-2 pr-3">Ticket</th>
-                    <th className="py-2 pr-3">Conversao</th>
-                    <th className="py-2 pr-3">Execucao</th>
-                    <th className="py-2 pr-3">Missoes</th>
+                    <th className="py-2 pr-3">Conversão</th>
+                    <th className="py-2 pr-3">Execução</th>
+                    <th className="py-2 pr-3">Missões</th>
                     <th className="py-2 pr-3">Status</th>
-                    <th className="py-2 pr-3">Acao</th>
+                    <th className="py-2 pr-3">Ação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -387,7 +387,7 @@ export default function MonitoramentoEquipePage() {
           <CardContent className="space-y-3">
             {data.action_queue.length === 0 ? (
               <div className="rounded-md border border-dashed p-5 text-sm text-muted-foreground">
-                Nenhuma intervencao critica no momento. Continue acompanhando forecast e proximas acoes.
+                Nenhuma intervencao critica no momento. Continue acompanhando previsão e próximas ações.
               </div>
             ) : data.action_queue.map((item) => (
               <div key={item.id} className="rounded-md border p-3">
@@ -421,7 +421,7 @@ export default function MonitoramentoEquipePage() {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-primary" />Execucao comercial</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-primary" />Execução comercial</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {data.execution.map((item) => (
                 <div key={item.event} className="space-y-1">
@@ -430,19 +430,19 @@ export default function MonitoramentoEquipePage() {
                     <span className="font-medium">{item.done.toLocaleString('pt-BR')}{item.target ? `/${item.target.toLocaleString('pt-BR')}` : ''}</span>
                   </div>
                   <Progress value={item.pct ?? Math.min(100, item.done * 5)} className="h-2" />
-                  <p className="text-[11px] text-muted-foreground">Lider: {item.leader ?? '-'} · abaixo: {item.lagging ?? '-'}</p>
+                  <p className="text-[11px] text-muted-foreground">Líder: {item.leader ?? '-'} · abaixo: {item.lagging ?? '-'}</p>
                 </div>
               ))}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Target className="h-4 w-4 text-violet-500" />Missoes comerciais</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Target className="h-4 w-4 text-violet-500" />Missões comerciais</CardTitle></CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
               <div><p className="text-xs text-muted-foreground">Ativas</p><p className="text-2xl font-semibold">{data.missions.active}</p></div>
-              <div><p className="text-xs text-muted-foreground">Concluidas</p><p className="text-2xl font-semibold">{data.missions.completed}</p></div>
+              <div><p className="text-xs text-muted-foreground">Concluídas</p><p className="text-2xl font-semibold">{data.missions.completed}</p></div>
               <div><p className="text-xs text-muted-foreground">Atrasadas</p><p className="text-2xl font-semibold">{data.missions.overdue}</p></div>
-              <div><p className="text-xs text-muted-foreground">Impacto pipeline</p><p className="text-2xl font-semibold">{currency(data.missions.estimated_pipeline_impact)}</p></div>
+              <div><p className="text-xs text-muted-foreground">Impacto funil</p><p className="text-2xl font-semibold">{currency(data.missions.estimated_pipeline_impact)}</p></div>
             </CardContent>
           </Card>
         </div>
@@ -452,9 +452,9 @@ export default function MonitoramentoEquipePage() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><Briefcase className="h-4 w-4 text-red-500" />Riscos comerciais</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
-            <div><p className="text-xs text-muted-foreground">Deals sem proxima acao</p><p className="text-2xl font-semibold">{data.risks.deals_without_next_action}</p></div>
-            <div><p className="text-xs text-muted-foreground">Follow-ups atrasados</p><p className="text-2xl font-semibold">{data.risks.overdue_followups}</p></div>
-            <div><p className="text-xs text-muted-foreground">Deals parados</p><p className="text-2xl font-semibold">{data.risks.stalled_deals}</p></div>
+            <div><p className="text-xs text-muted-foreground">oportunidades sem próxima ação</p><p className="text-2xl font-semibold">{data.risks.deals_without_next_action}</p></div>
+            <div><p className="text-xs text-muted-foreground">retornos atrasados</p><p className="text-2xl font-semibold">{data.risks.overdue_followups}</p></div>
+            <div><p className="text-xs text-muted-foreground">oportunidades parados</p><p className="text-2xl font-semibold">{data.risks.stalled_deals}</p></div>
             <div><p className="text-xs text-muted-foreground">Maior concentracao</p><p className="text-sm font-semibold">{data.risks.top_risk_seller ? `${data.risks.top_risk_seller.name} · ${currency(data.risks.top_risk_seller.value)}` : 'Sem concentracao'}</p></div>
           </CardContent>
         </Card>
@@ -481,8 +481,8 @@ export default function MonitoramentoEquipePage() {
       {summary.won_deals_count === 0 && (
         <Card className="border-dashed">
           <CardContent className="space-y-2 py-5 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Nenhuma venda ganha neste periodo ainda.</p>
-            <p>Comece analisando oportunidades em proposta, follow-ups atrasados e vendedores sem acao comercial hoje.</p>
+            <p className="font-medium text-foreground">Nenhuma venda ganha neste período ainda.</p>
+            <p>Comece analisando oportunidades em proposta, retornos atrasados e vendedores sem ação comercial hoje.</p>
           </CardContent>
         </Card>
       )}
@@ -504,7 +504,7 @@ export default function MonitoramentoEquipePage() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="message">Apenas enviar mensagem</SelectItem>
-                    <SelectItem value="mission">Mensagem + criar missao</SelectItem>
+                    <SelectItem value="mission">Mensagem + criar missão</SelectItem>
                     <SelectItem value="one_on_one">Mensagem + abrir pauta de 1:1</SelectItem>
                   </SelectContent>
                 </Select>

@@ -39,7 +39,7 @@ Stack: Next.js + Tailwind + Supabase. O redesign é feito em HTML/React para pro
 --amber:  oklch(0.77 0.19 70);   /* atenção, streak médio */
 --rose:   oklch(0.65 0.24 16);   /* erro, crítico, burnout */
 --blue:   oklch(0.70 0.17 215);  /* IA, informação */
---violet: oklch(0.69 0.17 290);  /* gamificação, badges */
+--violet: oklch(0.69 0.17 290);  /* gamificação, selos */
 --orange: oklch(0.75 0.18 45);   /* streak, energia */
 ```
 
@@ -47,8 +47,8 @@ Stack: Next.js + Tailwind + Supabase. O redesign é feito em HTML/React para pro
 - Green → positivo, ativo, XP, IA, crescimento
 - Amber → atenção, engajamento baixo, dificuldade média
 - Rose → erro, crítico, burnout, gargalo, dificuldade alta
-- Blue → insights de IA, informação, KPIs de volume
-- Violet → conquistas, badges, gamificação
+- Blue → análises de IA, informação, KPIs de volume
+- Violet → conquistas, selos, gamificação
 - Orange → streak, urgência positiva
 
 ---
@@ -156,7 +156,7 @@ color: transparent;
 .grid-2   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid-3-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
 .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
-/* Responsivo: @media (max-width:900px) → grid-template-columns: 1fr */
+/* Responsivo: @média (max-width:900px) → grid-template-columns: 1fr */
 ```
 
 Gap padrão entre seções: **20px**. Padding interno dos cards: **24–26px**.
@@ -213,7 +213,7 @@ box-shadow: 0 4px 16px oklch(0.87 0.29 145 / 0.4);
 Tipos: burnout → rose | recognize → green | followup → amber
 ```
 
-### Briefing banner (topo do dashboard)
+### Briefing banner (topo do painel)
 ```
 [✨ 40px]  Título bold "VAMO IA · Briefing de hoje"
            Texto com dados em destaque (cor --primary bold)
@@ -263,14 +263,14 @@ Border: 1px solid oklch(0.87 0.29 145 / 0.2)
 
 4. Conteúdo principal (grid-3-2 ou grid-2)
    ├─ Card maior: lista, gráfico, tabela, funil
-   └─ Card menor: ações, nudges, insights de IA
+   └─ Card menor: ações, nudges, análises de IA
 
 5. Seção secundária (grid-2)
    ├─ Ranking / histórico / perfil
    └─ Saúde / projeção / próximos passos
 
 6. Card full-width opcional
-   └─ Perfil DISC, Coach IA, onboarding, CTA
+   └─ Perfil DISC, Mentoria IA, integração, CTA
 ```
 
 ---
@@ -297,7 +297,7 @@ Border: 1px solid oklch(0.87 0.29 145 / 0.2)
 **Diagnóstico / DISC**
 - Hero com tipo + anel de score
 - grid-2: forças (green) + oportunidades (amber)
-- Insight de IA em card azul com `✨`
+- Análise de IA em card azul com `✨`
 - Histórico em linha do tempo
 
 **Configurações**
@@ -332,7 +332,7 @@ Border: 1px solid oklch(0.87 0.29 145 / 0.2)
 ## Arquivos do prototype
 
 ```
-Vamo Redesign.html     → Dashboard gestor + vendedor (prototype principal)
+Vamo Redesign.html     → Painel gestor + vendedor (prototype principal)
 vamo-components.jsx    → AnimatedNumber, ProgressRing, Sparkline, FunnelBar,
                          KpiRing, Sidebar, Topbar, StatCard, NudgeCard,
                          RankRow, MissionCard — importar em novas telas

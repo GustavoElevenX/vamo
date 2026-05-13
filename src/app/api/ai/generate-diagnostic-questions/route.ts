@@ -43,11 +43,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'companyContext é obrigatório' }, { status: 400 })
   }
 
-  const systemPrompt = `Você é um especialista em diagnóstico de equipes comerciais de alta performance no Brasil.
+  const systemPrompt = `Você é um especialista em diagnóstico de equipes comerciais de alta desempenho no Brasil.
 Gere um questionário de diagnóstico personalizado com base no perfil da empresa.
 
 ÁREAS A COBRIR (3 perguntas por área, total 12):
-- lead_generation: Geração de Leads e Prospecção
+- lead_generation: Geração de potenciais clientes e Prospecção
 - sales_process: Processo de Vendas e Conversão
 - team_management: Gestão da Equipe Comercial
 - tools_technology: Ferramentas, CRM e Tecnologia

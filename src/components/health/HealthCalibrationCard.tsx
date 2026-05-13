@@ -19,7 +19,7 @@ export function HealthCalibrationCard({ calibration }: { calibration: HealthCali
           <div className="flex gap-3">
             <HeartPulse className="mt-0.5 h-5 w-5 text-emerald-500" />
             <div>
-              <p className="font-bold">Calibragem de saude</p>
+              <p className="font-bold">Calibragem de saúde</p>
               <p className="mt-1 text-sm text-muted-foreground">{calibration.seller_focus}</p>
             </div>
           </div>

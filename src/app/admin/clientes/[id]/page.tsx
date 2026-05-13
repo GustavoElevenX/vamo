@@ -236,9 +236,9 @@ export default function ClienteDetailPage() {
                 <Select value={orgPlan} onValueChange={(v) => v && setOrgPlan(v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="starter">Starter</SelectItem>
-                    <SelectItem value="professional">Professional</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="starter">Inicial</SelectItem>
+                    <SelectItem value="professional">Profissional</SelectItem>
+                    <SelectItem value="enterprise">Empresarial</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -399,7 +399,7 @@ export default function ClienteDetailPage() {
                         <SelectContent>
                           <SelectItem value="seller">Vendedor</SelectItem>
                           <SelectItem value="manager">Gestor</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button

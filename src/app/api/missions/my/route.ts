@@ -52,25 +52,25 @@ export async function GET() {
         progressPct,
         missingValue: Math.max(0, targetValue - currentValue),
         validationLabel: mission.verification_type === 'automatic'
-          ? 'Validacao automatica'
+          ? 'Validação automatica'
           : mission.verification_type === 'hybrid'
-            ? 'Progresso automatico + aprovacao'
-            : 'Validacao pelo gestor',
+            ? 'Progresso automatico + aprovação'
+            : 'Validação pelo gestor',
         primaryCta: mission.status === 'pending'
           ? 'Iniciar'
           : canRequestApproval
-            ? 'Solicitar validacao'
+            ? 'Solicitar validação'
             : mission.status === 'awaiting_approval'
               ? 'Aguardando gestor'
               : mission.status === 'completed'
                 ? 'Concluida'
-                : 'Registrar acao',
+                : 'Registrar ação',
       }
     })
 
     return NextResponse.json({ missions })
   } catch (error) {
     console.error('GET /api/missions/my', error)
-    return NextResponse.json({ error: 'Erro ao carregar missoes' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao carregar missões' }, { status: 500 })
   }
 }

@@ -162,7 +162,7 @@ export default function SystemLogsPage() {
               <Server className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm font-medium">Nenhum log encontrado.</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Acoes como salvar criterios, configurar sistema e publicar no feed passam a aparecer aqui.
+                Ações como salvar critérios, configurar sistema e publicar no mural passam a aparecer aqui.
               </p>
             </CardContent>
           </Card>

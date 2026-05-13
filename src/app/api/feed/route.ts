@@ -32,7 +32,7 @@ export async function GET() {
       .eq('user_id', appUser.id),
     adminClient
       .from('user_badges')
-      .select('id, earned_at, users!inner(name), badges!inner(name, organization_id, xp_reward)')
+      .select('id, earned_at, users!inner(name), selos!inner(name, organization_id, xp_reward)')
       .eq('badges.organization_id', appUser.organization_id)
       .order('earned_at', { ascending: false })
       .limit(15),
@@ -73,7 +73,7 @@ export async function GET() {
   }
 
   for (const badge of badgesResult.data ?? []) {
-    const name = (badge as any).users?.name ?? 'Usuario'
+    const name = (badge as any).users?.name ?? 'Usuário'
     events.push({
       id: `badge-${(badge as any).id}`,
       kind: 'system',
@@ -89,7 +89,7 @@ export async function GET() {
   }
 
   for (const mission of missionsResult.data ?? []) {
-    const name = (mission as any).users?.name ?? 'Usuario'
+    const name = (mission as any).users?.name ?? 'Usuário'
     events.push({
       id: `mission-${(mission as any).id}`,
       kind: 'system',
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
 
   const targetUserId = input.targetUserId ? String(input.targetUserId) : null
   if (type === 'recognition' && targetUserId && !['manager', 'admin'].includes(appUser.role)) {
-    return NextResponse.json({ error: 'Apenas gestores podem reconhecer outro usuario' }, { status: 403 })
+    return NextResponse.json({ error: 'Apenas gestores podem reconhecer outro usuário' }, { status: 403 })
   }
 
   const { data, error } = await adminClient
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     organization_id: appUser.organization_id,
     level: 'info',
     source: 'feed',
-    message: 'Novo post publicado no feed',
+    message: 'Novo post publicado no mural',
     metadata: { post_id: data.id, type, author_id: appUser.id, target_user_id: targetUserId },
   })
 

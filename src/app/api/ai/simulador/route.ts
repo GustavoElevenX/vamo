@@ -46,8 +46,8 @@ const FALLBACK_SCENARIOS: Record<number, ClientScenario> = {
     empresa: 'Alfa Distribuidora',
     cargo: 'Gerente Comercial',
     setor: 'Distribuicao B2B',
-    objecao_principal: 'O preco parece alto para o momento.',
-    contexto: 'A empresa quer melhorar conversao de propostas, mas acabou de cortar custos.',
+    objecao_principal: 'O preço parece alto para o momento.',
+    contexto: 'A empresa quer melhorar conversão de propostas, mas acabou de cortar custos.',
     temperamento: 'Pragmatica, direta e aberta a numeros claros.',
   },
   2: {
@@ -55,18 +55,18 @@ const FALLBACK_SCENARIOS: Record<number, ClientScenario> = {
     empresa: 'NorteLog',
     cargo: 'Diretor de Operacoes',
     setor: 'Logistica',
-    objecao_principal: 'Agora nao e o timing; estamos com prioridades internas.',
-    contexto: 'O time comercial perde follow-ups e Renato teme iniciar mais um projeto sem adesao.',
+    objecao_principal: 'Agora não é o momento; estamos com prioridades internas.',
+    contexto: 'O time comercial perde retornos e Renato teme iniciar mais um projeto sem adesão.',
     temperamento: 'Cauteloso, analitico e resistente a promessas vagas.',
   },
   3: {
     nome: 'Camila Torres',
     empresa: 'VitaMed Brasil',
     cargo: 'CRO',
-    setor: 'Saude',
-    objecao_principal: 'Preco, timing e comparacao com concorrente.',
-    contexto: 'A empresa avalia duas solucoes, tem meta agressiva e quer prova de ROI antes de decidir.',
-    temperamento: 'Exigente, cetica e orientada a risco.',
+    setor: 'Saúde',
+    objecao_principal: 'Preço, timing e comparacao com concorrente.',
+    contexto: 'A empresa avalia duas soluções, tem meta agressiva e quer prova de ROI antes de decidir.',
+    temperamento: 'Exigente, cética e orientada a risco.',
   },
 }
 
@@ -78,9 +78,9 @@ function json(data: unknown, status = 200) {
 }
 
 function difficultyDescription(difficulty: number) {
-  if (difficulty === 1) return 'Cliente com objecao de preco, hesitante mas aberto.'
-  if (difficulty === 2) return 'Cliente com objecao de timing, mais resistente e com duas objecoes.'
-  return 'Cliente dificil com objecoes de preco, timing e concorrencia.'
+  if (difficulty === 1) return 'Cliente com objeção de preço, hesitante mas aberto.'
+  if (difficulty === 2) return 'Cliente com objeção ao momento, mais resistente e com duas objeções.'
+  return 'Cliente difícil com objeções de preço, momento e concorrência.'
 }
 
 function fallbackClientReply(scenario: ClientScenario, difficulty: number, sellerMessage: string, turn: number) {
@@ -90,20 +90,20 @@ function fallbackClientReply(scenario: ClientScenario, difficulty: number, selle
   const nextStep = lower.includes('agenda') || lower.includes('proximo') || lower.includes('próximo') || lower.includes('reuniao')
 
   if (mentionsRoi && asksQuestion && nextStep) {
-    return `Entendi melhor. Se voce conseguir me mostrar esse impacto com um exemplo parecido com a ${scenario.empresa}, eu topo uma conversa mais tecnica. Mas preciso sair dela com numeros e um proximo passo bem claro.`
+    return `Entendi melhor. Se você conseguir me mostrar esse impacto com um exemplo parecido com a ${scenario.empresa}, eu topo uma conversa mais técnica. Mas preciso sair dela com números e um próximo passo bem claro.`
   }
   if (mentionsRoi && asksQuestion) {
-    return 'Faz sentido olhar pelo impacto, mas ainda estou tentando entender se isso resolve o nosso problema agora. Que evidencia voce tem de que esse ganho acontece na pratica?'
+    return 'Faz sentido olhar pelo impacto, mas ainda estou tentando entender se isso resolve o nosso problema agora. Que evidência você tem de que esse ganho acontece na prática?'
   }
   if (asksQuestion) {
-    return 'Boa pergunta. Hoje minha maior preocupacao e com adesao do time e tempo de implementacao. Eu nao quero comprar algo que vire mais uma iniciativa parada.'
+    return 'Boa pergunta. Hoje minha maior preocupação é com adesão do time e tempo de implementação. Eu não quero comprar algo que vire mais uma iniciativa parada.'
   }
   if (turn <= 1) {
     return `Antes de falar de proposta, preciso ser transparente: ${scenario.objecao_principal} O que faria isso valer a pena para a gente?`
   }
   return difficulty === 3
-    ? 'Ainda parece generico para mim. O concorrente promete algo parecido, e eu preciso de uma razao objetiva para priorizar isso agora.'
-    : 'Eu entendo, mas ainda fico com receio de investir agora. Como voce reduziria o risco dessa decisao?'
+    ? 'Ainda parece genérico para mim. O concorrente promete algo parecido, e eu preciso de uma razão objetiva para priorizar isso agora.'
+    : 'Eu entendo, mas ainda fico com receio de investir agora. Como você reduziria o risco dessa decisão?'
 }
 
 function fallbackFeedback(messages: { role: string; content: string }[], scenario: ClientScenario): SimulationFeedback {
@@ -121,17 +121,17 @@ function fallbackFeedback(messages: { role: string; content: string }[], scenari
 
   return {
     ponto_forte: score >= 7
-      ? 'Voce conectou a conversa a impacto e conduziu o cliente para um proximo passo concreto.'
-      : 'Voce manteve a conversa ativa e demonstrou disposicao para lidar com a objecao.',
+      ? 'Você conectou a conversa a impacto e conduziu o cliente para um próximo passo concreto.'
+      : 'Você manteve a conversa ativa e demonstrou disposição para lidar com a objeção.',
     erro_especifico: score >= 7
-      ? 'O principal ajuste e quantificar melhor o impacto e confirmar criterios de decisao antes de propor agenda.'
-      : 'A abordagem ainda ficou pouco diagnostica. Faltaram perguntas para entender causa, impacto financeiro e criterio de decisao.',
-    frase_ideal: `Antes de discutir preco, posso entender quanto essa dificuldade custa hoje para a ${scenario.empresa} e qual resultado faria a decisao valer a pena?`,
+      ? 'O principal ajuste é quantificar melhor o impacto e confirmar critérios de decisão antes de propor agenda.'
+      : 'A abordagem ainda ficou pouco diagnóstica. Faltaram perguntas para entender causa, impacto financeiro e critério de decisão.',
+    frase_ideal: `Antes de discutir preço, posso entender quanto essa dificuldade custa hoje para a ${scenario.empresa} e qual resultado faria a decisão valer a pena?`,
     nota: score,
     skill_area: skillArea,
     next_practice: score >= 7
-      ? 'Aplicar a mesma estrutura em um deal real e registrar evidencia no CRM.'
-      : 'Treinar perguntas de qualificacao e fechamento antes de voltar para uma proposta real.',
+      ? 'Aplicar a mesma estrutura em uma oportunidade real e registrar evidência no CRM.'
+      : 'Treinar perguntas de qualificação e fechamento antes de voltar para uma proposta real.',
   }
 }
 
@@ -196,11 +196,11 @@ async function createSimulationPlan(
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
-  if (!authUser) return json({ error: 'Nao autorizado' }, 401)
+  if (!authUser) return json({ error: 'Não autorizado' }, 401)
 
   const adminClient = createAdminClient()
   const appUser = await loadAppUser(adminClient, authUser.id)
-  if (!appUser) return json({ error: 'Usuario nao encontrado' }, 404)
+  if (!appUser) return json({ error: 'Usuário não encontrado' }, 404)
 
   const body = await req.json() as ScenarioRequest
 
@@ -211,8 +211,8 @@ export async function POST(req: NextRequest) {
     if (isOpenAIConfigured()) {
       try {
         const result = await callOpenAIJSON<ClientScenario>({
-          systemPrompt: `Voce e um gerador de cenarios de simulacao de vendas B2B no Brasil. Dificuldade: ${difficultyDescription(difficulty)}. Retorne APENAS JSON com: nome, empresa, cargo, setor, objecao_principal, contexto, temperamento.`,
-          userPrompt: `Gere um perfil de cliente para simulacao nivel ${difficulty}.`,
+          systemPrompt: `Você é um gerador de cenários de simulação de vendas B2B no Brasil. Dificuldade: ${difficultyDescription(difficulty)}. Retorne APENAS JSON com: nome, empresa, cargo, setor, objecao_principal, contexto, temperamento.`,
+          userPrompt: `Gere um perfil de cliente para simulação nível ${difficulty}.`,
           temperature: 0.8,
           maxTokens: 500,
         })
@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', appUser.id)
       .single()
 
-    if (!session) return json({ error: 'Sessao nao encontrada' }, 404)
+    if (!session) return json({ error: 'Sessão não encontrada' }, 404)
 
     const scenario = session.scenario as ClientScenario
     const previousMessages = (session.messages || []) as { role: string; content: string }[]
@@ -398,7 +398,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.action === 'feedback') {
-    if (!body.sessionId) return json({ error: 'sessionId e obrigatorio' }, 400)
+    if (!body.sessionId) return json({ error: 'sessionId é obrigatório' }, 400)
 
     const { data: session } = await adminClient
       .from('simulation_sessions')
@@ -407,7 +407,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', appUser.id)
       .single()
 
-    if (!session) return json({ error: 'Sessao nao encontrada' }, 404)
+    if (!session) return json({ error: 'Sessão não encontrada' }, 404)
 
     const scenario = session.scenario as ClientScenario
     const messages = (session.messages || []) as { role: string; content: string }[]
@@ -419,8 +419,8 @@ export async function POST(req: NextRequest) {
     if (isOpenAIConfigured() && messages.length > 0) {
       try {
         const result = await callOpenAIJSON<SimulationFeedback>({
-          systemPrompt: `Voce e um coach de vendas. Analise a conversa de roleplay e retorne APENAS JSON com ponto_forte, erro_especifico, frase_ideal, nota de 1 a 10, skill_area (qualification, proposal, negotiation, closing, objection_handling, communication) e next_practice.`,
-          userPrompt: `Cenario: ${JSON.stringify(scenario)}\nConversa:\n${conversation}`,
+          systemPrompt: `Você é uma mentora de vendas. Analise a conversa de simulação e retorne APENAS JSON com ponto_forte, erro_especifico, frase_ideal, nota de 1 a 10, skill_area (qualification, proposal, negotiation, closing, objection_handling, communication) e next_practice.`,
+          userPrompt: `Cenário: ${JSON.stringify(scenario)}\nConversa:\n${conversation}`,
           temperature: 0.3,
           maxTokens: 500,
         })
@@ -551,8 +551,8 @@ export async function POST(req: NextRequest) {
         sourceId: body.sessionId,
         performanceEventId: event.id,
         evidence: { scenario, feedback, skillArea },
-        impactExpected: 'Melhorar abordagem comercial e aplicar aprendizado em deal real.',
-        description: `+${xpAwarded} XP por concluir simulacao com evidencia de ${skillArea}`,
+        impactExpected: 'Melhorar abordagem comercial e aplicar aprendizado em oportunidade real.',
+        description: `+${xpAwarded} XP por concluir simulação com evidência de ${skillArea}`,
       })
     }
 
@@ -563,7 +563,7 @@ export async function POST(req: NextRequest) {
       createdByUserId: appUser.id,
       sourceModule: 'simulation',
       recommendationType: feedback.nota >= 7 ? 'next_action' : 'pdi_training',
-      title: feedback.nota >= 7 ? 'Aplicar aprendizado em deal real' : `Praticar ${skillArea} antes da proxima proposta`,
+      title: feedback.nota >= 7 ? 'Aplicar aprendizado em oportunidade real' : `Praticar ${skillArea} antes da próxima proposta`,
       description: feedback.next_practice || feedback.erro_especifico,
       suggestedActionLabel: feedback.nota >= 7 ? 'Abrir CRM' : 'Abrir Meu PDI',
       suggestedActionHref: feedback.nota >= 7 ? '/crm' : '/desenvolvimento/pdi',
@@ -588,17 +588,17 @@ export async function POST(req: NextRequest) {
     return json({ feedback: finalFeedback })
   }
 
-  return json({ error: 'Acao invalida' }, 400)
+  return json({ error: 'Ação inválida' }, 400)
 }
 
 export async function GET() {
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
-  if (!authUser) return json({ error: 'Nao autorizado' }, 401)
+  if (!authUser) return json({ error: 'Não autorizado' }, 401)
 
   const adminClient = createAdminClient()
   const appUser = await loadAppUser(adminClient, authUser.id)
-  if (!appUser) return json({ error: 'Usuario nao encontrado' }, 404)
+  if (!appUser) return json({ error: 'Usuário não encontrado' }, 404)
 
   const { data: sessions } = await adminClient
     .from('simulation_sessions')

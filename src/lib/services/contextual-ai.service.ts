@@ -59,17 +59,17 @@ export async function generateDealScript(
     .maybeSingle()
 
   if (error) throw error
-  if (!deal) throw new Error('Deal nao encontrado')
+  if (!deal) throw new Error('oportunidade não encontrado')
 
   const orgId = organizationId ?? String(deal.organization_id)
   const fallback = [
     `Abra com contexto do cliente ${deal.account?.name ?? deal.title}.`,
     `Confirme o objetivo comercial e a etapa atual (${deal.stage}).`,
-    `Mostre o impacto financeiro de resolver agora e combine a proxima acao com data.`,
+    `Mostre o impacto financeiro de resolver agora e combine a próxima ação com data.`,
   ].join('\n')
 
   const content = await generateText(
-    'Voce e a VAMO IA, especialista em execucao comercial. Gere scripts curtos, praticos e conectados a forecast, ganho e proxima acao.',
+    'Você é a VAMO IA, especialista em execução comercial. Gere scripts curtos, práticos e conectados a previsão, ganho e próxima ação.',
     `Deal: ${JSON.stringify(deal)}\nGere um script de abordagem em portugues do Brasil com no maximo 5 bullets.`,
     fallback,
   )
@@ -82,12 +82,12 @@ export async function generateDealScript(
     outputType: 'ai_script',
     entityType: 'crm_deal',
     entityId: dealId,
-    title: 'Script recomendado para o deal',
+    title: 'Script recomendado para o oportunidade',
     content,
     metadata: { stage: deal.stage, value: deal.value },
   })
 
-  return { title: 'Script recomendado para o deal', content }
+  return { title: 'Script recomendado para o oportunidade', content }
 }
 
 export async function generateTodayPriorities(
@@ -130,10 +130,10 @@ export async function generateTodayPriorities(
     health: health.data?.[0] ?? null,
   }
 
-  const fallback = 'Priorize o deal com proxima acao vencida, registre a atividade no CRM e feche o dia com uma evidencia ligada a KPI, ganho ou PDI.'
+  const fallback = 'Priorize o oportunidade com próxima ação vencida, registre a atividade no CRM e feche o dia com uma evidência ligada a KPI, ganho ou PDI.'
   const content = await generateText(
-    'Voce e a VAMO IA dentro do cockpit Hoje. Priorize acoes comerciais concretas, com ganho, risco e proximo passo.',
-    `Contexto do vendedor: ${JSON.stringify(context)}\nResponda com 3 prioridades acionaveis para hoje.`,
+    'Você é a VAMO IA dentro do cockpit Hoje. Priorize ações comerciais concretas, com ganho, risco e próximo passo.',
+    `Contexto do vendedor: ${JSON.stringify(context)}\nResponda com 3 prioridades acionáveis para hoje.`,
     fallback,
   )
 
@@ -171,9 +171,9 @@ export async function generateManagerAlerts(
     health: health.data ?? [],
     events: events.data ?? [],
   }
-  const fallback = 'Comece pelos alertas de risco alto, transforme cada alerta em uma conversa ou acao com dono e reconheca comportamentos reais que ja apareceram nos eventos.'
+  const fallback = 'Comece pelos alertas de risco alto, transforme cada alerta em uma conversa ou ação com dono e reconheca comportamentos reais que já apareceram nos eventos.'
   const content = await generateText(
-    'Voce e a VAMO IA para gestor comercial. Gere decisoes prioritarias com postura humana, foco em forecast, PDI e reconhecimento.',
+    'Você é a VAMO IA para gestor comercial. Gere decisoes prioritarias com postura humana, foco em previsão, PDI e reconhecimento.',
     `Contexto do gestor: ${JSON.stringify(context)}\nListe decisoes prioritarias para hoje.`,
     fallback,
   )
@@ -204,12 +204,12 @@ export async function generatePdiRecommendation(
     .maybeSingle()
 
   if (error) throw error
-  if (!gap) throw new Error('Gap nao encontrado')
+  if (!gap) throw new Error('Gap não encontrado')
 
-  const fallback = `PDI curto para ${gap.skill_area}: treino de 10 minutos, roleplay de objecao e aplicacao em um deal real nesta semana.`
+  const fallback = `PDI curto para ${gap.skill_area}: treino de 10 minutos, roleplay de objecao e aplicação em um deal real nesta semana.`
   const content = await generateText(
-    'Voce cria PDI aplicado a performance comercial, nunca biblioteca de curso.',
-    `Gap detectado: ${JSON.stringify(gap)}\nGere plano enxuto com treino, aplicacao real e evidencia de evolucao.`,
+    'Você cria PDI aplicado a desempenho comercial, nunca biblioteca de curso.',
+    `Gap detectado: ${JSON.stringify(gap)}\nGere plano enxuto com treino, aplicação real e evidencia de evolucao.`,
     fallback,
   )
 
@@ -240,7 +240,7 @@ export async function generateCommissionExplanation(
     .maybeSingle()
 
   if (error) throw error
-  if (!calculation) throw new Error('Calculo de comissao nao encontrado')
+  if (!calculation) throw new Error('Cálculo de comissão não encontrado')
 
   const released = money(calculation.released_commission ?? calculation.total)
   const pending = money(calculation.pending_commission ?? 0)
@@ -255,12 +255,12 @@ export async function generateCommissionExplanation(
     outputType: 'commission_explanation',
     entityType: 'commission_calculation',
     entityId: commissionCalculationId,
-    title: 'Explicacao da comissao',
+    title: 'Explicação da comissão',
     content,
     metadata: { total: calculation.total, status: calculation.status },
   })
 
-  return { title: 'Explicacao da comissao', content }
+  return { title: 'Explicação da comissão', content }
 }
 
 export async function generateHealthCalibration(
@@ -274,14 +274,14 @@ export async function generateHealthCalibration(
     .maybeSingle()
 
   if (error) throw error
-  if (!checkin) throw new Error('Check-in nao encontrado')
+  if (!checkin) throw new Error('Check-in não encontrado')
 
   const energy = Number(checkin.energy_level)
   const risk = energy <= 2 ? 'high' : energy === 3 ? 'medium' : 'low'
   const content = energy <= 2
-    ? 'Reduza a agressividade da missao, foque em duas acoes controlaveis e sugira uma conversa de apoio.'
+    ? 'Reduza a agressividade da missão, foque em duas ações controlaveis e sugira uma conversa de apoio.'
     : energy === 3
-      ? 'Mantenha foco em poucos deals provaveis e use script de apoio para reduzir atrito.'
+      ? 'Mantenha foco em poucos oportunidades provaveis e use script de apoio para reduzir atrito.'
       : 'Energia favoravel: liberar sprint curto em oportunidade critica, sem perder check-in no fim do dia.'
 
   await persistOutput({
@@ -292,12 +292,12 @@ export async function generateHealthCalibration(
     outputType: 'health_calibration',
     entityType: 'daily_checkin',
     entityId: checkinId,
-    title: 'Calibragem de saude',
+    title: 'Calibragem de saúde',
     content,
     metadata: { energy_level: energy, risk },
   })
 
-  return { title: 'Calibragem de saude', content, risk }
+  return { title: 'Calibragem de saúde', content, risk }
 }
 
 export async function generateOneOnOneAgenda(
@@ -313,7 +313,7 @@ export async function generateOneOnOneAgenda(
   ])
 
   if (user.error) throw user.error
-  if (!user.data) throw new Error('Usuario nao encontrado')
+  if (!user.data) throw new Error('Usuário não encontrado')
 
   const context = {
     user: user.data,
@@ -321,9 +321,9 @@ export async function generateOneOnOneAgenda(
     health: health.data ?? [],
     recommendations: recommendations.data ?? [],
   }
-  const fallback = '1. Comecar pela energia e contexto. 2. Escolher um deal real para desbloquear. 3. Definir uma aplicacao de PDI com evidencia. 4. Fechar com apoio e proxima acao.'
+  const fallback = '1. Começar pela energia e contexto. 2. Escolher uma oportunidade real para desbloquear. 3. Definir uma aplicação de PDI com evidência. 4. Fechar com apoio e próxima ação.'
   const content = await generateText(
-    'Voce monta pauta de 1:1 humanizada para gestor comercial.',
+    'Você monta pauta de 1:1 humanizada para gestor comercial.',
     `Contexto: ${JSON.stringify(context)}\nGere pauta curta com perguntas e decisoes.`,
     fallback,
   )

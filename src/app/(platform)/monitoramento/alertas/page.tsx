@@ -207,7 +207,7 @@ export default function AlertasPage() {
       <PageHeader
         label="Monitoramento · IA"
         title={<>Alertas <TitleHighlight>VAMO IA</TitleHighlight></>}
-        description="Insights proativos gerados a partir de dados reais da sua equipe"
+        description="Análises proativas geradas a partir de dados reais da sua equipe"
         actions={
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
@@ -282,7 +282,7 @@ export default function AlertasPage() {
             <Sparkles className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">Nenhum alerta ainda.</p>
             <p className="text-xs text-muted-foreground/70 mt-1">
-              Clique em &ldquo;Atualizar alertas&rdquo; para gerar insights baseados na sua equipe.
+              Clique em &ldquo;Atualizar alertas&rdquo; para gerar análises baseados na sua equipe.
             </p>
           </CardContent>
         </Card>

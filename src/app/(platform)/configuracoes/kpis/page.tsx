@@ -36,15 +36,15 @@ const EVENT_OPTIONS = [
   { value: 'crm_activity_call', label: 'Ligacao no CRM' },
   { value: 'crm_activity_whatsapp', label: 'WhatsApp no CRM' },
   { value: 'crm_activity_email', label: 'E-mail no CRM' },
-  { value: 'crm_activity_follow_up', label: 'Follow-up no CRM' },
+  { value: 'crm_activity_follow_up', label: 'retorno no CRM' },
   { value: 'crm_activity_meeting', label: 'Reuniao no CRM' },
   { value: 'crm_activity_proposal_sent', label: 'Proposta enviada' },
-  { value: 'crm_deal_updated', label: 'Deal atualizado' },
+  { value: 'crm_deal_updated', label: 'oportunidade atualizado' },
   { value: 'crm_deal_won', label: 'Venda ganha' },
   { value: 'crm_deal_lost', label: 'Venda perdida' },
-  { value: 'pipeline_next_action_created', label: 'Proxima acao criada' },
+  { value: 'pipeline_next_action_created', label: 'Próxima ação criada' },
   { value: 'pipeline_overdue_action_resolved', label: 'Pendencia resolvida' },
-  { value: 'manual_kpi_entry', label: 'Registro manual de acao' },
+  { value: 'manual_kpi_entry', label: 'Registro manual de ação' },
 ]
 
 const emptyForm = {
@@ -179,8 +179,8 @@ export default function ConfiguracaoKpisPage() {
             <BarChart3 className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Indicadores de execucao</h1>
-            <p className="text-sm text-muted-foreground">Indicadores sao metas operacionais criadas pelo gestor para medir a execucao comercial.</p>
+            <h1 className="text-xl font-semibold tracking-tight">Indicadores de execução</h1>
+            <p className="text-sm text-muted-foreground">Indicadores sao metas operacionais criadas pelo gestor para medir a execução comercial.</p>
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={loadKpis} disabled={loading}>
@@ -221,7 +221,7 @@ export default function ConfiguracaoKpisPage() {
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Nome</Label>
-              <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Follow-ups realizados" />
+              <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="retornos realizados" />
             </div>
             <div className="space-y-2">
               <Label>Fonte</Label>
@@ -250,19 +250,19 @@ export default function ConfiguracaoKpisPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Calculo</Label>
+              <Label>Cálculo</Label>
               <Select value={form.calculationType} onValueChange={(value) => value && setForm({ ...form, calculationType: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="sum">Soma</SelectItem>
                   <SelectItem value="count">Contagem</SelectItem>
-                  <SelectItem value="average">Media</SelectItem>
+                  <SelectItem value="average">Média</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <Textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Criterio operacional do indicador" />
+          <Textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Critério operacional do indicador" />
 
           <div className="grid gap-3 md:grid-cols-5">
             <div className="space-y-2">
@@ -324,11 +324,11 @@ export default function ConfiguracaoKpisPage() {
                       <p className="text-sm font-semibold">{kpi.current.toLocaleString('pt-BR')} {kpi.unit}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Meta do periodo</p>
+                      <p className="text-xs text-muted-foreground">Meta do período</p>
                       <p className="text-sm font-semibold">{target.toLocaleString('pt-BR')} {kpi.unit}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Periodo</p>
+                      <p className="text-xs text-muted-foreground">Período</p>
                       <p className="text-sm font-semibold">{kpi.period}</p>
                     </div>
                     <div>

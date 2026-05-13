@@ -37,6 +37,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json(result)
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro ao revisar aplicacao' }, { status: 500 })
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro ao revisar aplicação' }, { status: 500 })
   }
 }

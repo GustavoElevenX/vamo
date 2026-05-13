@@ -126,7 +126,7 @@ export default function ProjecaoPage() {
     if (!bestAction) return null
     return {
       id: 'projection-next-best-action',
-      title: 'Proxima melhor acao para aumentar ganhos',
+      title: 'Próxima melhor ação para aumentar ganhos',
       description: `${bestAction.action}. Impacto projetado: ${money(bestAction.gain)}.`,
       priority: bestAction.gain > 500 ? 'high' : 'medium',
       status: 'open',
@@ -166,7 +166,7 @@ export default function ProjecaoPage() {
     },
     {
       label: 'Cenário máximo',
-      desc: 'Todos os leads em aberto fechando + missões ativas concluídas',
+      desc: 'Todos os potenciais clientes em aberto fechando + missões ativas concluídas',
       total: projection.maximum,
       color: 'text-emerald-500',
       border: 'border-emerald-500/20 bg-emerald-500/5',
@@ -196,8 +196,8 @@ export default function ProjecaoPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Leads abertos</p><p className="text-2xl font-bold">{projection.openLeads.length}</p></CardContent></Card>
-        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Valor em pipeline</p><p className="text-2xl font-bold">{money(projection.openLeads.reduce((sum, lead) => sum + Number(lead.value || 0), 0))}</p></CardContent></Card>
+        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Oportunidades abertas</p><p className="text-2xl font-bold">{projection.openLeads.length}</p></CardContent></Card>
+        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Valor em funil</p><p className="text-2xl font-bold">{money(projection.openLeads.reduce((sum, lead) => sum + Number(lead.value || 0), 0))}</p></CardContent></Card>
         <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Bônus de missões</p><p className="text-2xl font-bold">{money(projection.missionBonus)}</p></CardContent></Card>
       </div>
 
@@ -235,7 +235,7 @@ export default function ProjecaoPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {actions.length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">Cadastre leads no pipeline para calcular próximos ganhos.</p>
+            <p className="py-4 text-sm text-muted-foreground">Cadastre potenciais clientes no funil para calcular próximos ganhos.</p>
           ) : (
             actions.map((item) => (
               <Link key={`${item.href}-${item.action}`} href={item.href} className="flex items-center justify-between border-b border-border/30 py-2 last:border-0">
@@ -256,10 +256,10 @@ export default function ProjecaoPage() {
           <div>
             <p className="text-sm font-semibold">Como esta projeção é calculada</p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Leads ganhos entram como comissão confirmada. Leads abertos entram ponderados pela probabilidade da etapa atual. O cenário máximo considera todos os leads abertos como ganhos.
+              Oportunidades ganhas entram como comissão confirmada. Oportunidades abertas entram ponderados pela probabilidade da etapa atual. O cenário máximo considera todos os oportunidades abertas como ganhos.
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
-              Exemplo: um lead de {money(7500)} com 20% de probabilidade e comissão de {commissionRate.toLocaleString('pt-BR')}% projeta {money(commission(7500, commissionRate) * 0.2)}.
+              Exemplo: um potencial cliente de {money(7500)} com 20% de probabilidade e comissão de {commissionRate.toLocaleString('pt-BR')}% projeta {money(commission(7500, commissionRate) * 0.2)}.
             </p>
           </div>
         </CardContent>

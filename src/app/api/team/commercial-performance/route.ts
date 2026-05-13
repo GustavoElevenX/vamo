@@ -24,9 +24,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('GET /api/team/commercial-performance', error)
+    console.error('GET /api/team/commercial-desempenho', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro ao carregar performance comercial' },
+      { error: error instanceof Error ? error.message : 'Erro ao carregar desempenho comercial' },
       { status: 500 },
     )
   }

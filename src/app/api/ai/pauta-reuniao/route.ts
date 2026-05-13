@@ -7,7 +7,7 @@ import type { DealStage } from '@/types/crm'
 export const runtime = 'nodejs'
 
 type Pauta = {
-  situacao_semana: string
+  situação_semana: string
   deals_criticos: Array<{ title: string; value: number; owner: string; reason: string; days_stuck: number }>
   atencao_vendedores: Array<{ name: string; issue: string; suggestion: string }>
   acao_gestor: string
@@ -58,7 +58,7 @@ export async function POST() {
     }
 
     const { data, model } = await callOpenAIJSON<Pauta>({
-      systemPrompt: 'Voce e VAMO IA. Gere uma pauta de reuniao de pipeline objetiva para o gestor comercial. Foque no que precisa de decisao AGORA. Nao repita dados obvios. Seja direto: o gestor tem 15 minutos de reuniao. Responda em portugues com JSON valido no schema: { situacao_semana: string, deals_criticos: [{ title, value, owner, reason, days_stuck }], atencao_vendedores: [{ name, issue, suggestion }], acao_gestor: string }.',
+      systemPrompt: 'Você é VAMO IA. Gere uma pauta de reuniao de funil objetiva para o gestor comercial. Foque no que precisa de decisão AGORA. Não repita dados obvios. Seja direto: o gestor tem 15 minutos de reuniao. Responda em portugues com JSON válido no schema: { situação_semana: string, deals_criticos: [{ title, value, owner, reason, days_stuck }], atencao_vendedores: [{ name, issue, suggestion }], acao_gestor: string }.',
       userPrompt: JSON.stringify(payload),
       temperature: 0.2,
       maxTokens: 1200,

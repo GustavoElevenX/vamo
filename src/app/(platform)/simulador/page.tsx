@@ -252,7 +252,7 @@ export default function SimuladorPage() {
             Simulador de Proposta
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Pratique uma proposta, gere feedback, XP e evidencia real para seu PDI
+            Pratique uma proposta, gere feedback, XP e evidência real para seu PDI
           </p>
         </div>
 
@@ -504,14 +504,14 @@ export default function SimuladorPage() {
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">XP com evidencia</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">XP com evidência</p>
               <p className="mt-1 text-lg font-black text-primary">+{feedback.xp_awarded || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">PDI</p>
-              <p className="mt-1 text-lg font-black">{feedback.pdi_gap_id ? 'Gap criado' : 'Evolucao provada'}</p>
+              <p className="mt-1 text-lg font-black">{feedback.pdi_gap_id ? 'Gap criado' : 'Evolução provada'}</p>
             </CardContent>
           </Card>
         </div>
@@ -559,13 +559,13 @@ export default function SimuladorPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm font-medium text-primary">
                   <Lightbulb className="h-4 w-4" />
-                  Proxima pratica conectada
+                  Próxima prática conectada
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{feedback.next_practice}</p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Esta simulacao foi registrada como evento central, evidencia de PDI e recomendacao contextual.
+                  Esta simulação foi registrada como evento central, evidência de PDI e recomendação contextual.
                 </p>
               </CardContent>
             </Card>

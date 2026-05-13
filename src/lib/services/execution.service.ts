@@ -59,16 +59,16 @@ const EVENT_CONFIG: Record<ExecutionEventType, { label: string; xp: number; modu
   crm_activity_call: { label: 'Ligacao registrada', xp: 2, module: 'crm' },
   crm_activity_whatsapp: { label: 'WhatsApp registrado', xp: 1, module: 'crm' },
   crm_activity_email: { label: 'E-mail registrado', xp: 1, module: 'crm' },
-  crm_activity_follow_up: { label: 'Follow-up registrado', xp: 2, module: 'crm' },
+  crm_activity_follow_up: { label: 'retorno registrado', xp: 2, module: 'crm' },
   crm_activity_meeting: { label: 'Reuniao registrada', xp: 10, module: 'crm' },
   crm_activity_proposal_sent: { label: 'Proposta enviada', xp: 15, module: 'crm' },
-  crm_deal_updated: { label: 'Deal atualizado', xp: 1, module: 'crm' },
+  crm_deal_updated: { label: 'oportunidade atualizado', xp: 1, module: 'crm' },
   crm_deal_won: { label: 'Venda ganha', xp: 50, module: 'crm' },
   crm_deal_lost: { label: 'Venda perdida registrada', xp: 0, module: 'crm' },
-  pipeline_next_action_created: { label: 'Proxima acao criada', xp: 2, module: 'crm' },
-  pipeline_overdue_action_resolved: { label: 'Pendencia do pipeline resolvida', xp: 5, module: 'crm' },
-  manual_kpi_entry: { label: 'Acao comercial registrada', xp: 0, module: 'execution' },
-  mission_manual_validation_requested: { label: 'Validacao de missao solicitada', xp: 0, module: 'mission' },
+  pipeline_next_action_created: { label: 'Próxima ação criada', xp: 2, module: 'crm' },
+  pipeline_overdue_action_resolved: { label: 'Pendencia do funil resolvida', xp: 5, module: 'crm' },
+  manual_kpi_entry: { label: 'Ação comercial registrada', xp: 0, module: 'execution' },
+  mission_manual_validation_requested: { label: 'Validação de missão solicitada', xp: 0, module: 'mission' },
 }
 
 function numeric(value: unknown, fallback = 0) {
@@ -115,7 +115,7 @@ async function awardMissionXpOnce(
     sourceId: mission.id,
     performanceEventId,
     evidence: { missionId: mission.id, title: mission.title },
-    impactExpected: 'Concluir objetivo comercial validado pela regra da missao.',
+    impactExpected: 'Concluir objetivo comercial validado pela regra da missão.',
     description: `Missao concluida: ${mission.title}`,
   })
 }
@@ -218,7 +218,7 @@ export async function registerExecutionEvent(
       sourceId: input.sourceEntityId ?? undefined,
       performanceEventId: event.id,
       evidence: { ...metadata, executionEventType: input.type, sourceEntityType: input.sourceEntityType ?? null },
-      impactExpected: 'Registrar acao comercial real e alimentar KPIs, missoes e cockpit.',
+      impactExpected: 'Registrar ação comercial real e alimentar KPIs, missões e cockpit.',
       description: `${config.label}: +${config.xp} XP`,
     })
   }
@@ -315,7 +315,7 @@ export async function approveMission(
     .maybeSingle()
 
   if (error) throw error
-  if (!mission) throw new Error('Missao nao encontrada')
+  if (!mission) throw new Error('Missão não encontrada')
   if (mission.status === 'completed') return { mission, xpResult: null }
 
   const now = new Date().toISOString()
@@ -342,7 +342,7 @@ export async function approveMission(
     sourceType: 'mission',
     sourceId: mission.id,
     evidence: { approvedBy: params.approverId },
-    impactExpected: 'Validacao do gestor para concluir missao.',
+    impactExpected: 'Validação do gestor para concluir missão.',
     description: `Missao aprovada: ${mission.title}`,
   })
 

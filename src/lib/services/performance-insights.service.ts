@@ -29,7 +29,7 @@ export type PerformanceInsight = {
 }
 
 const AREA_LABELS: Record<DiagnosticArea, string> = {
-  lead_generation: 'Geração de Leads',
+  lead_generation: 'Geração de potenciais clientes',
   sales_process: 'Processo de Vendas',
   team_management: 'Gestão de Equipe',
   tools_technology: 'Ferramentas e Tecnologia',
@@ -37,7 +37,7 @@ const AREA_LABELS: Record<DiagnosticArea, string> = {
 
 const KPI_BY_AREA: Record<DiagnosticArea, Omit<KpiRecommendation, 'rationale'>> = {
   lead_generation: {
-    name: 'Leads qualificados gerados',
+    name: 'Potenciais clientes qualificados gerados',
     unit: 'leads',
     source: 'CRM',
     monthlyTarget: 120,

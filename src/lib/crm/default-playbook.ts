@@ -9,19 +9,19 @@ export const DEFAULT_PLAYBOOK_STEPS: Record<DealStage, string[]> = {
   qualification: [
     'Dor ou necessidade mapeada',
     'Budget qualificado',
-    'Prazo de decisao definido',
+    'Prazo de decisão definido',
     'Decisores identificados',
   ],
   proposal: [
     'Proposta enviada',
-    'Follow-up de recebimento',
+    'retorno de recebimento',
     'Objecoes mapeadas',
     'Data de resposta combinada',
   ],
   negotiation: [
     'Objecoes respondidas',
     'Condicoes comerciais alinhadas',
-    'Aprovacao interna confirmada',
+    'Aprovação interna confirmada',
   ],
   closed_won: [],
   closed_lost: [],

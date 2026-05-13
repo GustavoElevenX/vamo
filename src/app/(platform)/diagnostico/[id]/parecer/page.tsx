@@ -17,12 +17,12 @@ import type { DiagnosticSession, DiagnosticArea } from '@/types'
 
 const MISSION_TEMPLATES: Record<DiagnosticArea, { title: string; description: string; impact: 'alto' | 'medio' | 'baixo' }> = {
   lead_generation: {
-    title: 'Aumentar volume de leads qualificados',
-    description: 'Criar rotina de prospecção com meta diária e revisão semanal da qualidade dos leads.',
+    title: 'Aumentar volume de potenciais clientes qualificados',
+    description: 'Criar rotina de prospecção com meta diária e revisão semanal da qualidade dos potenciais clientes.',
     impact: 'alto',
   },
   sales_process: {
-    title: 'Reduzir perda em proposta e follow-up',
+    title: 'Reduzir perda em proposta e retorno',
     description: 'Padronizar retorno em até 24h para propostas abertas e medir conversão por etapa.',
     impact: 'alto',
   },
@@ -64,22 +64,22 @@ function parseMonthlyGoal(value: unknown): number | null {
 
 const ROADMAP: Record<string, { d30: string[]; d60: string[]; d90: string[] }> = {
   critical: {
-    d30: ['Estabilizar o processo de vendas com missoes corretivas', 'Convocar reuniao 1:1 com todo o time', 'Mapear os 2 maiores gargalos financeiros'],
-    d60: ['Lancar missoes gamificadas focadas em conversao e follow-up', 'Implementar script de proposta e follow-up padronizado', 'Revisao semanal de pipeline com todo o time'],
-    d90: ['Medir ROI das intervencoes vs. perda inicial identificada', 'Definir metas individuais para o proximo ciclo', 'Iniciar programa de desenvolvimento comportamental'],
+    d30: ['Estabilizar o processo de vendas com missões corretivas', 'Convocar reuniao 1:1 com todo o time', 'Mapear os 2 maiores gargalos financeiros'],
+    d60: ['Lancar missões gamificadas focadas em conversão e retorno', 'Implementar script de proposta e retorno padronizado', 'Revisao semanal de funil com todo o time'],
+    d90: ['Medir ROI das intervencoes vs. perda inicial identificada', 'Definir metas individuais para o próximo ciclo', 'Iniciar programa de desenvolvimento comportamental'],
   },
   at_risk: {
-    d30: ['Priorizar correcao dos 3 principais gargalos identificados', 'Lancar missoes de atividade intensa com recompensa imediata', 'Avaliar engajamento e identificar riscos de burnout'],
-    d60: ['Missoes em sequencia de dificuldade crescente (nivel 1-2-3)', 'Implementar reconhecimento publico semanal', 'Automatizar calculo de comissao para transparencia'],
-    d90: ['Revisao completa das metas com base nos resultados das missoes', 'Expandir gamificacao para missoes coletivas', 'Calcular ROI da plataforma e apresentar ao time'],
+    d30: ['Priorizar correcao dos 3 principais gargalos identificados', 'Lancar missões de atividade intensa com recompensa imediata', 'Avaliar engajamento e identificar riscos de burnout'],
+    d60: ['Missões em sequência de dificuldade crescente (nivel 1-2-3)', 'Implementar reconhecimento publico semanal', 'Automatizar cálculo de comissão para transparencia'],
+    d90: ['Revisao completa das metas com base nos resultados das missões', 'Expandir gamificacao para missões coletivas', 'Calcular ROI da plataforma e apresentar ao time'],
   },
   developing: {
-    d30: ['Escalar o que ja funciona bem no processo', 'Criar desafios progressivos para manter engajamento', 'Missoes de upsell e ticket medio para vendedores top'],
-    d60: ['Lancar missoes coletivas para fortalecer cultura de equipe', 'Implementar programa de mentoria interna', 'Revisar comissionamento para incluir bonus de qualidade'],
-    d90: ['Documentar e replicar as melhores praticas identificadas', 'Expandir para novos KPIs e metricas avancadas', 'Definir metas de Temporada de Alta Performance (90 dias)'],
+    d30: ['Escalar o que já funciona bem no processo', 'Criar desafios progressivos para manter engajamento', 'Missões de upsell e ticket medio para vendedores top'],
+    d60: ['Lancar missões coletivas para fortalecer cultura de equipe', 'Implementar programa de mentoria interna', 'Revisar comissionamento para incluir bônus de qualidade'],
+    d90: ['Documentar e replicar as melhores práticas identificadas', 'Expandir para novos KPIs e metricas avancadas', 'Definir metas de Temporada de Alta Desempenho (90 dias)'],
   },
   optimized: {
-    d30: ['Manter ritmo e engajamento com novas missoes desafiadoras', 'Identificar proximos niveis de crescimento', 'Introduzir missoes de lideranca para vendedores senior'],
+    d30: ['Manter ritmo e engajamento com novas missões desafiadoras', 'Identificar próximos niveis de crescimento', 'Introduzir missões de lideranca para vendedores sênior'],
     d60: ['Criar programa de embaixadores internos', 'Explorar novos mercados e segmentos com a equipe', 'Implementar coaching peer-to-peer entre vendedores'],
     d90: ['Medir impacto da gamificacao no churn de vendedores', 'Expandir modelo para outros times da empresa', 'Documentar case de sucesso para uso em vendas'],
   },
@@ -134,7 +134,7 @@ export default function ParecerPage() {
   if (!session) {
     return (
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold">Parecer nao encontrado</h2>
+        <h2 className="text-2xl font-bold">Parecer não encontrado</h2>
         <Button variant="outline" onClick={() => router.push('/diagnostico')}>Voltar</Button>
       </div>
     )
@@ -193,7 +193,7 @@ export default function ParecerPage() {
             <div>
               <p className="text-sm font-medium text-red-500">Antes de lançar missões, valide a saúde da equipe</p>
               <p className="text-xs text-muted-foreground mt-1">
-                O diagnóstico comercial aponta gargalos de performance, mas risco de burnout precisa vir dos check-ins e da tela de saúde da equipe.
+                O diagnóstico comercial aponta gargalos de desempenho, mas risco de burnout precisa vir dos check-ins e da tela de saúde da equipe.
               </p>
               <Link href="/saude-equipe">
                 <Button variant="outline" size="sm" className="mt-2 text-xs h-7">
@@ -224,7 +224,7 @@ export default function ParecerPage() {
                 )}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {estimatedLoss ? 'Baseado nos gargalos identificados no diagnostico' : 'Preencha a meta mensal no diagnóstico para calcular impacto financeiro'}
+                {estimatedLoss ? 'Baseado nos gargalos identificados no diagnóstico' : 'Preencha a meta mensal no diagnóstico para calcular impacto financeiro'}
               </p>
             </div>
           </div>
@@ -273,7 +273,7 @@ export default function ParecerPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-blue-500" />
-            <CardTitle className="text-sm font-medium">Recomendacao Estruturada — Plano 30 / 60 / 90 dias</CardTitle>
+            <CardTitle className="text-sm font-medium">Recomendação Estruturada — Plano 30 / 60 / 90 dias</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -380,9 +380,9 @@ export default function ParecerPage() {
               <Rocket className="h-6 w-6 text-emerald-500" />
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <p className="text-sm font-semibold">Pronto para definir metas e lancar missoes?</p>
+              <p className="text-sm font-semibold">Pronto para definir metas e lancar missões?</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Na Etapa 2, voce define objetivos para empresa, time e individuo. Configure missoes com 1 clique.
+                Na Etapa 2, você define objetivos para empresa, time e individuo. Configure missões com 1 clique.
               </p>
             </div>
             <Link href="/objetivos/metas">

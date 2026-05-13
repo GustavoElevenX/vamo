@@ -226,7 +226,7 @@ async function closeOrganizationPeriod(admin: ReturnType<typeof createAdminClien
         deal_id: deal.id,
         payment_receipt_id: receipt.id,
         release_status: 'released',
-        release_reason: 'Pagamento recebido; comissao liberada conforme politica de caixa.',
+        release_reason: 'Pagamento recebido; comissão liberada conforme política de caixa.',
         rule_snapshot: { rate, baseAmount, calculationBase: 'received_amount', receiptStatus: receipt.status },
       })
     }
@@ -244,8 +244,8 @@ async function closeOrganizationPeriod(admin: ReturnType<typeof createAdminClien
         payment_receipt_id: pendingReceipt?.id ?? null,
         release_status: hasPartialPayment ? 'pending' : 'blocked',
         release_reason: hasPartialPayment
-          ? 'Parte do valor ainda nao entrou no caixa.'
-          : 'Nenhum pagamento recebido para este deal; comissao nao pode ser paga.',
+          ? 'Parte do valor ainda não entrou no caixa.'
+          : 'Nenhum pagamento recebido para esta oportunidade; comissão não pode ser paga.',
         rule_snapshot: { rate, baseAmount: pendingAmount, calculationBase: 'received_amount', receiptStatus: 'pending' },
       })
     }
@@ -279,7 +279,7 @@ async function closeOrganizationPeriod(admin: ReturnType<typeof createAdminClien
       released_commission: releasedCommission,
       pending_commission: pendingCommission,
       blocked_commission: blockedCommission,
-      block_reason: blockedCommission > 0 ? 'Existem deals fechados sem pagamento recebido.' : null,
+      block_reason: blockedCommission > 0 ? 'Existem oportunidades fechados sem pagamento recebido.' : null,
       line_items: [
         ...(lineItemsByUser.get(seller.id) ?? []),
         ...calculation.line_items.filter((item) => item.tipo !== 'venda'),

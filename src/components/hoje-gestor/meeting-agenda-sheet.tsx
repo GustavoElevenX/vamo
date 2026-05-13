@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Copy, Sparkles } from 'lucide-react'
 
 type Pauta = {
-  situacao_semana: string
+  situação_semana: string
   deals_criticos: Array<{ title: string; value: number; owner: string; reason: string; days_stuck: number }>
   atencao_vendedores: Array<{ name: string; issue: string; suggestion: string }>
   acao_gestor: string
@@ -30,9 +30,9 @@ export function MeetingAgendaSheet() {
     return [
       'Pauta VAMO',
       '',
-      `Situacao: ${pauta.situacao_semana}`,
+      `Situacao: ${pauta.situação_semana}`,
       '',
-      'Deals criticos:',
+      'oportunidades criticos:',
       ...(pauta.deals_criticos || []).map((deal) => `- ${deal.title} (${deal.owner}): ${deal.reason}`),
       '',
       'Atencao vendedores:',
@@ -68,17 +68,17 @@ export function MeetingAgendaSheet() {
             <SheetTitle>Pauta de reuniao</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 px-4">
-            {loading && <p className="text-sm text-muted-foreground">A VAMO IA esta consolidando pipeline, alertas e KPIs reais.</p>}
+            {loading && <p className="text-sm text-muted-foreground">A VAMO IA está consolidando funil, alertas e KPIs reais.</p>}
             {error && <p className="text-sm text-destructive">{error}</p>}
             {pauta && (
               <>
                 <section className="rounded-lg border p-3">
-                  <Badge variant="secondary">Situacao</Badge>
-                  <p className="mt-2 text-sm leading-relaxed">{pauta.situacao_semana}</p>
+                  <Badge variant="secondary">Situação</Badge>
+                  <p className="mt-2 text-sm leading-relaxed">{pauta.situação_semana}</p>
                 </section>
                 {!!pauta.deals_criticos?.length && (
                   <section className="rounded-lg border p-3">
-                    <Badge variant="destructive">Deals criticos</Badge>
+                    <Badge variant="destructive">oportunidades criticos</Badge>
                     <div className="mt-3 space-y-2">
                       {pauta.deals_criticos.map((deal, index) => (
                         <p key={`${deal.title}-${index}`} className="text-sm">
@@ -101,7 +101,7 @@ export function MeetingAgendaSheet() {
                   </section>
                 )}
                 <section className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                  <Badge>Acao do gestor</Badge>
+                  <Badge>Ação do gestor</Badge>
                   <p className="mt-2 text-sm font-medium leading-relaxed">{pauta.acao_gestor}</p>
                 </section>
               </>

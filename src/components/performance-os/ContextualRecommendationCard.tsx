@@ -25,7 +25,7 @@ interface Props {
 
 const priorityLabel = {
   low: 'Baixa',
-  medium: 'Media',
+  medium: 'Média',
   high: 'Alta',
   critical: 'Critica',
 }

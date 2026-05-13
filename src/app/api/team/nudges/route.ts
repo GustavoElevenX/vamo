@@ -44,7 +44,7 @@ function buildMissionForNudge(type: NudgeType, message: string, context: Record<
 
   if (type === 'execution') {
     return {
-      title: 'Registrar 3 follow-ups comerciais',
+      title: 'Registrar 3 retornos comerciais',
       description: message,
       type: 'kpi_target',
       target_value: 3,
@@ -75,7 +75,7 @@ function buildMissionForNudge(type: NudgeType, message: string, context: Record<
   }
 
   return {
-    title: 'Compartilhar boa pratica comercial',
+    title: 'Compartilhar boa prática comercial',
     description: message,
     type: 'manual_validation',
     target_value: 1,
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (sellerError) return NextResponse.json({ error: sellerError.message }, { status: 500 })
-    if (!seller) return NextResponse.json({ error: 'Vendedor nao encontrado' }, { status: 404 })
+    if (!seller) return NextResponse.json({ error: 'Vendedor não encontrado' }, { status: 404 })
 
     const { event } = await createEventWithImpacts(
       adminClient,
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
       description: mode === 'one_on_one'
         ? `Use este contexto para uma conversa objetiva: ${message}`
         : message,
-      suggestedActionLabel: mode === 'mission' ? 'Ver missao' : mode === 'one_on_one' ? 'Abrir VAMO IA' : 'Abrir Hoje',
+      suggestedActionLabel: mode === 'mission' ? 'Ver missão' : mode === 'one_on_one' ? 'Abrir VAMO IA' : 'Abrir Hoje',
       suggestedActionHref: mode === 'mission' ? '/performance/missoes' : mode === 'one_on_one' ? `/chat-ia?prompt=${encodeURIComponent(`Gere uma pauta de 1:1 para ${seller.name}. Contexto: ${message}`)}` : '/hoje',
       priority: type === 'risk' || type === 'execution' || type === 'coaching' ? 'high' : 'medium',
       metadata: { nudgeType: type, mode, context, missionId: mission?.id ?? null, notificationId: notification.id },

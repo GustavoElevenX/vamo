@@ -125,15 +125,15 @@ function buildLLMContext(
       : 'Vendedores em atencao: nenhum sinal critico no momento.',
     topRisks.length
       ? `Oportunidades/pipeline em risco: ${topRisks.map((risk) => `${risk.titulo} com ${risk.vendedor}, ${currency(risk.valor)} (${risk.motivo})`).join(' | ')}`
-      : 'Oportunidades/pipeline em risco: nenhum risco relevante detectado.',
+      : 'Oportunidades/funil em risco: nenhum risco relevante detectado.',
     opportunities.reconhecimentos.length
       ? `Reconhecimentos possiveis: ${opportunities.reconhecimentos.map((seller) => `${seller.nome} (${seller.motivo}) [id: ${seller.id}]`).join(' | ')}`
       : null,
     topActions.length
       ? `Acoes recomendadas abertas: ${topActions.map((action) => `${action.titulo} (${action.prioridade}) - ${action.contexto}`).join(' | ')}`
-      : 'Acoes recomendadas abertas: nenhuma acao priorizada.',
+      : 'Ações recomendadas abertas: nenhuma ação priorizada.',
     `Eventos recentes registrados: ${recentEvents.events.length}; recomendacoes abertas: ${recentEvents.recommendations.length}; gaps de PDI: ${recentEvents.pdiGaps.length}; calibracoes de saude: ${recentEvents.healthCalibrations.length}.`,
-    'Use esse contexto para diagnosticar, decidir, simular e executar. Quando uma acao envolver alterar banco, enviar mensagem, criar missao, PDI, meta, comissao ou XP, proponha tool com confirmacao.',
+    'Use esse contexto para diagnosticar, decidir, simular e executar. Quando uma ação envolver alterar banco, enviar mensagem, criar missão, PDI, meta, comissão ou XP, proponha tool com confirmacao.',
   ])
 }
 

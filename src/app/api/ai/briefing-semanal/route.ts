@@ -110,7 +110,7 @@ Resumo da semana (${weekAgo} a ${today}):
 - Missões completadas: ${completedMissions.map((m) => `${sellerNames[m.user_id] || 'Vendedor'}: "${m.title}" (+${m.xp_reward}XP)`).join('; ') || 'nenhuma'}
 `.trim()
 
-    const systemPrompt = `Você é um consultor sênior de performance comercial. Gere um briefing semanal para o gestor de uma equipe de vendas. O briefing deve ser prático, direto e acionável. O gestor deve conseguir agir SEM precisar abrir outra tela.
+    const systemPrompt = `Você é um consultor sênior de desempenho comercial. Gere um briefing semanal para o gestor de uma equipe de vendas. O briefing deve ser prático, direto e acionável. O gestor deve conseguir agir SEM precisar abrir outra tela.
 
 Responda em JSON com exatamente estes 5 campos (strings em português, com markdown leve para formatação):
 {

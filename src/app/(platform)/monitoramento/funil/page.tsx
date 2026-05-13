@@ -28,7 +28,7 @@ interface FunnelStage {
 }
 
 const FUNNEL_STAGES: FunnelStage[] = [
-  { name: 'Leads', beforeVolume: 280, currentVolume: 347, beforeConversion: 100, currentConversion: 100, isBottleneck: false },
+  { name: 'Potenciais clientes', beforeVolume: 280, currentVolume: 347, beforeConversion: 100, currentConversion: 100, isBottleneck: false },
   { name: 'Qualificados', beforeVolume: 140, currentVolume: 198, beforeConversion: 50, currentConversion: 57, isBottleneck: false },
   { name: 'Propostas', beforeVolume: 63, currentVolume: 89, beforeConversion: 45, currentConversion: 45, isBottleneck: true },
   { name: 'Negociação', beforeVolume: 38, currentVolume: 52, beforeConversion: 60, currentConversion: 58, isBottleneck: false },
@@ -38,7 +38,7 @@ const FUNNEL_STAGES: FunnelStage[] = [
 const VELOCITY_METRICS = [
   { label: 'Ciclo médio de venda', before: '32 dias', now: '24 dias', improved: true },
   { label: 'Proposta → Resposta', before: '5.2 dias', now: '3.1 dias', improved: true },
-  { label: 'Lead → Qualificação', before: '8 dias', now: '6 dias', improved: true },
+  { label: 'Potencial cliente → Qualificação', before: '8 dias', now: '6 dias', improved: true },
   { label: 'Negociação → Fechamento', before: '12 dias', now: '9 dias', improved: true },
 ]
 
@@ -114,7 +114,7 @@ export default function FunilPage() {
                   <span>Diagnóstico: <strong>{stage.beforeVolume}</strong></span>
                   <ArrowRight className="h-3 w-3" />
                   <span>Atual: <strong>{stage.currentVolume}</strong></span>
-                  {stage.name !== 'Leads' && (
+                  {stage.name !== 'Potenciais clientes' && (
                     <>
                       <Separator orientation="vertical" className="h-3" />
                       <span>Conversão: {stage.beforeConversion}% → {stage.currentConversion}%</span>
@@ -140,7 +140,7 @@ export default function FunilPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Leads totais</span>
+              <span>Potenciais clientes totais</span>
               <span className="font-semibold">280</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -148,7 +148,7 @@ export default function FunilPage() {
               <span className="font-semibold">21</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>Taxa Lead→Fechamento</span>
+              <span>Taxa Potencial cliente→Fechamento</span>
               <span className="font-semibold">7.5%</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -166,7 +166,7 @@ export default function FunilPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Leads totais</span>
+              <span>Potenciais clientes totais</span>
               <span className="font-semibold">347 <span className="text-emerald-600 text-xs">(+24%)</span></span>
             </div>
             <div className="flex justify-between text-sm">
@@ -174,7 +174,7 @@ export default function FunilPage() {
               <span className="font-semibold">31 <span className="text-emerald-600 text-xs">(+48%)</span></span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>Taxa Lead→Fechamento</span>
+              <span>Taxa Potencial cliente→Fechamento</span>
               <span className="font-semibold">8.9% <span className="text-emerald-600 text-xs">(+1.4pp)</span></span>
             </div>
             <div className="flex justify-between text-sm">

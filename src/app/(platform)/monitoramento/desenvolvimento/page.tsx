@@ -110,7 +110,7 @@ export default function ManagerDevelopmentPage() {
       toast.success(status === 'approved' ? 'PDI aprovado.' : 'PDI atualizado.')
       await load()
     } catch {
-      toast.error('Nao foi possivel atualizar o PDI.')
+      toast.error('Não foi possível atualizar o PDI.')
     } finally {
       setSavingId(null)
     }
@@ -129,7 +129,7 @@ export default function ManagerDevelopmentPage() {
       toast.success(`Deteccao concluida: ${body.created ?? 0} novos, ${body.updated ?? 0} atualizados.`)
       await load()
     } catch {
-      toast.error('Nao foi possivel detectar gaps agora.')
+      toast.error('Não foi possível detectar gaps agora.')
     } finally {
       setDetecting(false)
     }
@@ -147,7 +147,7 @@ export default function ManagerDevelopmentPage() {
       toast.success('Treinamento gerado. Revise e aprove antes de liberar ao vendedor.')
       await load()
     } catch {
-      toast.error('Nao foi possivel gerar treinamento com IA.')
+      toast.error('Não foi possível gerar treinamento com IA.')
     } finally {
       setSavingId(null)
     }
@@ -180,7 +180,7 @@ export default function ManagerDevelopmentPage() {
       setManualEvidence('')
       await load()
     } catch {
-      toast.error('Nao foi possivel criar o gap manual.')
+      toast.error('Não foi possível criar o gap manual.')
     } finally {
       setSavingId(null)
     }
@@ -198,7 +198,7 @@ export default function ManagerDevelopmentPage() {
       toast.success('Gap dispensado.')
       await load()
     } catch {
-      toast.error('Nao foi possivel dispensar o gap.')
+      toast.error('Não foi possível dispensar o gap.')
     } finally {
       setSavingId(null)
     }
@@ -216,7 +216,7 @@ export default function ManagerDevelopmentPage() {
       toast.success('Novo treinamento gerado para revisao.')
       await load()
     } catch {
-      toast.error('Nao foi possivel regenerar o PDI.')
+      toast.error('Não foi possível regenerar o PDI.')
     } finally {
       setSavingId(null)
     }
@@ -239,12 +239,12 @@ export default function ManagerDevelopmentPage() {
           kpiEntryValue: hasKpiValue ? parsedKpiValue : null,
         }),
       })
-      if (!res.ok) throw new Error('Erro ao validar evidencia')
-      toast.success(['approved', 'validated'].includes(status) ? 'Evidencia validada e ciclo atualizado.' : status === 'rejected' ? 'Evidencia reprovada.' : 'Ajuste solicitado.')
+      if (!res.ok) throw new Error('Erro ao validar evidência')
+      toast.success(['approved', 'validated'].includes(status) ? 'Evidência validada e ciclo atualizado.' : status === 'rejected' ? 'Evidência reprovada.' : 'Ajuste solicitado.')
       setReviewNotes('')
       await load()
     } catch {
-      toast.error('Nao foi possivel revisar a evidencia.')
+      toast.error('Não foi possível revisar a evidência.')
     } finally {
       setSavingId(null)
     }
@@ -266,12 +266,12 @@ export default function ManagerDevelopmentPage() {
     return {
       summary: topSkills.length
         ? `O principal gargalo do time hoje esta em ${topSkills.join(' e ')}.`
-        : 'Ainda nao ha gargalo dominante detectado nos gaps ativos.',
+        : 'Ainda não há gargalo dominante detectado nos gaps ativos.',
       evidence: topGap
         ? `${topGap.user?.name ?? 'Um vendedor'} tem ${topGap.title.toLowerCase()} com impacto estimado de ${Number(topGap.impact_value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}.`
         : 'A VAMO precisa de mais sinais de CRM, KPI, carteira e simulador para priorizar.',
       priority: critical[0]
-        ? `Prioridade recomendada: gerar treinamento aplicado para ${critical[0].user?.name ?? 'o vendedor'} em ${critical[0].skill_area.replace(/_/g, ' ')} e validar aplicacao real.`
+        ? `Prioridade recomendada: gerar treinamento aplicado para ${critical[0].user?.name ?? 'o vendedor'} em ${critical[0].skill_area.replace(/_/g, ' ')} e validar aplicação real.`
         : 'Prioridade recomendada: rodar deteccao de gaps e observar padroes comerciais recorrentes.',
     }
   }, [gaps])
@@ -287,7 +287,7 @@ export default function ManagerDevelopmentPage() {
           <div className="section-label"><Brain className="h-3.5 w-3.5" />Gestao</div>
           <h1 className="mt-2 text-2xl font-black tracking-tight">Desenvolvimento da Equipe</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Gaps, feedback da VamoAI, PDIs, aplicacoes reais e ROI vistos como decisao comercial do gestor.
+            Gaps, feedback da VamoAI, PDIs, aplicacoes reais e ROI vistos como decisão comercial do gestor.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -309,7 +309,7 @@ export default function ManagerDevelopmentPage() {
         <CardContent className="space-y-2 p-5">
           <div className="section-label"><Brain className="h-3.5 w-3.5" />Regra de responsabilidade</div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            A VamoAI apoia o diagnostico, mas nao decide sozinha. O gestor interpreta gaps, aprova PDI, transforma recomendacao em missao pratica, valida evidencia e acompanha impacto no resultado.
+            A VamoAI apoia o diagnóstico, mas não decide sozinha. O gestor interpreta gaps, aprova PDI, transforma recomendação em missão prática, valida evidência e acompanha impacto no resultado.
           </p>
         </CardContent>
       </Card>
@@ -317,14 +317,14 @@ export default function ManagerDevelopmentPage() {
       <div className="grid gap-4 sm:grid-cols-5">
         <PdiEvidenceCard label="Gaps criticos" value={String(gaps.filter((gap) => ['critical', 'high'].includes(gap.severity)).length)} hint="Priorizados por impacto e confianca" />
         <PdiEvidenceCard label="PDIs para aprovar" value={String(plans.filter((plan) => ['recommended', 'pending_approval'].includes(plan.status)).length)} hint="Gerados pela IA aguardando gestor" />
-        <PdiEvidenceCard label="PDIs ativos" value={String(activePlans)} hint="Aguardando treino e aplicacao" />
-        <PdiEvidenceCard label="PDIs concluidos" value={String(completedPlans)} hint="Com evidencia mensuravel" />
+        <PdiEvidenceCard label="PDIs ativos" value={String(activePlans)} hint="Aguardando treino e aplicação" />
+        <PdiEvidenceCard label="PDIs concluidos" value={String(completedPlans)} hint="Com evidência mensurável" />
         <PdiEvidenceCard label="Delta medio KPI" value={avgDelta.toFixed(1)} hint="Baseado na view de ROI" />
       </div>
 
       <ImpactSummaryCard
         title="Mesmo dado, decisoes diferentes"
-        description="O vendedor ve treino, aplicacao e progresso. O gestor ve risco, aprovacao, evolucao por habilidade e impacto no resultado."
+        description="O vendedor vê treino, aplicação e progresso. O gestor vê risco, aprovação, evolução por habilidade e impacto no resultado."
         modules={['pdi', 'crm', 'kpi', 'health', 'commission', 'roi']}
       />
 
@@ -336,7 +336,7 @@ export default function ManagerDevelopmentPage() {
           <div className="rounded-lg border border-primary/20 bg-background/70 p-3 text-sm font-medium">{aiReading.priority}</div>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input type="checkbox" checked={createMissionWithTraining} onChange={(event) => setCreateMissionWithTraining(event.target.checked)} />
-            Criar missao vinculada quando gerar treinamento com IA
+            Criar missão vinculada quando gerar treinamento com IA
           </label>
         </CardContent>
       </Card>
@@ -365,7 +365,7 @@ export default function ManagerDevelopmentPage() {
                 onDismiss={dismissGap}
               />
             )) : (
-              <p className="text-sm text-muted-foreground">Nenhum gap critico detectado ainda. A VAMO analisara KPIs, CRM, pipeline, clientes, missoes e simulacoes para identificar pontos de desenvolvimento.</p>
+              <p className="text-sm text-muted-foreground">Nenhum gap critico detectado ainda. A VAMO analisara KPIs, CRM, funil, clientes, missões e simulações para identificar pontos de desenvolvimento.</p>
             )}
           </CardContent>
         </Card>
@@ -381,7 +381,7 @@ export default function ManagerDevelopmentPage() {
                     <Textarea
                       value={planAdjustments[plan.id] ?? ''}
                       onChange={(event) => setPlanAdjustments((prev) => ({ ...prev, [plan.id]: event.target.value }))}
-                      placeholder="Ajuste opcional do gestor antes da aprovacao"
+                      placeholder="Ajuste opcional do gestor antes da aprovação"
                       className="min-h-9 flex-1 text-xs"
                     />
                     <Button size="sm" variant="outline" onClick={() => updatePlanStatus(plan, 'rejected')} disabled={savingId === plan.id}>
@@ -407,22 +407,22 @@ export default function ManagerDevelopmentPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Aplicacoes aguardando validacao</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Aplicacoes aguardando validação</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <Textarea
             value={reviewNotes}
             onChange={(event) => setReviewNotes(event.target.value)}
-            placeholder="Observacao da validacao para o vendedor"
+            placeholder="Observação da validação para o vendedor"
           />
           {applications.filter((item) => item.status === 'submitted').length ? (
             applications.filter((item) => item.status === 'submitted').slice(0, 8).map((application) => (
               <div key={application.id} className="rounded-lg border border-border/60 p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="font-bold">{application.plan?.title ?? 'Aplicacao de PDI'}</p>
+                    <p className="font-bold">{application.plan?.title ?? 'Aplicação de PDI'}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{application.description}</p>
                     {application.deal?.title && (
-                      <p className="mt-1 text-xs text-muted-foreground">Deal: {application.deal.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">oportunidade: {application.deal.title}</p>
                     )}
                     <Input
                       value={kpiValues[application.id] ?? ''}
@@ -447,7 +447,7 @@ export default function ManagerDevelopmentPage() {
               </div>
             ))
           ) : (
-            <p className="text-sm text-muted-foreground">Nenhuma aplicacao aguardando validacao. Quando um vendedor aplicar um treinamento em um caso real, a evidencia aparecera aqui.</p>
+            <p className="text-sm text-muted-foreground">Nenhuma aplicação aguardando validação. Quando um vendedor aplicar um treinamento em um caso real, a evidência aparecera aqui.</p>
           )}
         </CardContent>
       </Card>
@@ -466,17 +466,17 @@ export default function ManagerDevelopmentPage() {
             <div className="space-y-2">
               <Label htmlFor="manual-skill">Habilidade</Label>
               <select id="manual-skill" value={manualSkill} onChange={(event) => setManualSkill(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm">
-                {['prospeccao', 'qualificacao', 'diagnostico', 'follow_up', 'proposta', 'negociacao', 'fechamento', 'objecoes', 'construcao_de_valor', 'organizacao_de_pipeline', 'pos_venda', 'expansao', 'retencao', 'relacionamento'].map((skill) => (
+                {['prospecção', 'qualificacao', 'diagnostico', 'follow_up', 'proposta', 'negociacao', 'fechamento', 'objecoes', 'construcao_de_valor', 'organizacao_de_pipeline', 'pos_venda', 'expansao', 'retencao', 'relacionamento'].map((skill) => (
                   <option key={skill} value={skill}>{skill.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="manual-title">Titulo do gap</Label>
+              <Label htmlFor="manual-title">Título do gap</Label>
               <Input id="manual-title" value={manualTitle} onChange={(event) => setManualTitle(event.target.value)} placeholder="Ex.: Dificuldade em objeção de preço" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="manual-evidence">Evidencia observada</Label>
+              <Label htmlFor="manual-evidence">Evidência observada</Label>
               <Textarea id="manual-evidence" value={manualEvidence} onChange={(event) => setManualEvidence(event.target.value)} placeholder="Descreva a reuniao, comportamento observado, impacto e contexto comercial." />
             </div>
           </div>

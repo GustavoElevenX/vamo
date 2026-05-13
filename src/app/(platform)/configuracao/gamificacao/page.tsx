@@ -39,9 +39,9 @@ const DEFAULT_LEVELS: Level[] = [
   { position: 1, name: 'Recruta' },
   { position: 2, name: 'Prospector' },
   { position: 3, name: 'Negociador' },
-  { position: 4, name: 'Hunter' },
-  { position: 5, name: 'Closer' },
-  { position: 6, name: 'Elite' },
+  { position: 4, name: 'Caçador' },
+  { position: 5, name: 'Fechador' },
+  { position: 6, name: 'Especialista' },
   { position: 7, name: 'Campeão' },
   { position: 8, name: 'Lenda' },
 ]
@@ -199,9 +199,9 @@ export default function GamificacaoPage() {
                   <Award className="h-4 w-4 text-violet-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Badges</p>
+                  <p className="text-sm font-medium">Selos</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {badgesPublic ? 'Exibir badges no feed público' : 'Apenas no perfil individual'}
+                    {badgesPublic ? 'Exibir selos no mural público' : 'Apenas no perfil individual'}
                   </p>
                 </div>
               </div>
@@ -214,9 +214,9 @@ export default function GamificacaoPage() {
                   <MessageCircle className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Feed de Reconhecimento</p>
+                  <p className="text-sm font-medium">Mural de reconhecimento</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {feedEnabled ? 'Feed de reconhecimento público ativado' : 'Feed de reconhecimento desativado'}
+                    {feedEnabled ? 'Mural de reconhecimento público ativado' : 'Mural de reconhecimento desativado'}
                   </p>
                 </div>
               </div>

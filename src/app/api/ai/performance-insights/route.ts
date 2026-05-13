@@ -30,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json({ insight })
   } catch (error) {
-    console.error('API /ai/performance-insights error:', error)
-    return NextResponse.json({ error: 'Erro ao gerar insight de performance' }, { status: 500 })
+    console.error('API /ai/desempenho-análises error:', error)
+    return NextResponse.json({ error: 'Erro ao gerar análise de desempenho' }, { status: 500 })
   }
 }

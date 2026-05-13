@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     .maybeSingle()
 
   if (!deal || (appUser.role === 'seller' && deal.owner_id !== appUser.id)) {
-    return NextResponse.json({ error: 'Deal nao encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'oportunidade não encontrado' }, { status: 404 })
   }
 
   const [receipts, lineItems] = await Promise.all([
@@ -66,10 +66,10 @@ export async function GET(request: Request) {
       pendingCommission,
       blockedCommission,
       reason: blockedCommission > 0
-        ? 'Ha comissao bloqueada por regra ou pagamento pendente.'
+        ? 'Há comissão bloqueada por regra ou pagamento pendente.'
         : pendingCommission > 0
-          ? 'Aguardando pagamento ou fechamento para liberar comissao.'
-          : 'Comissao liberada conforme registros atuais.',
+          ? 'Aguardando pagamento ou fechamento para liberar comissão.'
+          : 'Comissão liberada conforme registros atuais.',
     },
   })
 }

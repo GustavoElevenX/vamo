@@ -32,7 +32,7 @@ const features = [
   {
     icon: Zap,
     label: 'VAMO IA integrada',
-    desc: 'Insights e missões geradas por VAMO IA',
+    desc: 'Análises e missões geradas por VAMO IA',
   },
 ]
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
         <div className="relative z-10 space-y-10">
           <div className="space-y-5">
             <h1 className="text-[3.25rem] font-black text-white leading-[1.05] tracking-tight">
-              Performance<br />
+              Desempenho<br />
               que você<br />
               <span className="text-primary">consegue ver.</span>
             </h1>

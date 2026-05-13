@@ -113,7 +113,7 @@ type CustomerData = {
 const filters: Array<{ value: CustomerStatus; label: string }> = [
   { value: 'all', label: 'Todos' },
   { value: 'new_customer', label: 'Novos' },
-  { value: 'without_post_sale', label: 'Sem pos-venda' },
+  { value: 'without_post_sale', label: 'Sem pós-venda' },
   { value: 'pending_receipt', label: 'Recebimento pendente' },
   { value: 'expansion_open', label: 'Com expansao' },
   { value: 'inactive', label: 'Inativos' },
@@ -148,12 +148,12 @@ function daysLabel(value: string | null) {
   if (!value) return 'sem contato'
   const diff = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86400000))
   if (diff === 0) return 'hoje'
-  if (diff === 1) return 'ha 1 dia'
+  if (diff === 1) return 'há 1 dia'
   return `ha ${diff} dias`
 }
 
 function encodePrompt(customer: Customer, context: string) {
-  return `/chat-ia?prompt=${encodeURIComponent(`${context}: ${customer.name}. Status: ${customer.status_label}. Sugestao atual: ${customer.suggested_action ?? 'definir proxima acao comercial'}.`)}`
+  return `/chat-ia?prompt=${encodeURIComponent(`${context}: ${customer.name}. Status: ${customer.status_label}. Sugestao atual: ${customer.suggested_action ?? 'definir próxima ação comercial'}.`)}`
 }
 
 function SummaryCard({ title, value, detail, icon: Icon }: { title: string; value: string; detail?: string; icon: typeof Building2 }) {
@@ -193,7 +193,7 @@ function CustomerCard({
               <Building2 className="h-4 w-4 shrink-0 text-primary" />
               <h2 className="truncate font-semibold">{customer.name}</h2>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{customer.segment || 'Segmento nao informado'}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{customer.segment || 'Segmento não informado'}</p>
           </div>
           <Badge variant="outline" className={statusClass[customer.status]}>
             {customer.status_label}
@@ -214,20 +214,20 @@ function CustomerCard({
             <p className="font-bold">{money(customer.pending_receivable)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Ultimo contato</p>
+            <p className="text-xs text-muted-foreground">Último contato</p>
             <p className="font-bold">{daysLabel(customer.last_activity_at ?? customer.last_won_at)}</p>
           </div>
         </div>
 
         <div className="rounded-lg border border-border/60 bg-muted/25 p-3">
-          <p className="text-xs font-medium text-muted-foreground">Proxima acao</p>
-          <p className="mt-1 text-sm">{customer.next_action_title || customer.suggested_action || 'Definir proxima acao da carteira.'}</p>
+          <p className="text-xs font-medium text-muted-foreground">Próxima ação</p>
+          <p className="mt-1 text-sm">{customer.next_action_title || customer.suggested_action || 'Definir próxima ação da carteira.'}</p>
           {customer.next_action_due_at && <p className="mt-1 text-xs text-muted-foreground">{dateLabel(customer.next_action_due_at)}</p>}
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button size="sm" render={<Link href={customer.pipeline_href} />}>
-            Ver pipeline
+            Ver funil
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
           <Button size="sm" variant="outline" render={<Link href={encodePrompt(customer, isManager ? 'Gerar pauta de intervencao para o cliente' : 'Gerar mensagem comercial para o cliente')} />}>
@@ -346,7 +346,7 @@ export default function CrmClientesPage() {
       if (!trainingRes.ok) throw new Error(trainingBody.error || 'Erro ao gerar treinamento')
       toast.success('PDI de carteira gerado para revisao.')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar PDI')
+      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar PDI')
     }
   }
 
@@ -365,25 +365,25 @@ export default function CrmClientesPage() {
         labelIcon={<Building2 className="h-3 w-3" />}
         title={isManager ? <>Base de <TitleHighlight>Clientes</TitleHighlight></> : <>Minha <TitleHighlight>Carteira</TitleHighlight></>}
         description={isManager
-          ? 'Visao estrategica da carteira, receita ganha, pos-venda, recebimentos e expansao da equipe.'
-          : 'Clientes ganhos, pos-venda, recebimentos e oportunidades de expansao.'}
+          ? 'Visão estrategica da carteira, receita ganha, pós-venda, recebimentos e expansao da equipe.'
+          : 'Clientes ganhos, pós-venda, recebimentos e oportunidades de expansao.'}
       />
 
       {!data || !summary ? (
         <Card>
           <CardContent className="py-8 text-center">
             <AlertTriangle className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">Nao foi possivel carregar a carteira de clientes.</p>
+            <p className="text-sm text-muted-foreground">Não foi possível carregar a carteira de clientes.</p>
           </CardContent>
         </Card>
       ) : customers.length === 0 ? (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="py-8 text-center">
             <Building2 className="mx-auto mb-2 h-8 w-8 text-primary" />
-            <p className="text-sm font-medium">Ainda nao existe cliente ganho.</p>
+            <p className="text-sm font-medium">Ainda não existe cliente ganho.</p>
             <p className="mt-1 text-sm text-muted-foreground">Quando uma oportunidade for marcada como ganha e vinculada a uma conta, ela aparece aqui automaticamente.</p>
             <Button className="mt-4" render={<Link href="/crm" />}>
-              Abrir pipeline
+              Abrir funil
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardContent>
@@ -393,7 +393,7 @@ export default function CrmClientesPage() {
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <SummaryCard title={isManager ? 'Clientes totais' : 'Clientes ganhos'} value={String(summary.total_customers)} detail={`${summary.new_customers_this_month} novos no mes`} icon={UsersRound} />
             <SummaryCard title="Receita ganha" value={money(summary.won_revenue)} detail={`Ticket medio: ${money(summary.average_won_ticket)}`} icon={BarChart3} />
-            <SummaryCard title="Recebimento pendente" value={money(summary.pending_receivables)} detail="Base para comissao e fechamento" icon={BadgeDollarSign} />
+            <SummaryCard title="Recebimento pendente" value={money(summary.pending_receivables)} detail="Base para comissão e fechamento" icon={BadgeDollarSign} />
             <SummaryCard title="Expansao aberta" value={String(summary.customers_with_open_expansion)} detail={`${summary.customers_without_post_sale} sem pos-venda`} icon={LineChart} />
           </section>
 
@@ -425,7 +425,7 @@ export default function CrmClientesPage() {
                   </Badge>
                   <h2 className="mt-3 text-xl font-bold">{priorityCustomer.name}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {priorityCustomer.status_label} | {money(priorityCustomer.won_revenue)} em vendas ganhas | ultimo contato {daysLabel(priorityCustomer.last_activity_at ?? priorityCustomer.last_won_at)}
+                    {priorityCustomer.status_label} | {money(priorityCustomer.won_revenue)} em vendas ganhas | último contato {daysLabel(priorityCustomer.last_activity_at ?? priorityCustomer.last_won_at)}
                   </p>
                   <p className="mt-3 text-sm font-medium">{priorityCustomer.suggested_action}</p>
                 </div>
@@ -436,10 +436,10 @@ export default function CrmClientesPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" render={<Link href={priorityCustomer.pipeline_href} />}>
-                      Ver pipeline
+                      Ver funil
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="sm" variant="outline" render={<Link href={encodePrompt(priorityCustomer, 'Gerar proxima melhor acao para o cliente')} />}>
+                    <Button size="sm" variant="outline" render={<Link href={encodePrompt(priorityCustomer, 'Gerar próxima melhor ação para o cliente')} />}>
                       VAMO IA
                     </Button>
                   </div>
@@ -520,7 +520,7 @@ export default function CrmClientesPage() {
                     <div key={seller.seller_id} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3">
                       <div>
                         <p className="text-sm font-semibold">{seller.seller_name}</p>
-                        <p className="text-xs text-muted-foreground">{seller.customers_count} clientes | {seller.customers_without_post_sale} sem pos-venda</p>
+                        <p className="text-xs text-muted-foreground">{seller.customers_count} clientes | {seller.customers_without_post_sale} sem pós-venda</p>
                       </div>
                       <p className="text-sm font-bold">{money(seller.won_revenue)}</p>
                     </div>
@@ -554,7 +554,7 @@ export default function CrmClientesPage() {
             <CardContent className="flex items-start gap-3 py-4">
               <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
               <p className="text-sm text-muted-foreground">
-                Cliente aqui nao e cadastro manual separado: e conta com pelo menos uma venda ganha. Pipeline continua sendo acao comercial; esta tela mostra relacionamento, recebimento, pos-venda e expansao.
+                Cliente aqui não e cadastro manual separado: é conta com pelo menos uma venda ganha. Funil continua sendo ação comercial; esta tela mostra relacionamento, recebimento, pós-venda e expansao.
               </p>
             </CardContent>
           </Card>

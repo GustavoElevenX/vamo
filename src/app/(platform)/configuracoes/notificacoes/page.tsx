@@ -64,7 +64,7 @@ export default function NotificationSettingsPage() {
     <div className="max-w-3xl space-y-5">
       <div>
         <h1 className="text-2xl font-bold">Notificacoes</h1>
-        <p className="text-sm text-muted-foreground">Configure como a VAMO avisa sobre rotina comercial e deals em risco.</p>
+        <p className="text-sm text-muted-foreground">Configure como a VAMO avisa sobre rotina comercial e oportunidades em risco.</p>
       </div>
 
       <Card>
@@ -100,9 +100,9 @@ export default function NotificationSettingsPage() {
       <Card>
         <CardHeader><CardTitle>WhatsApp</CardTitle></CardHeader>
         <CardContent className="space-y-2">
-          <Label htmlFor="whatsapp">Numero com DDI</Label>
+          <Label htmlFor="whatsapp">Número com DDI</Label>
           <Input id="whatsapp" value={prefs.whatsapp_number} onChange={(e) => patch({ whatsapp_number: e.target.value })} placeholder="+5511999999999" />
-          <p className="text-xs text-muted-foreground">O envio depende da configuracao do provedor WhatsApp no ambiente.</p>
+          <p className="text-xs text-muted-foreground">O envio depende da configuração do provedor WhatsApp no ambiente.</p>
         </CardContent>
       </Card>
 
@@ -111,7 +111,7 @@ export default function NotificationSettingsPage() {
         <CardContent className="space-y-3">
           {[
             ['notify_daily_digest', 'Digest diario'],
-            ['notify_deal_stuck', 'Deals parados'],
+            ['notify_deal_stuck', 'oportunidades parados'],
             ['notify_deal_closed', 'Fechamento realizado'],
             ['notify_ranking_change', 'Mudanca no ranking'],
           ].map(([key, label]) => (

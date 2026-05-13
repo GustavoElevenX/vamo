@@ -51,7 +51,7 @@ export default function RecompensasPage() {
     ])
 
     if (catalogResult.error) {
-      toast.error('Nao foi possivel carregar recompensas.')
+      toast.error('Não foi possível carregar recompensas.')
     } else {
       setRewards((catalogResult.data ?? []).map((reward: any) => ({
         id: reward.id,
@@ -137,7 +137,7 @@ export default function RecompensasPage() {
       toast.success('Recompensas salvas na loja.')
       await load()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar recompensas.')
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar recompensas.')
     } finally {
       setSaving(false)
     }

@@ -118,7 +118,7 @@ export function buildFallbackQuestions(context: CheckinQuestionContext): Checkin
     questions.push({
       id: 'priority_focus',
       type: 'single_choice',
-      title: 'Qual pendencia voce vai destravar primeiro?',
+      title: 'Qual pendencia você vai destravar primeiro?',
       options: context.overdueDeals.slice(0, 3).map((deal) => deal.title),
       required: false,
     })
@@ -130,7 +130,7 @@ export function buildFallbackQuestions(context: CheckinQuestionContext): Checkin
       options: [
         'Registrar uma nova atividade comercial',
         'Avancar uma oportunidade aberta',
-        'Atualizar proximos passos no CRM',
+        'Atualizar próximos passos no CRM',
       ],
       required: false,
     })
@@ -138,7 +138,7 @@ export function buildFallbackQuestions(context: CheckinQuestionContext): Checkin
     questions.push({
       id: 'priority_focus',
       type: 'single_choice',
-      title: 'Qual oportunidade vai ganhar uma proxima acao hoje?',
+      title: 'Qual oportunidade vai ganhar uma próxima ação hoje?',
       options: context.noActionDeals.slice(0, 3).map((deal) => deal.title),
       required: false,
     })
@@ -146,10 +146,10 @@ export function buildFallbackQuestions(context: CheckinQuestionContext): Checkin
     questions.push({
       id: 'priority_focus',
       type: 'single_choice',
-      title: 'Qual sera seu foco comercial principal hoje?',
+      title: 'Qual será seu foco comercial principal hoje?',
       options: [
         'Criar novas oportunidades',
-        'Fazer follow-up',
+        'Fazer retorno',
         'Atualizar CRM',
         'Avancar proposta',
       ],
@@ -159,13 +159,13 @@ export function buildFallbackQuestions(context: CheckinQuestionContext): Checkin
 
   const blockerTitle = context.pdiGaps[0]
     ? `Existe algo em ${context.pdiGaps[0].skill_area} que pode travar sua execucao hoje?`
-    : 'Existe algo que pode travar sua execucao hoje?'
+    : 'Existe algo que pode travar sua execução hoje?'
 
   questions.push({
     id: 'blocker',
     type: 'text',
     title: blockerTitle,
-    description: 'Responda em uma frase. Se nao tiver, pode deixar em branco.',
+    description: 'Responda em uma frase. Se não tiver, pode deixar em branco.',
     required: false,
   })
 
@@ -180,13 +180,13 @@ export async function generateCheckinQuestions(context: CheckinQuestionContext) 
   }
 
   const systemPrompt = `
-Voce e a IA da Vamo dentro do Copiloto Diario.
+Você é a IA da Vamo dentro do Copiloto Diario.
 Sua funcao e gerar um check-in curto, util e contextual para um vendedor.
-Nao repita perguntas genericas se houver dados concretos no contexto.
+Não repita perguntas genericas se houver dados concretos no contexto.
 Use no maximo 3 perguntas.
 A primeira pergunta sempre deve medir energia de 1 a 5.
-As outras perguntas devem se conectar a KPI, pipeline, missao, PDI ou risco real do dia.
-Retorne apenas JSON valido.
+As outras perguntas devem se conectar a KPI, funil, missão, PDI ou risco real do dia.
+Retorne apenas JSON válido.
 `
 
   const userPrompt = `

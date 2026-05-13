@@ -60,14 +60,14 @@ function isInteractiveDragTarget(target: EventTarget | null) {
 const actionTypes: NextActionType[] = ['follow_up', 'call', 'email', 'proposal', 'meeting', 'review', 'other']
 const forecastCategories: ForecastCategory[] = ['pipeline', 'best_case', 'commit']
 const lostReasons = [
-  'Preco',
-  'Sem orcamento',
+  'Preço',
+  'Sem orçamento',
   'Concorrente',
   'Sem resposta',
   'Proposta fraca',
   'Timing',
-  'Nao viu valor',
-  'Nao era perfil',
+  'Não viu valor',
+  'Não era perfil',
   'Outro',
 ]
 
@@ -216,7 +216,7 @@ export default function CrmPipelinePage() {
     const body = await res.json().catch(() => ({}))
     setSavingDealId(null)
     if (res.ok) await load()
-    else setCrmError(body.error || 'Nao foi possivel atualizar o deal.')
+    else setCrmError(body.error || 'Não foi possível atualizar o oportunidade.')
     return res.ok
   }
 
@@ -334,7 +334,7 @@ export default function CrmPipelinePage() {
       })
       const accountBody = await accountRes.json().catch(() => ({}))
       if (!accountRes.ok || !accountBody.account?.id) {
-        setCrmError(accountBody.error || 'Nao foi possivel criar a conta.')
+        setCrmError(accountBody.error || 'Não foi possível criar a conta.')
         setConfirmingWin(false)
         return
       }
@@ -391,8 +391,8 @@ export default function CrmPipelinePage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <PageHeader
           label={user.role === 'seller' ? 'Vender' : 'CRM'}
-          title={<>{user.role === 'seller' ? 'Pipeline de ' : 'Pipeline '}<TitleHighlight>ações</TitleHighlight></>}
-          description="Oportunidades ativas, próximo passo, follow-up atrasado e impacto no forecast."
+          title={<>{user.role === 'seller' ? 'Funil de ' : 'Funil '}<TitleHighlight>ações</TitleHighlight></>}
+          description="Oportunidades ativas, próximo passo, retorno atrasado e impacto na previsão."
         />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger render={<Button />}>
@@ -403,7 +403,7 @@ export default function CrmPipelinePage() {
             <SheetHeader><SheetTitle>Nova oportunidade</SheetTitle></SheetHeader>
             <div className="space-y-3 px-4">
               <div className="space-y-2">
-                <Label htmlFor="deal-title">Titulo da oportunidade</Label>
+                <Label htmlFor="deal-title">Título da oportunidade</Label>
                 <Input id="deal-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Proposta ACME" />
               </div>
               <div className="space-y-2">
@@ -441,7 +441,7 @@ export default function CrmPipelinePage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="forecast-category">Forecast</Label>
+                  <Label htmlFor="forecast-category">Previsão</Label>
                   <select
                     id="forecast-category"
                     value={forecastCategory}
@@ -519,7 +519,7 @@ export default function CrmPipelinePage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-forecast">Forecast</Label>
+                <Label htmlFor="edit-forecast">Previsão</Label>
                 <select
                   id="edit-forecast"
                   value={editForecastCategory}
@@ -550,7 +550,7 @@ export default function CrmPipelinePage() {
             <div className="rounded-lg border border-primary/25 bg-primary/5 p-3">
               <p className="text-sm font-semibold">{winDeal?.title}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Antes de marcar como ganho, vincule essa oportunidade a uma conta. Isso garante historico, comissao, recebimento e pos-venda corretamente.
+                Antes de marcar como ganho, vincule essa oportunidade a uma conta. Isso garante histórico, comissão, recebimento e pós-venda corretamente.
               </p>
             </div>
 
@@ -582,7 +582,7 @@ export default function CrmPipelinePage() {
                 <Input id="win-value" value={winFinalValue} onChange={(event) => setWinFinalValue(event.target.value)} inputMode="decimal" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="win-product">Produto / servico</Label>
+                <Label htmlFor="win-product">Produto / serviço</Label>
                 <Input id="win-product" value={winProductName} onChange={(event) => setWinProductName(event.target.value)} placeholder="Opcional" />
               </div>
             </div>
@@ -599,12 +599,12 @@ export default function CrmPipelinePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="win-post-sale">Proxima acao pos-venda</Label>
-              <Input id="win-post-sale" value={winPostSaleAction} onChange={(event) => setWinPostSaleAction(event.target.value)} placeholder="Ex.: Agendar onboarding" />
+              <Label htmlFor="win-post-sale">Próxima ação pós-venda</Label>
+              <Input id="win-post-sale" value={winPostSaleAction} onChange={(event) => setWinPostSaleAction(event.target.value)} placeholder="Ex.: Agendar integração" />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="win-post-sale-due">Prazo da acao pos-venda</Label>
+              <Label htmlFor="win-post-sale-due">Prazo da ação pós-venda</Label>
               <Input id="win-post-sale-due" type="datetime-local" value={winPostSaleDueAt} onChange={(event) => setWinPostSaleDueAt(event.target.value)} />
             </div>
           </div>
@@ -624,7 +624,7 @@ export default function CrmPipelinePage() {
             <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3">
               <p className="text-sm font-semibold">{lostDeal?.title}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                O motivo alimenta gaps de PDI quando o padrao se repete por vendedor.
+                O motivo alimenta gaps de PDI quando o padrão se repete por vendedor.
               </p>
             </div>
             <div className="space-y-2">
@@ -641,7 +641,7 @@ export default function CrmPipelinePage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="lost-notes">Contexto da perda</Label>
-              <Input id="lost-notes" value={lostNotes} onChange={(event) => setLostNotes(event.target.value)} placeholder="Ex.: cliente comparou com concorrente e nao viu ROI" />
+              <Input id="lost-notes" value={lostNotes} onChange={(event) => setLostNotes(event.target.value)} placeholder="Ex.: cliente comparou com concorrente e não viu ROI" />
             </div>
           </div>
           <SheetFooter>
@@ -655,7 +655,7 @@ export default function CrmPipelinePage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Total em aberto</p><p className="text-2xl font-bold">{money(totalOpen)}</p></CardContent></Card>
-        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Forecast provável</p><p className="text-2xl font-bold">{money(forecastLikely)}</p></CardContent></Card>
+        <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Previsão provável</p><p className="text-2xl font-bold">{money(forecastLikely)}</p></CardContent></Card>
         <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Ações atrasadas</p><p className="text-2xl font-bold">{overdueActions}</p></CardContent></Card>
         <Card><CardContent className="py-4"><p className="text-xs text-muted-foreground">Sem próxima ação</p><p className="text-2xl font-bold">{withoutNextAction}</p><p className="text-[10px] text-muted-foreground">Conversão geral: {conversion}%</p></CardContent></Card>
       </div>
@@ -672,9 +672,9 @@ export default function CrmPipelinePage() {
                     <Target className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-bold">Seu pipeline ainda está vazio</p>
+                    <p className="font-bold">Seu funil ainda está vazio</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Cadastre uma oportunidade com próxima ação para a VAMO priorizar follow-ups, forecast e ganho potencial.
+                      Cadastre uma oportunidade com próxima ação para a VAMO priorizar retornos, previsão e ganho potencial.
                     </p>
                   </div>
                 </div>
@@ -767,7 +767,7 @@ export default function CrmPipelinePage() {
                                   {deal.last_activity_at ? `${stuckDays}d sem atividade` : 'sem atividade'}
                                 </Badge>
                                 <Badge variant="outline"><Filter className="h-3 w-3" />{deal.probability}%</Badge>
-                                <Badge variant="outline">{FORECAST_LABELS[deal.forecast_category] ?? 'Pipeline'}</Badge>
+                                <Badge variant="outline">{FORECAST_LABELS[deal.forecast_category] ?? 'Funil'}</Badge>
                               </div>
                               <div className={`rounded-lg border p-2.5 text-xs ${hasOpenNextAction(deal) && isActionOverdue(deal.next_action_due_at) ? 'border-amber-500/30 bg-amber-500/10' : 'border-border/50 bg-muted/25'}`}>
                                 <div className="mb-1 flex items-center justify-between gap-2">
@@ -817,10 +817,10 @@ export default function CrmPipelinePage() {
                                       Recebimento
                                     </Button>
                                     <Button type="button" variant="outline" size="sm" render={<Link href="/monitoramento/comissionamento" />}>
-                                      Comissao
+                                      Comissão
                                     </Button>
                                     <Button type="button" variant="outline" size="sm" onClick={() => openEdit(deal)}>
-                                      Pos-venda
+                                      Pós-venda
                                     </Button>
                                     <Button type="button" variant="outline" size="sm" onClick={() => openExpansion(deal)}>
                                       Expansao

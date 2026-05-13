@@ -311,7 +311,7 @@ export default function NovoDiagnosticoPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { id: 'equipe' as const, icon: Users, title: 'Minha equipe completa', desc: 'Visão geral da performance do time' },
+              { id: 'equipe' as const, icon: Users, title: 'Minha equipe completa', desc: 'Visão geral da desempenho do time' },
               { id: 'vendedor' as const, icon: Target, title: 'Um vendedor específico', desc: 'Diagnóstico individual de um colaborador' },
               { id: 'eu' as const, icon: Building2, title: 'Minha operação comercial', desc: 'Autoavaliação do processo e resultados' },
             ].map(({ id, icon: Icon, title, desc }) => (
@@ -535,7 +535,7 @@ export default function NovoDiagnosticoPage() {
 
             {/* Canais de leads */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Canais de geração de leads</Label>
+              <Label className="text-xs">Canais de geração de potenciais clientes</Label>
               <div className="flex flex-wrap gap-2">
                 {CANAL_LEADS_OPTIONS.map((canal) => (
                   <button

@@ -400,7 +400,7 @@ export function findApplicableCommissionRule(rules: CommissionRule[], sale: Comm
   })[0]
 
   return selected ?? {
-    name: 'Regra padrao da empresa',
+    name: 'Regra padrão da empresa',
     rule_type: 'company_default',
     percentage: 0,
     calculation_base: 'sale_amount',
@@ -423,7 +423,7 @@ function baseEntry(sale: CommissionSaleInput, rule: CommissionRule, periodRefere
     category_id: sale.category_id ?? null,
     category_name: sale.category_name ?? 'Sem categoria',
     commercial_table_id: sale.commercial_table_id ?? null,
-    commercial_table_name: sale.commercial_table_name ?? 'Tabela padrao',
+    commercial_table_name: sale.commercial_table_name ?? 'Tabela padrão',
     commission_rule_id: rule.id ?? null,
     rule_name: rule.name,
     period_reference: periodReference,
@@ -465,7 +465,7 @@ export function calculateCommissionEntriesForSale(
         base_amount: pendingBase,
         commission_amount: roundMoney(pendingBase * percentage / 100),
         status: 'pending',
-        status_reason: 'Pendente porque a venda ainda nao foi totalmente recebida.',
+        status_reason: 'Pendente porque a venda ainda não foi totalmente recebida.',
         confirmed_at: null,
       })
     }
@@ -630,7 +630,7 @@ export function statusLabel(status: CommissionPeriodStatus | CommissionCalculati
   const labels: Record<string, string> = {
     open: 'Aberto',
     calculating: 'Calculando',
-    pending_approval: 'Aguardando aprovacao',
+    pending_approval: 'Aguardando aprovação',
     approved: 'Aprovado',
     in_review: 'Em revisao',
     closed: 'Fechado',

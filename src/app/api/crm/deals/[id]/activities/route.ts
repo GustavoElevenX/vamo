@@ -45,7 +45,7 @@ export async function GET(_request: Request, { params }: Params) {
     .maybeSingle()
 
   if (!deal || (appUser.role === 'seller' && deal.owner_id !== appUser.id)) {
-    return NextResponse.json({ error: 'Deal nao encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'oportunidade não encontrado' }, { status: 404 })
   }
 
   const { data, error } = await adminClient
@@ -79,7 +79,7 @@ export async function POST(request: Request, { params }: Params) {
     .maybeSingle()
 
   if (!deal || (appUser.role === 'seller' && deal.owner_id !== appUser.id)) {
-    return NextResponse.json({ error: 'Deal nao encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'oportunidade não encontrado' }, { status: 404 })
   }
 
   const { data: activity, error } = await adminClient
@@ -158,7 +158,7 @@ export async function POST(request: Request, { params }: Params) {
       recommendationType: 'next_action',
       title: nextActionTitle,
       description: `Proxima melhor acao para ${deal.title}.`,
-      suggestedActionLabel: 'Abrir deal',
+      suggestedActionLabel: 'Abrir oportunidade',
       suggestedActionHref: `/crm/${id}`,
       priority: 'medium',
       dueAt: input.next_action_due_at || null,
@@ -204,8 +204,8 @@ export async function POST(request: Request, { params }: Params) {
       xp: execution.actionXp ? 1 : 0,
       kpiEntries: execution.kpiEntries.length,
       missionUpdates: execution.missionUpdates,
-      missionHint: execution.missionUpdates.length ? 'Missao relacionada avancou.' : 'Nenhuma missao ativa relacionada a esta acao.',
-      nextBestAction: nextActionTitle || 'Defina a proxima acao para manter o deal em movimento.',
+      missionHint: execution.missionUpdates.length ? 'Missão relacionada avancou.' : 'Nenhuma missão ativa relacionada a esta ação.',
+      nextBestAction: nextActionTitle || 'Defina a próxima ação para manter o oportunidade em movimento.',
     },
   }, { status: 201 })
 }

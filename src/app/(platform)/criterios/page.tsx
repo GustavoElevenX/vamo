@@ -68,8 +68,8 @@ interface CriteriaResponse {
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'kpis', label: 'KPIs', icon: BarChart3 },
-  { key: 'comissionamento', label: 'Comissao', icon: DollarSign },
-  { key: 'avaliacoes', label: 'Avaliacoes', icon: ShieldCheck },
+  { key: 'comissionamento', label: 'Comissão', icon: DollarSign },
+  { key: 'avaliacoes', label: 'Avaliações', icon: ShieldCheck },
   { key: 'alertas', label: 'Alertas', icon: Bell },
   { key: 'bemestar', label: 'Bem-estar', icon: Heart },
   { key: 'gamificacao', label: 'Gamificacao', icon: Trophy },
@@ -101,7 +101,7 @@ export default function CriteriosPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/platform/criteria', { credentials: 'same-origin' })
-      if (!res.ok) throw new Error('Erro ao carregar criterios')
+      if (!res.ok) throw new Error('Erro ao carregar critérios')
       const data = await res.json() as CriteriaResponse
       setKpis(data.kpis)
       setCommission(data.commission)
@@ -109,7 +109,7 @@ export default function CriteriosPage() {
       setGamification(data.gamification)
       setRemovedKpiIds([])
     } catch {
-      toast.error('Nao foi possivel carregar criterios.')
+      toast.error('Não foi possível carregar critérios.')
     } finally {
       setLoading(false)
     }
@@ -153,10 +153,10 @@ export default function CriteriosPage() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? 'Erro ao salvar')
       }
-      toast.success('Criterios salvos e conectados a plataforma.')
+      toast.success('Critérios salvos e conectados a plataforma.')
       await load()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar.')
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar.')
     } finally {
       setSaving(false)
     }
@@ -177,10 +177,10 @@ export default function CriteriosPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Badge variant="outline" className="mb-2 text-[10px]">Configuracao operacional</Badge>
-          <h2 className="text-xl font-semibold tracking-tight">Criterios da Plataforma</h2>
+          <Badge variant="outline" className="mb-2 text-[10px]">Configuração operacional</Badge>
+          <h2 className="text-xl font-semibold tracking-tight">Critérios da Plataforma</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Define como metas, XP, comissao, alertas e saude da equipe conversam entre si.
+            Define como metas, XP, comissão, alertas e saúde da equipe conversam entre si.
           </p>
         </div>
         <Button onClick={save} disabled={saving}>
@@ -199,7 +199,7 @@ export default function CriteriosPage() {
         <Card className="border-border/50">
           <CardContent className="p-3 text-center">
             <p className="text-2xl font-bold text-primary">{commission.aliquota_base}%</p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissao base</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Comissão base</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
@@ -211,7 +211,7 @@ export default function CriteriosPage() {
         <Card className="border-border/50">
           <CardContent className="p-3 text-center">
             <p className="mt-1 text-sm font-bold capitalize text-emerald-500">{criteria.evaluationMode}</p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Avaliacao</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Avaliação</p>
           </CardContent>
         </Card>
       </div>
@@ -234,7 +234,7 @@ export default function CriteriosPage() {
       {activeTab === 'kpis' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">KPIs ativos alimentam indicadores, ranking, alertas e missoes.</p>
+            <p className="text-sm text-muted-foreground">KPIs ativos alimentam indicadores, ranking, alertas e missões.</p>
             <Button size="sm" variant="outline" onClick={addKpi}>
               <Plus className="h-3.5 w-3.5" />
               Adicionar KPI
@@ -286,8 +286,8 @@ export default function CriteriosPage() {
             ['Aliquota base (%)', 'aliquota_base'],
             ['Acelerador a partir de (%)', 'acelerador_threshold'],
             ['Aliquota acelerada (%)', 'acelerador_rate'],
-            ['Bonus por missao (R$)', 'bonus_missao'],
-            ['Bonus por KPI batido (R$)', 'bonus_kpi'],
+            ['Bônus por missão (R$)', 'bonus_missao'],
+            ['Bônus por KPI batido (R$)', 'bonus_kpi'],
             ['Elegibilidade minima (%)', 'elegibilidade'],
           ].map(([label, key]) => (
             <Card key={key} className="border-border/50">
@@ -303,7 +303,7 @@ export default function CriteriosPage() {
           ))}
           <Card className="border-border/50 md:col-span-2">
             <CardContent className="space-y-1.5 py-4">
-              <Label className="text-xs">Periodo de apuracao</Label>
+              <Label className="text-xs">Período de apuracao</Label>
               <div className="flex gap-2">
                 {(['mensal', 'quinzenal', 'semanal'] as const).map((periodo) => (
                   <Button key={periodo} variant={commission.periodo === periodo ? 'default' : 'outline'} onClick={() => setCommission({ ...commission, periodo })}>
@@ -319,8 +319,8 @@ export default function CriteriosPage() {
       {activeTab === 'avaliacoes' && (
         <div className="grid gap-3">
           {[
-            { id: 'automatic', title: 'Automatica', desc: 'Eventos comprovados concluem missoes sem validacao manual.' },
-            { id: 'mixed', title: 'Mista', desc: 'Evento cria evidencia e gestor valida qualidade quando necessario.' },
+            { id: 'automatic', title: 'Automatica', desc: 'Eventos comprovados concluem missões sem validação manual.' },
+            { id: 'mixed', title: 'Mista', desc: 'Evento cria evidência e gestor valida qualidade quando necessário.' },
             { id: 'manual', title: 'Manual', desc: 'Gestor confirma conclusao e qualidade diretamente.' },
           ].map((mode) => (
             <button
@@ -421,8 +421,8 @@ export default function CriteriosPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Badges no feed</p>
-                  <p className="text-xs text-muted-foreground">Publica conquistas no feed real da equipe.</p>
+                  <p className="text-sm font-medium">Selos no mural</p>
+                  <p className="text-xs text-muted-foreground">Publica conquistas no mural real da equipe.</p>
                 </div>
                 <Toggle enabled={gamification.badges_no_feed} onChange={(value) => setGamification({ ...gamification, badges_no_feed: value })} />
               </div>
@@ -430,7 +430,7 @@ export default function CriteriosPage() {
           </Card>
           <Card className="border-border/50">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Titulos dos niveis</CardTitle>
+              <CardTitle className="text-sm">Títulos dos niveis</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-2 md:grid-cols-2">
               {gamification.level_titles.map((title, index) => (
@@ -453,7 +453,7 @@ export default function CriteriosPage() {
       <Card className="border-border/50 bg-muted/30">
         <CardContent className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
           <Activity className="h-3.5 w-3.5" />
-          Essas configuracoes sao usadas por Hoje, Indicadores, Missoes, Comissionamento, PDI e Logs.
+          Essas configurações sao usadas por Hoje, Indicadores, Missões, Comissionamento, PDI e Logs.
         </CardContent>
       </Card>
     </div>

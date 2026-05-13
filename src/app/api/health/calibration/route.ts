@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     .eq('organization_id', appUser.organization_id)
     .maybeSingle()
 
-  if (!checkin) return NextResponse.json({ error: 'Check-in nao encontrado' }, { status: 404 })
+  if (!checkin) return NextResponse.json({ error: 'Check-in não encontrado' }, { status: 404 })
   if (appUser.role === 'seller' && checkin.user_id !== appUser.id) {
     return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
   }

@@ -45,7 +45,7 @@ export default function PlaybookDetailPage() {
   if (!playbook) {
     return (
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold">Playbook não encontrado</h2>
+        <h2 className="text-2xl font-bold">roteiro não encontrado</h2>
         <Button variant="outline" onClick={() => router.push('/padronizacao')}>Voltar</Button>
       </div>
     )

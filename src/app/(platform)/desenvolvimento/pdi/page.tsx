@@ -179,18 +179,18 @@ export default function SellerPdiPage() {
             Seu PDI e definido pelo gestor com apoio da VamoAI e deve ser aplicado em situacoes reais de venda.
           </p>
         </div>
-        <Badge className="bg-primary/10 text-primary">Performance OS</Badge>
+        <Badge className="bg-primary/10 text-primary">Desempenho OS</Badge>
       </div>
 
       <Card className="border-blue-500/20 bg-blue-500/5">
         <CardContent className="pt-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">PDI desenvolve.</strong> PDI desenvolve habilidade; missao forca aplicacao pratica. A logica aqui e sempre: gap real, microtreino, evidencia, validacao do gestor e evolucao acompanhada.
+          <strong className="text-foreground">PDI desenvolve.</strong> PDI desenvolve habilidade; missão forca aplicação prática. A logica aqui é sempre: gap real, microtreino, evidência, validação do gestor e evolução acompanhada.
         </CardContent>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <PdiEvidenceCard label="Gaps abertos" value={String(gaps.length)} hint="Diagnostico vindo de KPI, CRM ou gestor" />
-        <PdiEvidenceCard label="PDIs ativos" value={String(plans.filter((plan) => ['approved', 'active'].includes(plan.status)).length)} hint="Treinos curtos com aplicacao real" />
+        <PdiEvidenceCard label="Gaps abertos" value={String(gaps.length)} hint="Diagnóstico vindo de KPI, CRM ou gestor" />
+        <PdiEvidenceCard label="PDIs ativos" value={String(plans.filter((plan) => ['approved', 'active'].includes(plan.status)).length)} hint="Treinos curtos com aplicação real" />
         <PdiEvidenceCard label="Aplicacoes validadas" value={String(completedApplications)} hint="Evidencias praticas aceitas" />
       </div>
 
@@ -200,15 +200,15 @@ export default function SellerPdiPage() {
 
       {activePlan ? (
         <NextBestActionCard
-          title="Seu proximo salto"
+          title="Seu próximo salto"
           description={`Aplique "${activePlan.title}" em um caso real e registre evidencia para provar evolucao.`}
-          href="#aplicacao-real"
-          actionLabel="Registrar evidencia"
+          href="#aplicação-real"
+          actionLabel="Registrar evidência"
         />
       ) : (
         <NextBestActionCard
           title="Ainda sem PDI ativo"
-          description="Quando um gap real for detectado, a VAMO IA e seu gestor transformam isso em treino curto e aplicacao pratica."
+          description="Quando um gap real for detectado, a VAMO IA e seu gestor transformam isso em treino curto e aplicação pratica."
           href="/chat-ia"
           actionLabel="Conversar com IA"
         />
@@ -219,7 +219,7 @@ export default function SellerPdiPage() {
           <CardHeader><CardTitle>Gaps detectados</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {gaps.length ? gaps.map((gap) => <PdiGapCard key={gap.id} gap={gap} />) : (
-              <p className="text-sm text-muted-foreground">Nenhum gap ativo. Continue registrando CRM e KPIs para gerar diagnostico real.</p>
+              <p className="text-sm text-muted-foreground">Nenhum gap ativo. Continue registrando CRM e KPIs para gerar diagnóstico real.</p>
             )}
           </CardContent>
         </Card>
@@ -228,7 +228,7 @@ export default function SellerPdiPage() {
           <CardHeader><CardTitle>Planos em andamento</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {plans.length ? plans.map((plan) => <PdiPlanCard key={plan.id} plan={plan} context="seller" />) : (
-              <p className="text-sm text-muted-foreground">Voce ainda nao possui um PDI ativo. Quando a VAMO identificar uma oportunidade de evolucao, seu gestor podera liberar um plano para voce.</p>
+              <p className="text-sm text-muted-foreground">Você ainda não possui um PDI ativo. Quando a VAMO identificar uma oportunidade de evolução, seu gestor podera liberar um plano para você.</p>
             )}
           </CardContent>
         </Card>
@@ -255,22 +255,22 @@ export default function SellerPdiPage() {
                   </div>
                   <div className="rounded-lg border border-border/60 p-3">
                     <CheckCircle2 className="mb-2 h-4 w-4 text-primary" />
-                    <p className="text-xs text-muted-foreground">Evidencia exigida</p>
+                    <p className="text-xs text-muted-foreground">Evidência exigida</p>
                     <p className="text-sm font-medium">{training.required_evidence}</p>
                   </div>
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-2">
-                  <TrainingBlock icon={BookOpenCheck} title="Conceito rapido" body={training.quick_concept} />
+                  <TrainingBlock icon={BookOpenCheck} title="Conceito rápido" body={training.quick_concept} />
                   <TrainingBlock icon={MessageSquareText} title="Script" body={training.script} />
                   <TrainingBlock icon={Dumbbell} title="Exercicio" body={training.exercise} />
-                  <TrainingBlock icon={Sparkles} title="Roleplay" body={training.roleplay_prompt || 'Roleplay opcional conforme orientacao do gestor.'} />
+                  <TrainingBlock icon={Sparkles} title="simulação" body={training.roleplay_prompt || 'simulação opcional conforme orientacao do gestor.'} />
                 </div>
 
                 <div className="rounded-lg border border-border/60 p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <ListChecks className="h-4 w-4 text-primary" />
-                    <p className="font-bold">Checklist de aplicacao</p>
+                    <p className="font-bold">Checklist de aplicação</p>
                   </div>
                   <div className="grid gap-2 md:grid-cols-2">
                     {(training.checklist ?? []).map((item) => (
@@ -283,12 +283,12 @@ export default function SellerPdiPage() {
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-2">
-                  <TrainingBlock icon={Target} title="Aplicacao real" body={training.real_case_application} />
-                  <TrainingBlock icon={CheckCircle2} title="Criterio de validacao" body={training.validation_criteria} />
+                  <TrainingBlock icon={Target} title="Aplicação real" body={training.real_case_application} />
+                  <TrainingBlock icon={CheckCircle2} title="Critério de validação" body={training.validation_criteria} />
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Este plano ainda nao tem treinamento detalhado gerado pela IA.</p>
+              <p className="text-sm text-muted-foreground">Este plano ainda não tem treinamento detalhado gerado pela IA.</p>
             )}
 
             {activePlan.items?.length ? (
@@ -313,7 +313,7 @@ export default function SellerPdiPage() {
 
       {activePlan && (
         <Card>
-          <CardHeader><CardTitle>Missoes praticas vinculadas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Missões práticas vinculadas</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {linkedMissions.length ? linkedMissions.map((mission) => (
               <div key={mission.id} className="rounded-lg border border-border/60 p-3">
@@ -321,7 +321,7 @@ export default function SellerPdiPage() {
                   <div>
                     <p className="font-medium">{mission.title}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Esta missao transforma o PDI em aplicacao pratica. Concluir a missao nao conclui o PDI automaticamente quando houver validacao humana; envie evidencia para o gestor validar sua evolucao.
+                      Esta missão transforma o PDI em aplicação prática. Concluir a missão não conclui o PDI automaticamente quando houver validação humana; envie evidência para o gestor validar sua evolução.
                     </p>
                   </div>
                   <Badge variant="outline">{mission.status}</Badge>
@@ -334,19 +334,19 @@ export default function SellerPdiPage() {
               </div>
             )) : (
               <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
-                Este PDI ainda nao tem missao pratica vinculada. O gestor pode criar uma missao relacionada para forcar a aplicacao em oportunidades reais.
+                Este PDI ainda não tem missão prática vinculada. O gestor pode criar uma missão relacionada para forcar a aplicação em oportunidades reais.
               </div>
             )}
             <Button variant="outline" size="sm" render={<Link href="/performance/missoes" />}>
               <Swords className="h-4 w-4" />
-              Ver missoes ativas
+              Ver missões ativas
             </Button>
           </CardContent>
         </Card>
       )}
 
-      <Card id="aplicacao-real">
-        <CardHeader><CardTitle>Aplicacao real</CardTitle></CardHeader>
+      <Card id="aplicação-real">
+        <CardHeader><CardTitle>Aplicação real</CardTitle></CardHeader>
         <CardContent>
           <form className="grid gap-4 md:grid-cols-[240px_1fr]" onSubmit={submitApplication}>
             <div className="space-y-2">
@@ -361,7 +361,7 @@ export default function SellerPdiPage() {
                 <option value="">Sem oportunidade vinculada</option>
                 {deals.map((deal) => (
                   <option key={deal.id} value={deal.id}>
-                    {deal.title} | {deal.account?.name ?? 'Sem conta'} | {deal.stage} | {Number(deal.value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })} | {deal.next_action_title ?? 'sem proxima acao'}
+                    {deal.title} | {deal.account?.name ?? 'Sem conta'} | {deal.stage} | {Number(deal.value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })} | {deal.next_action_title ?? 'sem próxima ação'}
                   </option>
                 ))}
               </select>
@@ -376,13 +376,13 @@ export default function SellerPdiPage() {
               </select>
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="evidence">Evidencia aplicada</Label>
-              <Textarea id="evidence" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Descreva o que treinou, deal ou cliente usado, resposta do cliente, proximo passo criado e resultado preliminar." />
+              <Label htmlFor="evidence">Evidência aplicada</Label>
+              <Textarea id="evidence" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Descreva o que treinou, oportunidade ou cliente usado, resposta do cliente, próximo passo criado e resultado preliminar." />
             </div>
             <div className="md:col-span-2">
               <Button disabled={!activePlan || !description.trim() || saving}>
                 <Sparkles className="h-4 w-4" />
-                {saving ? 'Registrando...' : 'Registrar aplicacao'}
+                {saving ? 'Registrando...' : 'Registrar aplicação'}
               </Button>
             </div>
           </form>
@@ -390,19 +390,19 @@ export default function SellerPdiPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Historico de aplicacoes</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Histórico de aplicacoes</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {applications.length ? applications.map((item) => (
             <PdiApplicationCard
               key={item.id}
-              title={item.plan?.title || item.deal?.title || 'Aplicacao de PDI'}
+              title={item.plan?.title || item.deal?.title || 'Aplicação de PDI'}
               description={item.description}
               status={item.status}
               accountName={item.account?.name ?? null}
             />
           )) : (
             <div className="rounded-lg border border-border/60 p-4 text-sm text-muted-foreground">
-              Nenhuma aplicacao ainda. Abra um deal em <Link className="text-primary underline-offset-4 hover:underline" href="/crm">Vender</Link> e traga evidencia para ca.
+              Nenhuma aplicação ainda. Abra uma oportunidade em <Link className="text-primary underline-offset-4 hover:underline" href="/crm">Vender</Link> e traga evidência para ca.
             </div>
           )}
         </CardContent>

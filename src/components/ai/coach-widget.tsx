@@ -83,7 +83,7 @@ export function CoachWidget() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-primary">Coach VAMO IA</span>
+              <span className="text-xs font-medium text-primary">Mentoria VAMO IA</span>
               {tip?.category && (
                 <span className={`text-xs ${categoryColors[tip.category] ?? 'text-muted-foreground'}`}>
                   {categoryLabels[tip.category] ?? tip.category}

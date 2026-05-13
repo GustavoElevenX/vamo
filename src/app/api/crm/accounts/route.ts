@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   let query = adminClient
     .from('crm_accounts')
-    .select('*, deals:crm_deals(id,value,stage)')
+    .select('*, oportunidades:crm_deals(id,value,stage)')
     .eq('organization_id', appUser.organization_id)
     .order('name')
   if (q) query = query.ilike('name', `%${q}%`)
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const { adminClient, appUser } = auth
   const input = await request.json()
   const name = String(input.name ?? '').trim()
-  if (!name) return NextResponse.json({ error: 'Nome e obrigatorio' }, { status: 400 })
+  if (!name) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
 
   const { data, error } = await adminClient
     .from('crm_accounts')

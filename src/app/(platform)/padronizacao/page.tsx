@@ -76,7 +76,7 @@ export default function PadronizacaoPage() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <BookOpen className="mb-4 h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground">Nenhum playbook cadastrado.</p>
+                <p className="text-muted-foreground">Nenhum roteiro cadastrado.</p>
               </CardContent>
             </Card>
           ) : (
@@ -94,7 +94,7 @@ export default function PadronizacaoPage() {
                       {pb.content.slice(0, 120)}...
                     </p>
                     <Button variant="outline" size="sm" className="mt-3" render={<Link href={`/padronizacao/${pb.id}`} />}>
-                      Ler Playbook
+                      Ler roteiro
                     </Button>
                   </CardContent>
                 </Card>

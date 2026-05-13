@@ -138,7 +138,7 @@ type CockpitData = {
 }
 
 const severityLabel: Record<Severity, string> = {
-  critical: 'Critico',
+  critical: 'Crítico',
   high: 'Alto',
   medium: 'Atencao',
   opportunity: 'Oportunidade',
@@ -334,7 +334,7 @@ export default function HojeGestorPage() {
       <Card>
         <CardContent className="py-8 text-center">
           <AlertTriangle className="mx-auto h-8 w-8 text-destructive" />
-          <p className="mt-3 text-sm text-muted-foreground">{error || 'Nao foi possivel montar o painel de comando.'}</p>
+          <p className="mt-3 text-sm text-muted-foreground">{error || 'Não foi possível montar o painel de comando.'}</p>
         </CardContent>
       </Card>
     )
@@ -373,7 +373,7 @@ export default function HojeGestorPage() {
                 <p className="mt-1 text-sm font-semibold">{data.briefing.principalRisk}</p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/70 p-3">
-                <p className="text-xs font-medium uppercase text-muted-foreground">Acao recomendada</p>
+                <p className="text-xs font-medium uppercase text-muted-foreground">Ação recomendada</p>
                 <p className="mt-1 text-sm font-semibold">{data.briefing.principalAction}</p>
               </div>
             </div>
@@ -403,7 +403,7 @@ export default function HojeGestorPage() {
               <div className="space-y-3">
                 <Badge variant="outline" className={severityClass[data.topDecision.severity]}>
                   <Target className="h-3 w-3" />
-                  Decisao no 1 do gestor
+                  Decisão no 1 do gestor
                 </Badge>
                 <div>
                   <h2 className="text-xl font-bold leading-tight">{data.topDecision.title}</h2>
@@ -424,7 +424,7 @@ export default function HojeGestorPage() {
       ) : (
         <Card>
           <CardContent className="py-6 text-center text-sm text-muted-foreground">
-            Sem decisao prioritaria gerada porque a conta ainda nao tem sinais reais suficientes para esse bloco.
+            Sem decisão prioritaria gerada porque a conta ainda não tem sinais reais suficientes para esse bloco.
           </CardContent>
         </Card>
       )}
@@ -454,7 +454,7 @@ export default function HojeGestorPage() {
           <CardContent className="space-y-3">
             {data.teamMap.recognition.length ? data.teamMap.recognition.map((member) => (
               <TeamRow key={member.id} member={member} mode="recognition" />
-            )) : <p className="text-sm text-muted-foreground">Sem sinal real de reconhecimento priorizado ate agora.</p>}
+            )) : <p className="text-sm text-muted-foreground">Sem sinal real de reconhecimento priorizado até agora.</p>}
           </CardContent>
         </Card>
 
@@ -491,11 +491,11 @@ export default function HojeGestorPage() {
                   </p>
                 </div>
                 <Button size="sm" variant="outline" render={<Link href={deal.href} />}>
-                  Ver deal
+                  Ver oportunidade
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
-            )) : <p className="text-sm text-muted-foreground">Nenhum deal aberto aparece como critico pelos sinais atuais.</p>}
+            )) : <p className="text-sm text-muted-foreground">Nenhuma oportunidade aberto aparece como critico pelos sinais atuais.</p>}
           </CardContent>
         </Card>
 
@@ -550,10 +550,10 @@ export default function HojeGestorPage() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                {data.commission.disputes} contestacoes e {data.commission.pendingEntries} lancamentos pendentes no periodo.
+                {data.commission.disputes} contestacoes e {data.commission.pendingEntries} lancamentos pendentes no período.
               </p>
               <Button variant="outline" render={<Link href={data.commission.href} />}>
-                Revisar comissoes
+                Revisar comissões
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </CardContent>
@@ -565,14 +565,14 @@ export default function HojeGestorPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Zap className="h-4 w-4 text-primary" />
-            Fila de acoes recomendadas
+            Fila de ações recomendadas
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.actionQueue.length ? data.actionQueue.map((item) => (
             <QueueCard key={item.id} item={item} />
           )) : (
-            <p className="text-sm text-muted-foreground">Sem fila acionavel agora. Novos alertas, KPIs, deals e comissoes alimentam esta lista automaticamente.</p>
+            <p className="text-sm text-muted-foreground">Sem fila acionável agora. Novos alertas, KPIs, oportunidades e comissões alimentam esta lista automaticamente.</p>
           )}
         </CardContent>
       </Card>
@@ -591,7 +591,7 @@ export default function HojeGestorPage() {
           <CardContent className="flex items-start gap-3 py-4">
             <MessageSquareText className="mt-0.5 h-4 w-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              A conta tem {data.dataHealth.sellers} vendedor{data.dataHealth.sellers === 1 ? '' : 'es'}, mas ainda nao ha deals, KPIs, recomendacoes ou alertas reais suficientes para uma decisao automatica.
+              A conta tem {data.dataHealth.sellers} vendedor{data.dataHealth.sellers === 1 ? '' : 'es'}, mas ainda não há oportunidades, KPIs, recomendações ou alertas reais suficientes para uma decisão automatica.
             </p>
           </CardContent>
         </Card>

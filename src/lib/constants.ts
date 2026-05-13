@@ -1,5 +1,5 @@
 export const APP_NAME = 'Vamo'
-export const APP_DESCRIPTION = 'Plataforma de Performance Comercial'
+export const APP_DESCRIPTION = 'Plataforma de Desempenho Comercial'
 
 export const ROLES = {
   ADMIN: 'admin',
@@ -18,14 +18,14 @@ export const ROLE_LABELS: Record<string, string> = {
 }
 
 export const DIAGNOSTIC_AREAS = {
-  lead_generation: 'Geração de Leads',
+  lead_generation: 'Geração de potenciais clientes',
   sales_process: 'Processo de Vendas',
   team_management: 'Gestão de Equipe',
   tools_technology: 'Ferramentas e Tecnologia',
 } as const
 
 export const DIAGNOSTIC_QUADRANTS = {
-  critical: { label: 'Critico', color: '#ef4444', min: 0, max: 25 },
+  critical: { label: 'Crítico', color: '#ef4444', min: 0, max: 25 },
   at_risk: { label: 'Em Risco', color: '#f59e0b', min: 25, max: 50 },
   developing: { label: 'Em Desenvolvimento', color: '#3b82f6', min: 50, max: 75 },
   optimized: { label: 'Otimizado', color: '#22c55e', min: 75, max: 100 },
@@ -42,9 +42,9 @@ export const DEFAULT_XP_LEVELS = [
   { level: 1, name: 'Recruta', xp_required: 0 },
   { level: 2, name: 'Prospector', xp_required: 500 },
   { level: 3, name: 'Negociador', xp_required: 1500 },
-  { level: 4, name: 'Hunter', xp_required: 3000 },
-  { level: 5, name: 'Closer', xp_required: 5500 },
-  { level: 6, name: 'Elite', xp_required: 9000 },
+  { level: 4, name: 'Caçador', xp_required: 3000 },
+  { level: 5, name: 'Fechador', xp_required: 5500 },
+  { level: 6, name: 'Especialista', xp_required: 9000 },
   { level: 7, name: 'Campeao', xp_required: 14000 },
   { level: 8, name: 'Lenda', xp_required: 21000 },
 ] as const
@@ -77,7 +77,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       key: 'crm',
       label: 'CRM',
       items: [
-        { label: 'Pipeline', href: '/crm', icon: 'Filter' },
+        { label: 'Funil', href: '/crm', icon: 'Filter' },
         { label: 'Clientes', href: '/crm/clientes', icon: 'Users' },
       ],
     },
@@ -85,10 +85,10 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       key: 'equipe',
       label: 'Minha Equipe',
       items: [
-        { label: 'Performance', href: '/monitoramento/equipe', icon: 'BarChart3' },
-        { label: 'Saude da Equipe', href: '/monitoramento/saude-equipe', icon: 'HeartPulse' },
+        { label: 'Desempenho', href: '/monitoramento/equipe', icon: 'BarChart3' },
+        { label: 'Saúde da Equipe', href: '/monitoramento/saude-equipe', icon: 'HeartPulse' },
         { label: 'Desenvolvimento da Equipe', href: '/monitoramento/desenvolvimento', icon: 'ClipboardCheck' },
-        { label: 'Missoes da Equipe', href: '/monitoramento/missoes', icon: 'Swords' },
+        { label: 'Missões da Equipe', href: '/monitoramento/missoes', icon: 'Swords' },
         { label: 'Alertas', href: '/monitoramento/alertas', icon: 'Zap', badge: 'alert' },
       ],
     },
@@ -114,7 +114,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       items: [
         { label: 'Empresa e Plano', href: '/configuracoes/empresa', icon: 'Building2' },
         { label: 'Notificações', href: '/configuracoes/notificacoes', icon: 'Bell' },
-        { label: 'Diagnostico', href: '/diagnostico', icon: 'Search' },
+        { label: 'Diagnóstico', href: '/diagnostico', icon: 'Search' },
         { label: 'Objetivos e Metas', href: '/objetivos/metas', icon: 'Target' },
         { label: 'Comissionamento', href: '/configuracao/comissionamento', icon: 'DollarSign' },
         { label: 'Programa', href: '/configuracoes/kpis', icon: 'Settings' },
@@ -134,9 +134,9 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       key: 'vender',
       label: 'Vender',
       items: [
-        { label: 'Pipeline de ações', href: '/crm', icon: 'Filter' },
+        { label: 'Funil de ações', href: '/crm', icon: 'Filter' },
         { label: 'Clientes', href: '/crm/clientes', icon: 'Users' },
-        { label: 'Registrar acao', href: '/kpis/registrar', icon: 'BarChart3' },
+        { label: 'Registrar ação', href: '/kpis/registrar', icon: 'BarChart3' },
       ],
     },
     {
@@ -154,7 +154,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
         { label: 'Converse com Vamo IA', href: '/chat-ia', icon: 'MessageSquare' },
         { label: 'Meu PDI', href: '/desenvolvimento/pdi', icon: 'ClipboardCheck' },
         { label: 'Simulador de proposta', href: '/simulador', icon: 'Swords' },
-        { label: 'Performance', href: '/performance', icon: 'LayoutDashboard' },
+        { label: 'Desempenho', href: '/performance', icon: 'LayoutDashboard' },
         { label: 'Indicadores', href: '/performance/indicadores', icon: 'BarChart3' },
         { label: 'Missões ativas', href: '/performance/missoes', icon: 'CheckSquare' },
         { label: 'Minhas metas', href: '/minhas-metas', icon: 'Target' },
@@ -164,7 +164,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       key: 'reconhecimento',
       label: 'Reconhecimento',
       items: [
-        { label: 'Feed de reconhecimento', href: '/feed', icon: 'Megaphone' },
+        { label: 'Mural de reconhecimento', href: '/feed', icon: 'Megaphone' },
         { label: 'Conquistas e pontos', href: '/desenvolvimento/conquistas', icon: 'Medal' },
         { label: 'Loja de recompensas', href: '/desenvolvimento/loja', icon: 'ShoppingBag' },
       ],
@@ -187,11 +187,11 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       key: 'admin',
       label: 'Administração',
       items: [
-        { label: 'Dashboard', href: '/admin', icon: 'LayoutDashboard' },
+        { label: 'Painel', href: '/admin', icon: 'LayoutDashboard' },
         { label: 'Clientes', href: '/admin/clientes', icon: 'Building2' },
-        { label: 'Diagnosticos', href: '/admin/diagnosticos', icon: 'ClipboardCheck' },
-        { label: 'Templates', href: '/admin/templates', icon: 'FileText' },
-        { label: 'Analytics', href: '/admin/analytics', icon: 'BarChart3' },
+        { label: 'Diagnósticos', href: '/admin/diagnosticos', icon: 'ClipboardCheck' },
+        { label: 'Modelos', href: '/admin/templates', icon: 'FileText' },
+        { label: 'Análises', href: '/admin/analytics', icon: 'BarChart3' },
       ],
     },
   ],
@@ -210,7 +210,7 @@ export const NAV_CONFIG: Record<string, NavGroup[]> = {
       items: [
         { label: 'Meus Clientes', href: '/consultor/clientes', icon: 'Building2' },
         { label: 'Ações Pendentes', href: '/consultor/acoes', icon: 'ClipboardList' },
-        { label: 'Saude da Carteira', href: '/consultor/saude-carteira', icon: 'HeartPulse' },
+        { label: 'Saúde da Carteira', href: '/consultor/saude-carteira', icon: 'HeartPulse' },
         { label: 'Impacto Consolidado', href: '/consultor/impacto', icon: 'TrendingUp' },
       ],
     },

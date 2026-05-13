@@ -142,8 +142,8 @@ const ACTIVITY_LABELS: Record<string, string> = {
   crm_activity_whatsapp: 'WhatsApps',
   email: 'E-mails',
   crm_activity_email: 'E-mails',
-  follow_up: 'Follow-ups',
-  crm_activity_follow_up: 'Follow-ups',
+  follow_up: 'retornos',
+  crm_activity_follow_up: 'retornos',
   meeting: 'Reunioes',
   crm_activity_meeting: 'Reunioes',
   proposal: 'Propostas',
@@ -152,7 +152,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 }
 
 const FALLBACK_ACTIVITY_TARGETS: Array<{ type: string; label: string; target: number }> = [
-  { type: 'follow_up', label: 'Follow-ups', target: 25 },
+  { type: 'follow_up', label: 'retornos', target: 25 },
   { type: 'call', label: 'Ligacoes', target: 20 },
   { type: 'meeting', label: 'Reunioes', target: 5 },
   { type: 'proposal', label: 'Propostas', target: 6 },
@@ -249,7 +249,7 @@ function buildSaleInput(deal: DealRow, user: { id: string; name: string; organiz
     category_id: deal.category_id ?? deal.category_name ?? null,
     category_name: deal.category_name ?? 'Sem categoria',
     commercial_table_id: deal.commercial_table_id ?? deal.commercial_table_name ?? null,
-    commercial_table_name: deal.commercial_table_name ?? 'Tabela padrao',
+    commercial_table_name: deal.commercial_table_name ?? 'Tabela padrão',
     sale_amount: toNumber(deal.value),
     received_amount: toNumber(deal.received_amount),
     sale_date: deal.expected_close ?? deal.updated_at ?? new Date().toISOString(),
@@ -260,56 +260,56 @@ function buildSaleInput(deal: DealRow, user: { id: string; name: string; organiz
 function getPerformanceStatus(scores: { result: number; execution: number; pipeline: number; evolution: number }) {
   if (scores.result >= 80 && scores.execution >= 75 && scores.pipeline >= 70) {
     return {
-      label: 'Alta Performance',
-      description: 'Voce esta perto da meta, executando bem e mantendo o pipeline saudavel.',
+      label: 'Alta Desempenho',
+      description: 'Você esta perto da meta, executando bem e mantendo o funil saudavel.',
       tone: 'green' as const,
     }
   }
   if (scores.pipeline < 55) {
     return {
-      label: 'Atencao no pipeline',
-      description: 'Existem oportunidades abertas sem proximo passo, atrasadas ou paradas demais.',
+      label: 'Atencao no funil',
+      description: 'Existem oportunidades abertas sem próximo passo, atrasadas ou paradas demais.',
       tone: 'amber' as const,
     }
   }
   if (scores.execution < 50) {
     return {
-      label: 'Baixa execucao',
-      description: 'Sua atividade comercial esta abaixo do ritmo necessario para sustentar a meta.',
+      label: 'Baixa execução',
+      description: 'Sua atividade comercial esta abaixo do ritmo necessário para sustentar a meta.',
       tone: 'red' as const,
     }
   }
   if (scores.execution >= 70 && scores.result < 55) {
     return {
-      label: 'Executa, mas nao converte',
-      description: 'Voce esta se movimentando, mas precisa melhorar qualificacao, proposta ou fechamento.',
+      label: 'Executa, mas não converte',
+      description: 'Você esta se movimentando, mas precisa melhorar qualificacao, proposta ou fechamento.',
       tone: 'amber' as const,
     }
   }
   return {
-    label: 'Em evolucao',
-    description: 'Voce tem boa execucao, mas ainda ha alavancas claras para melhorar resultado e previsibilidade.',
+    label: 'Em evolução',
+    description: 'Você tem boa execução, mas ainda há alavancas claras para melhorar resultado e previsibilidade.',
     tone: 'blue' as const,
   }
 }
 
 function statusMessage(scores: { result: number; execution: number; pipeline: number; evolution: number }, potentialCommission: number, activePdi: PdiPlanRow | null) {
   if (scores.execution >= 70 && scores.result < 55) {
-    return 'Voce esta executando bem, mas sua conversao ainda esta baixa. Foque nas oportunidades mais qualificadas e revise a abordagem de fechamento.'
+    return 'Você esta executando bem, mas sua conversão ainda esta baixa. Foque nas oportunidades mais qualificadas e revise a abordagem de fechamento.'
   }
   if (scores.result >= 70 && scores.pipeline < 60) {
-    return 'Voce vendeu bem, mas seu pipeline esta com risco. Sem proximos passos claros, a meta dos proximos dias pode cair.'
+    return 'Você vendeu bem, mas seu funil esta com risco. Sem próximos passos claros, a meta dos próximos dias pode cair.'
   }
   if (scores.pipeline < 55) {
-    return 'Existem oportunidades com valor relevante sem proxima acao. Destravar pipeline vem antes de buscar novos leads.'
+    return 'Existem oportunidades com valor relevante sem próxima ação. Destravar funil vem antes de buscar novos potenciais clientes.'
   }
   if (potentialCommission > 0) {
-    return 'Voce tem comissao parada no pipeline. Avancar oportunidades em negociacao pode aumentar seu ganho do mes.'
+    return 'Você tem comissão parada no funil. Avancar oportunidades em negociacao pode aumentar seu ganho do mes.'
   }
   if (activePdi) {
-    return 'Seu PDI atual pode melhorar sua conversao, mas precisa ser aplicado em uma situacao real de venda.'
+    return 'Seu PDI atual pode melhorar sua conversão, mas precisa ser aplicado em uma situação real de venda.'
   }
-  return 'Sua performance combina resultado, execucao, pipeline e evolucao. Use a acao de maior impacto para melhorar o placar hoje.'
+  return 'Sua desempenho combina resultado, execução, funil e evolução. Use a ação de maior impacto para melhorar o placar hoje.'
 }
 
 function PillarCard({ label, value, weight, icon: Icon }: { label: string; value: number; weight: string; icon: LucideIcon }) {
@@ -620,7 +620,7 @@ export default function PerformancePage() {
       const reason = isOverdue(deal)
         ? `Follow-up atrasado em ${dealName(deal)}.`
         : !deal.next_action_title
-          ? `${dealName(deal)} esta sem proximo passo definido.`
+          ? `${dealName(deal)} esta sem próximo passo definido.`
           : `${dealName(deal)} esta ${days !== null ? `ha ${days} dias` : ''} sem movimento relevante.`
       return {
         title: `Retomar contato com ${dealName(deal)}`,
@@ -628,10 +628,10 @@ export default function PerformancePage() {
         impact: goalTarget > 0
           ? `Pode destravar ${impactPct}% da sua meta mensal.`
           : `Pode destravar ${formatCurrency(weightedDealValue(deal))} de forecast ponderado.`,
-        nextStep: deal.next_action_title || 'Enviar follow-up com pergunta de decisao.',
+        nextStep: deal.next_action_title || 'Enviar retorno com pergunta de decisão.',
         primaryLabel: 'Abrir oportunidade',
         primaryHref: `/crm/${deal.id}`,
-        secondaryLabel: 'Registrar follow-up',
+        secondaryLabel: 'Registrar retorno',
         secondaryHref: `/kpis/registrar?dealId=${encodeURIComponent(deal.id)}&action=crm_activity_follow_up`,
         aiHref: '/chat-ia',
         tone: isOverdue(deal) ? 'red' : 'amber',
@@ -642,12 +642,12 @@ export default function PerformancePage() {
     if (mission) {
       return {
         title: mission.title,
-        reason: 'Missao ativa pode melhorar sua evolucao comercial e gerar XP.',
+        reason: 'Missão ativa pode melhorar sua evolução comercial e gerar XP.',
         impact: `${mission.xp_reward ?? 0} XP de recompensa vinculada a execucao.`,
-        nextStep: 'Abra a missao, registre a acao e solicite validacao quando concluir.',
-        primaryLabel: 'Abrir missao',
+        nextStep: 'Abra a missão, registre a ação e solicite validação quando concluir.',
+        primaryLabel: 'Abrir missão',
         primaryHref: '/performance/missoes',
-        secondaryLabel: 'Registrar evidencia',
+        secondaryLabel: 'Registrar evidência',
         secondaryHref: '/desenvolvimento/pdi',
         aiHref: '/chat-ia',
         tone: 'green',
@@ -655,13 +655,13 @@ export default function PerformancePage() {
     }
 
     return {
-      title: 'Registrar uma acao comercial agora',
-      reason: 'Ainda nao existe uma oportunidade critica priorizada pela Vamo.',
-      impact: 'Aumenta seu ritmo de execucao e melhora a leitura da performance.',
-      nextStep: 'Registre follow-up, ligacao, reuniao ou proposta enviada.',
-      primaryLabel: 'Registrar acao',
+      title: 'Registrar uma ação comercial agora',
+      reason: 'Ainda não existe uma oportunidade critica priorizada pela Vamo.',
+      impact: 'Aumenta seu ritmo de execução e melhora a leitura da desempenho.',
+      nextStep: 'Registre retorno, ligacao, reuniao ou proposta enviada.',
+      primaryLabel: 'Registrar ação',
       primaryHref: '/kpis/registrar',
-      secondaryLabel: 'Ver pipeline',
+      secondaryLabel: 'Ver funil',
       secondaryHref: '/crm',
       aiHref: '/chat-ia',
       tone: 'green',
@@ -685,9 +685,9 @@ export default function PerformancePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        label="Performance"
-        title={<>Minha <TitleHighlight>Performance Comercial</TitleHighlight></>}
-        description="Performance combina resultado, execucao, saude do pipeline e evolucao comercial para interpretar onde agir agora."
+        label="Desempenho"
+        title={<>Minha <TitleHighlight>Desempenho Comercial</TitleHighlight></>}
+        description="Desempenho combina resultado, execução, saúde do funil e evolução comercial para interpretar onde agir agora."
         actions={(
           <Badge className={statusTone}>{performanceStatus.label}</Badge>
         )}
@@ -720,8 +720,8 @@ export default function PerformancePage() {
 
               <div className="space-y-4">
                 <div>
-                  <div className="section-label"><Brain className="h-3.5 w-3.5" />Score de Performance</div>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight">Performance Geral</h2>
+                  <div className="section-label"><Brain className="h-3.5 w-3.5" />Score de Desempenho</div>
+                  <h2 className="mt-2 text-2xl font-black tracking-tight">Desempenho Geral</h2>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                     {performanceStatus.description}
                   </p>
@@ -747,14 +747,14 @@ export default function PerformancePage() {
                 {formatCurrency(monthlyRevenue)} {goalTarget > 0 && <span className="text-muted-foreground">/ {formatCurrency(goalTarget)}</span>}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {goalTarget > 0 ? `${goalProgress}% concluido. Faltam ${formatCurrency(remainingGoal)} para bater a meta.` : 'Meta financeira do mes ainda nao configurada.'}
+                {goalTarget > 0 ? `${goalProgress}% concluido. Faltam ${formatCurrency(remainingGoal)} para bater a meta.` : 'Meta financeira do mes ainda não configurada.'}
               </p>
             </div>
             <Progress value={goalProgress} className="h-3" />
             <div className="grid gap-3 text-sm">
-              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Forecast provavel</span><strong>{formatCurrency(forecastLikely)}</strong></div>
-              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Forecast em risco</span><strong>{formatCurrency(forecastRisk)}</strong></div>
-              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Necessario por semana</span><strong>{goalTarget > 0 ? formatCurrency(neededPerWeek) : '-'}</strong></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Previsão provavel</span><strong>{formatCurrency(forecastLikely)}</strong></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Previsão em risco</span><strong>{formatCurrency(forecastRisk)}</strong></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Necessário por semana</span><strong>{goalTarget > 0 ? formatCurrency(neededPerWeek) : '-'}</strong></div>
             </div>
             {Boolean(individualGoal?.goal) && (
               <p className="rounded-lg bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">{String(individualGoal?.goal)}</p>
@@ -765,20 +765,20 @@ export default function PerformancePage() {
 
       <div className="grid gap-3 md:grid-cols-4">
         <PillarCard label="Resultado" value={scores.result} weight="35%" icon={Trophy} />
-        <PillarCard label="Execucao" value={scores.execution} weight="30%" icon={ListChecks} />
-        <PillarCard label="Pipeline" value={scores.pipeline} weight="20%" icon={LineChart} />
-        <PillarCard label="Evolucao" value={scores.evolution} weight="15%" icon={Rocket} />
+        <PillarCard label="Execução" value={scores.execution} weight="30%" icon={ListChecks} />
+        <PillarCard label="Funil" value={scores.pipeline} weight="20%" icon={LineChart} />
+        <PillarCard label="Evolução" value={scores.evolution} weight="15%" icon={Rocket} />
       </div>
 
       <Card className="border-amber-500/25 bg-amber-500/10">
         <CardContent className="p-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="space-y-2">
-              <div className="section-label"><AlertTriangle className="h-3.5 w-3.5" />Acao de maior impacto hoje</div>
+              <div className="section-label"><AlertTriangle className="h-3.5 w-3.5" />Ação de maior impacto hoje</div>
               <h2 className="text-xl font-black tracking-tight">{topImpactAction.title}</h2>
               <p className="text-sm text-muted-foreground"><strong className="text-foreground">Motivo:</strong> {topImpactAction.reason}</p>
               <p className="text-sm text-muted-foreground"><strong className="text-foreground">Impacto:</strong> {topImpactAction.impact}</p>
-              <p className="text-sm text-muted-foreground"><strong className="text-foreground">Proximo passo sugerido:</strong> {topImpactAction.nextStep}</p>
+              <p className="text-sm text-muted-foreground"><strong className="text-foreground">Próximo passo sugerido:</strong> {topImpactAction.nextStep}</p>
             </div>
             <div className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
               <Button render={<Link href={topImpactAction.primaryHref} />}>
@@ -803,17 +803,17 @@ export default function PerformancePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <ListChecks className="h-4 w-4 text-primary" />
-              Execucao da semana
+              Execução da semana
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {executionItems.length > 0 ? executionItems.map((item) => <MetricLine key={item.label} item={item} />) : (
-              <EmptyHint>Registre acoes comerciais para a Vamo interpretar sua execucao semanal.</EmptyHint>
+              <EmptyHint>Registre ações comerciais para a Vamo interpretar sua execução semanal.</EmptyHint>
             )}
             <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-sm text-muted-foreground">
               {scores.execution >= 75
-                ? 'Sua execucao esta em bom ritmo. O proximo ganho vem de converter melhor as oportunidades abertas.'
-                : 'Sua execucao ainda esta abaixo do necessario. Priorize as atividades com menor progresso nesta semana.'}
+                ? 'Sua execução esta em bom ritmo. O próximo ganho vem de converter melhor as oportunidades abertas.'
+                : 'Sua execução ainda esta abaixo do necessário. Priorize as atividades com menor progresso nesta semana.'}
             </div>
           </CardContent>
         </Card>
@@ -822,7 +822,7 @@ export default function PerformancePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <ShieldAlert className="h-4 w-4 text-amber-500" />
-              Saude do pipeline
+              Saúde do funil
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -836,17 +836,17 @@ export default function PerformancePage() {
               </Badge>
             </div>
             <div className="grid gap-2 text-sm">
-              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Sem proxima acao</span><strong>{missingActionDeals.length}</strong></div>
-              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Follow-ups atrasados</span><strong>{overdueDeals.length}</strong></div>
-              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Forecast parado</span><strong>{formatCurrency(forecastRisk)}</strong></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Sem próxima ação</span><strong>{missingActionDeals.length}</strong></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">retornos atrasados</span><strong>{overdueDeals.length}</strong></div>
+              <div className="flex justify-between gap-3"><span className="text-muted-foreground">Previsão parado</span><strong>{formatCurrency(forecastRisk)}</strong></div>
               <div className="flex justify-between gap-3"><span className="text-muted-foreground">Dias sem mover proposta principal</span><strong>{maxStaleProposalDays}</strong></div>
             </div>
             {(missingActionDeals.length > 0 || overdueDeals.length > 0) && (
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-muted-foreground">
-                Atencao: {missingActionDeals.length + overdueDeals.length} oportunidades precisam de proximo passo para o pipeline voltar a respirar.
+                Atencao: {missingActionDeals.length + overdueDeals.length} oportunidades precisam de próximo passo para o funil voltar a respirar.
               </div>
             )}
-            <Button variant="outline" className="w-full" render={<Link href="/hoje" />}>Ver acoes prioritarias</Button>
+            <Button variant="outline" className="w-full" render={<Link href="/hoje" />}>Ver ações prioritarias</Button>
           </CardContent>
         </Card>
       </div>
@@ -856,7 +856,7 @@ export default function PerformancePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <DollarSign className="h-4 w-4 text-emerald-500" />
-              Comissao potencial
+              Comissão potencial
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -875,9 +875,9 @@ export default function PerformancePage() {
               </div>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {openDeals.length} oportunidades abertas podem gerar {formatCurrency(commissionSummary.salesPotential)} em vendas e {formatCurrency(commissionSummary.potential)} em comissao estimada. Potencial nao e valor garantido.
+              {openDeals.length} oportunidades abertas podem gerar {formatCurrency(commissionSummary.salesPotential)} em vendas e {formatCurrency(commissionSummary.potential)} em comissão estimada. Potencial não e valor garantido.
             </p>
-            <Button variant="outline" className="w-full" render={<Link href="/ganhos/comissao" />}>Ver detalhes da comissao</Button>
+            <Button variant="outline" className="w-full" render={<Link href="/ganhos/comissao" />}>Ver detalhes da comissão</Button>
           </CardContent>
         </Card>
 
@@ -885,21 +885,21 @@ export default function PerformancePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <BadgeCheck className="h-4 w-4 text-primary" />
-              Missoes e PDI
+              Missões e PDI
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg border border-border/60 p-3">
-                <p className="text-xs text-muted-foreground">Missoes ativas</p>
+                <p className="text-xs text-muted-foreground">Missões ativas</p>
                 <p className="mt-1 text-2xl font-black">{activeMissions.length}</p>
               </div>
               <div className="rounded-lg border border-border/60 p-3">
-                <p className="text-xs text-muted-foreground">Concluidas no mes</p>
+                <p className="text-xs text-muted-foreground">Concluídas no mes</p>
                 <p className="mt-1 text-2xl font-black">{completedMissions.length}</p>
               </div>
               <div className="rounded-lg border border-border/60 p-3">
-                <p className="text-xs text-muted-foreground">Evidencias aprovadas</p>
+                <p className="text-xs text-muted-foreground">Evidências aprovadas</p>
                 <p className="mt-1 text-2xl font-black">{approvedApplications}</p>
               </div>
             </div>
@@ -907,13 +907,13 @@ export default function PerformancePage() {
               {activePdi
                 ? `Voce esta evoluindo em ${activePdi.title}. Aplique o treino em uma oportunidade real e envie evidencia.`
                 : activeMissions.length > 0
-                  ? 'Suas missoes ativas sustentam a evolucao pratica. Conclua, registre a evidencia e peca validacao.'
-                  : 'Sem PDI ativo agora. Quando o gestor liberar um plano, ele aparece aqui junto das missoes praticas.'}
+                  ? 'Suas missões ativas sustentam a evolução prática. Conclua, registre a evidência e peca validação.'
+                  : 'Sem PDI ativo agora. Quando o gestor liberar um plano, ele aparece aqui junto das missões práticas.'}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" render={<Link href="/performance/missoes" />}>Ver missoes</Button>
+              <Button variant="outline" render={<Link href="/performance/missoes" />}>Ver missões</Button>
               <Button variant="outline" render={<Link href="/desenvolvimento/pdi" />}>Abrir PDI</Button>
-              <Button render={<Link href="/desenvolvimento/pdi" />}>Enviar evidencia</Button>
+              <Button render={<Link href="/desenvolvimento/pdi" />}>Enviar evidência</Button>
             </div>
           </CardContent>
         </Card>
@@ -923,7 +923,7 @@ export default function PerformancePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <TrendingUp className="h-4 w-4 text-primary" />
-            Historico de evolucao
+            Histórico de evolução
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-4">

@@ -143,12 +143,12 @@ export default function ConfigGamificacaoPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Configurar Gamificação</h2>
-        <p className="text-muted-foreground">Badges, recompensas e desafios</p>
+        <p className="text-muted-foreground">Selos, recompensas e desafios</p>
       </div>
 
       <Tabs defaultValue="badges">
         <TabsList>
-          <TabsTrigger value="badges"><Medal className="mr-2 h-4 w-4" />Badges</TabsTrigger>
+          <TabsTrigger value="badges"><Medal className="mr-2 h-4 w-4" />Selos</TabsTrigger>
           <TabsTrigger value="rewards"><Gift className="mr-2 h-4 w-4" />Recompensas</TabsTrigger>
           <TabsTrigger value="challenges"><Swords className="mr-2 h-4 w-4" />Desafios</TabsTrigger>
         </TabsList>

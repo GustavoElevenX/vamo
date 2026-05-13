@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: Params) {
     const { adminClient, appUser } = auth
 
     if (!['manager', 'admin', 'developer'].includes(appUser.role)) {
-      return NextResponse.json({ error: 'Apenas gestor pode reprovar missao' }, { status: 403 })
+      return NextResponse.json({ error: 'Apenas gestor pode reprovar missão' }, { status: 403 })
     }
 
     const input = await request.json().catch(() => ({}))
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: Params) {
   } catch (error) {
     console.error('POST /api/missions/[id]/reject', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro ao reprovar missao' },
+      { error: error instanceof Error ? error.message : 'Erro ao reprovar missão' },
       { status: 500 },
     )
   }

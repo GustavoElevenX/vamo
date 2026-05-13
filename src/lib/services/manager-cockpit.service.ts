@@ -237,16 +237,16 @@ export async function buildManagerCockpit(
       principalPerson: attention[0]?.name ?? recognition[0]?.name ?? null,
       principalAction: topDecision?.actions[0]?.label ?? ai_reading.priority,
       quickIndicators: [
-        { label: 'Pipeline em risco', value: currency(summary.pipeline_at_risk) },
+        { label: 'Funil em risco', value: currency(summary.pipeline_at_risk) },
         { label: 'Gap de meta', value: currency(summary.gap_to_goal) },
         { label: 'Pessoas em atencao', value: String(attention.length) },
       ],
     },
     metrics: {
       forecast: {
-        title: 'Forecast em risco',
+        title: 'Previsão em risco',
         value: currency(summary.pipeline_at_risk),
-        detail: `${summary.deals_without_next_action} sem proximo passo | ${summary.overdue_followups} follow-up(s) vencido(s)`,
+        detail: `${summary.deals_without_next_action} sem próximo passo | ${summary.overdue_followups} follow-up(s) vencido(s)`,
         href: '/monitoramento/funil',
       },
       team: {
@@ -256,13 +256,13 @@ export async function buildManagerCockpit(
         href: '/monitoramento/equipe',
       },
       execution: {
-        title: 'Execucao comercial',
+        title: 'Execução comercial',
         value: `${executionPercent}%`,
         detail: `${summary.deals_without_next_action + summary.overdue_followups} pendencia(s) de pipeline | ${missions.active} missao(oes) ativa(s)`,
         href: '/monitoramento/missoes',
       },
       commission: {
-        title: 'Comissao e fechamento',
+        title: 'Comissão e fechamento',
         value: currency(pendingCommissionAmount + disputedCommissionAmount),
         detail: `${commissionEntries.length} lancamento(s) pendente(s) ou contestado(s)`,
         href: '/monitoramento/comissionamento',
@@ -293,9 +293,9 @@ export async function buildManagerCockpit(
     quickAccess: [
       { label: 'Funil', href: '/monitoramento/funil' },
       { label: 'Equipe', href: '/monitoramento/equipe' },
-      { label: 'Saude', href: '/monitoramento/saude-equipe' },
+      { label: 'Saúde', href: '/monitoramento/saude-equipe' },
       { label: 'ROI', href: '/monitoramento/roi' },
-      { label: 'Comissoes', href: '/monitoramento/comissionamento' },
+      { label: 'Comissões', href: '/monitoramento/comissionamento' },
       { label: 'VAMO IA', href: '/chat-ia' },
     ],
     dataHealth: {

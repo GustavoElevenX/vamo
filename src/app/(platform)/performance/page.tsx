@@ -631,8 +631,8 @@ export default function PerformancePage() {
         nextStep: deal.next_action_title || 'Enviar follow-up com pergunta de decisao.',
         primaryLabel: 'Abrir oportunidade',
         primaryHref: `/crm/${deal.id}`,
-        secondaryLabel: 'Registrar acao manual',
-        secondaryHref: '/kpis/registrar',
+        secondaryLabel: 'Registrar follow-up',
+        secondaryHref: `/kpis/registrar?dealId=${encodeURIComponent(deal.id)}&action=crm_activity_follow_up`,
         aiHref: '/chat-ia',
         tone: isOverdue(deal) ? 'red' : 'amber',
       }

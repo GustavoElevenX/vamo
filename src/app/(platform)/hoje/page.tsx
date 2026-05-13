@@ -114,7 +114,7 @@ interface HojeCache {
 }
 
 type Priority =
-  | { kind: 'deal'; title: string; description: string; href: string; gain: number; tone: 'rose' | 'amber' | 'green' }
+  | { kind: 'deal'; title: string; description: string; href: string; registerHref: string; gain: number; tone: 'rose' | 'amber' | 'green' }
   | { kind: 'mission'; title: string; description: string; href: string; gain: number; tone: 'green' }
   | { kind: 'kpi'; title: string; description: string; href: string; gain: number; tone: 'amber' }
 
@@ -362,6 +362,7 @@ export default function HojePage() {
           ? `Follow-up atrasado em ${priorityDeal.account?.name || priorityDeal.title}. Forecast impactado em ${compactCurrency(Number(priorityDeal.value || 0))}.`
           : 'Este deal esta aberto, mas ainda nao tem um proximo passo claro.',
         href: `/crm/${priorityDeal.id}`,
+        registerHref: `/kpis/registrar?dealId=${encodeURIComponent(priorityDeal.id)}&action=crm_activity_follow_up`,
         gain: Number(priorityDeal.value || 0) * Number(priorityDeal.probability || 0) / 100,
         tone: isOverdue(priorityDeal.next_action_due_at) ? 'rose' : 'amber',
       }
@@ -481,8 +482,8 @@ export default function HojePage() {
                 {priority.kind === 'deal' ? 'Abrir oportunidade' : 'Executar agora'} <ArrowRight className="h-4 w-4" />
               </Button>
               {priority.kind === 'deal' && (
-                <Button variant="outline" render={<Link href="/kpis/registrar" />}>
-                  Registrar acao
+                <Button variant="outline" render={<Link href={priority.registerHref} />}>
+                  Registrar follow-up
                 </Button>
               )}
               <Button variant="outline" render={<Link href="/chat-ia" />}>

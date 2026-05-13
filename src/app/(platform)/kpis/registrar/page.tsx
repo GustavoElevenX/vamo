@@ -63,6 +63,23 @@ export default function RegistrarAcaoComercialPage() {
     return () => { cancelled = true }
   }, [])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const action = params.get('action')
+    if (action && ACTIONS.some((item) => item.value === action)) {
+      setForm((current) => ({ ...current, action }))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (loadingDeals) return
+    const params = new URLSearchParams(window.location.search)
+    const dealId = params.get('dealId')
+    if (dealId && deals.some((deal) => deal.id === dealId)) {
+      setForm((current) => ({ ...current, dealId }))
+    }
+  }, [deals, loadingDeals])
+
   const selectedAction = useMemo(() => ACTIONS.find((action) => action.value === form.action) ?? ACTIONS[0], [form.action])
   const selectedDeal = deals.find((deal) => deal.id === form.dealId)
 
